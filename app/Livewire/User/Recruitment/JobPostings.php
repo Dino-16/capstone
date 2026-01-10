@@ -113,7 +113,8 @@ class JobPostings extends Component
 
     public function export()
     {
-        return (new JobPostsExport)->download('JobPosts.xlsx');
+        $export = new JobPostsExport();
+        return $export->export();
     }
 
 

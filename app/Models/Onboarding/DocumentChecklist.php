@@ -13,7 +13,8 @@ class DocumentChecklist extends Model
         'employee_name',
         'email',
         'documents',
-        'notes'
+        'notes',
+        'status'
     ];
 
     protected $casts = [
@@ -38,13 +39,8 @@ class DocumentChecklist extends Model
     {
         $documents = $this->documents ?? [];
         
-        // If all 6 documents are present, show complete
-        if (count($documents) === 6) {
-            return 100;
-        }
-        
-        // If not all 6 documents are present, show incomplete
-        return 0;
+        // Calculate completion based on document count only (6 total documents)
+        return (count($documents) / 6) * 100;
     }
 
     public function initializeDocuments()

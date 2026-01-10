@@ -5,6 +5,9 @@
         <p @class('text-muted')>Create and manage employee performance evaluations</p>
     </div>
 
+    {{-- SUCCESS TOAST --}}
+    <x-toast />
+
     <!-- Evaluation Form -->
     <div @class('card')>
         <div @class('card-header')>

@@ -8,7 +8,6 @@ use App\Exports\Recognition\GiveRewardsExport;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Http;
-use Maatwebsite\Excel\Facades\Excel;
 
 class GiveRewards extends Component
 {
@@ -122,7 +121,7 @@ class GiveRewards extends Component
 
     public function editRewardGiven($id)
     {
-        $rewardGiven = RewardGiven::find($id);
+        $rewardGiven = GiveReward::find($id);
         
         if ($rewardGiven) {
             $this->rewardGivenId = $id;
@@ -199,7 +198,8 @@ class GiveRewards extends Component
 
     public function export()
     {
-        return Excel::download(new GiveRewardsExport, 'give-rewards-' . now()->format('Y-m-d') . '.xlsx');
+        $export = new GiveRewardsExport();
+        return $export->export();
     }
 
     public function render()

@@ -72,42 +72,50 @@ class Reports extends Component
 
     public function exportRequisition()
     {
-        return (new RequisitionsExport)->download('requisitions.xlsx');
+        $export = new RequisitionsExport();
+        return $export->export();
     }
     
     public function exportJobPost()
     {
-        return (new JobPostsExport)->download('job_posts.xlsx');
+        $export = new JobPostsExport();
+        return $export->export();
     }
     
     public function exportEmployee()
     {
-        return (new EmployeesExport)->download('employees.xlsx');
+        $export = new EmployeesExport();
+        return $export->export();
     }
     
     public function exportDocumentChecklist()
     {
-        return (new DocumentChecklistExport)->download('document_checklist.xlsx');
+        $export = new DocumentChecklistExport();
+        return $export->export();
     }
     
     public function exportOrientationSchedule()
     {
-        return (new OrientationScheduleExport)->download('orientation_schedule.xlsx');
+        $export = new OrientationScheduleExport();
+        return $export->export();
     }
     
     public function exportEvaluationRecords()
     {
-        return (new EvaluationRecordsExport)->download('evaluation_records.xlsx');
+        $export = new EvaluationRecordsExport();
+        return $export->export();
     }
     
     public function exportRewards()
     {
-        return (new RewardsExport)->download('rewards.xlsx');
+        $export = new RewardsExport();
+        return $export->export();
     }
     
     public function exportGiveRewards()
     {
-        return (new GiveRewardsExport)->download('give_rewards.xlsx');
+        $export = new GiveRewardsExport();
+        return $export->export();
     }
     
     public function saveReport()

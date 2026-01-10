@@ -2,14 +2,12 @@
 
 namespace App\Exports\Onboarding;
 
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\Exportable;
+use App\Services\ExportService;
+use Illuminate\Support\Collection;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class EmployeesExport implements FromCollection, WithHeadings
+class EmployeesExport
 {
-    use Exportable;
-
     protected $employees;
 
     public function __construct($employees)
@@ -17,14 +15,9 @@ class EmployeesExport implements FromCollection, WithHeadings
         $this->employees = $employees;
     }
 
-    public function collection()
+    public function export(): StreamedResponse
     {
-        return $this->employees;
-    }
-
-    public function headings(): array
-    {
-        return [
+        $headers = [
             'Name',
             'Position', 
             'Department',
@@ -32,5 +25,15 @@ class EmployeesExport implements FromCollection, WithHeadings
             'HR Documents',
             'Training Modules',
         ];
+
+        $data = collect($this->employees)->map(function ($employee) use ($headers) {
+            $row = [];
+            foreach ($headers as $header) {
+                $row[$header] = $employee[$header] ?? '';
+            }
+            return $row;
+        });
+        
+        return ExportService::exportToXls($data, $headers, 'employees_' . date('Y-m-d') . '.xls');
     }
 }

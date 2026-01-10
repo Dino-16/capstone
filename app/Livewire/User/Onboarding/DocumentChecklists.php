@@ -112,8 +112,16 @@ class DocumentChecklists extends Component
     public function addEmployee()
     {
         try {
+            // Debug: Log the incoming data
+            logger('Add Employee Data:', [
+                'employeeName' => $this->employeeName,
+                'email' => $this->email,
+                'selectedDocuments' => $this->selectedDocuments,
+                'notes' => $this->notes
+            ]);
+
             $this->validate([
-                'employeeName' => 'required|string|max:255|unique:document_checklists,employee_name',
+                'employeeName' => 'required|string|max:255',
                 'email' => 'nullable|email|max:255',
                 'selectedDocuments' => 'required|array|min:1',
             ]);
@@ -133,11 +141,17 @@ class DocumentChecklists extends Component
                 $documents[$docType] = $allDocuments[$docType] ?? 'incomplete';
             }
 
+            logger('Documents to create:', [
+                'documents' => $documents,
+                'status' => 'active'
+            ]);
+
             DocumentChecklist::create([
                 'employee_name' => $this->employeeName,
                 'email' => $this->email,
                 'documents' => $documents,
                 'notes' => $this->notes,
+                'status' => 'active',
             ]);
 
             session()->flash('status', 'Employee added successfully with ' . count($this->selectedDocuments) . ' documents.');
@@ -145,6 +159,7 @@ class DocumentChecklists extends Component
             $this->reset(['employeeName', 'email', 'notes', 'selectedDocuments']);
             
         } catch (\Exception $e) {
+            logger('Add Employee Error: ' . $e->getMessage());
             session()->flash('error', 'Error adding employee: ' . $e->getMessage());
         }
     }
@@ -207,16 +222,32 @@ class DocumentChecklists extends Component
 
     public function draft($employeeId)
     {
-        // Since there's no status column, we'll just show a success message
-        // The draft functionality will toggle the view instead
-        session()->flash('status', 'Draft mode activated!');
+        $employee = DocumentChecklist::findOrFail($employeeId);
+        $employee->update(['status' => 'draft']);
+        session()->flash('status', 'Employee moved to draft status!');
     }
 
     public function restore($employeeId) 
     {
-        // Since there's no status column, we'll just show a success message
-        // The restore functionality will toggle back to normal view
-        session()->flash('status', 'Draft mode deactivated!');
+        try {
+            logger('Restore called for employee ID: ' . $employeeId);
+            
+            $employee = DocumentChecklist::findOrFail($employeeId);
+            logger('Employee found:', ['id' => $employee->id, 'name' => $employee->employee_name, 'current_status' => $employee->status]);
+            
+            $employee->update(['status' => 'active']);
+            logger('Employee status updated to active');
+            
+            session()->flash('status', 'Employee restored to active status!');
+            
+            // Redirect to main view after restore
+            $this->showDrafts = false;
+            $this->resetPage();
+            
+        } catch (\Exception $e) {
+            logger('Restore Error: ' . $e->getMessage());
+            session()->flash('error', 'Error restoring employee: ' . $e->getMessage());
+        }
     }
 
     public function openDraft()
@@ -238,7 +269,8 @@ class DocumentChecklists extends Component
 
     public function export()
     {
-        return (new \App\Exports\Onboarding\DocumentChecklistsExport)->download('document-checklists.xlsx');
+        $export = new \App\Exports\Onboarding\DocumentChecklistsExport();
+        return $export->export();
     }
 
     public function openMessageModal($employeeId)
@@ -289,8 +321,9 @@ class DocumentChecklists extends Component
         }
 
         if ($this->showDrafts) {
-            // Since there's no status column, we'll show all records when in draft mode
-            $drafts = DocumentChecklist::latest()->paginate($this->perPage);
+            // Show only draft employees
+            $query->where('status', 'draft');
+            $drafts = $query->latest()->paginate($this->perPage);
 
             return view('livewire.user.onboarding.document-checklists', [
                 'documentChecklists' => null,
@@ -298,6 +331,11 @@ class DocumentChecklists extends Component
             ])->layout('layouts.app');
         }
 
+        // Show incomplete employees (less than 6 documents) but exclude draft status
+        $query->where(function($q) {
+            $q->whereRaw("JSON_LENGTH(documents) < 6")
+              ->orWhereNull('documents');
+        })->where('status', '!=', 'draft');
         return view('livewire.user.onboarding.document-checklists', [
             'documentChecklists' => $query->latest()->paginate($this->perPage),
             'drafts' => null,

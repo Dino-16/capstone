@@ -119,14 +119,24 @@
                                 </div>
                             </td>
                             <td>
-                                @if($document->getCompletionPercentage() == 100)
-                                    <span @class('badge bg-success text-white')>Complete</span>
-                                @else
-                                    <span @class('badge bg-warning text-white')>Incomplete</span>
-                                @endif
+                                <div @class('d-flex flex-column gap-1')>
+                                    {{-- Status Badge --}}
+                                    @if($document->status === 'draft')
+                                        <span @class('badge bg-secondary text-white')>Draft</span>
+                                    @else
+                                        <span @class('badge bg-success text-white')>Active</span>
+                                    @endif
+                                    
+                                    {{-- Completion Badge --}}
+                                    @if($document->getCompletionPercentage() == 100)
+                                        <span @class('badge bg-primary text-white')>Complete</span>
+                                    @else
+                                        <span @class('badge bg-warning text-white')>Incomplete</span>
+                                    @endif
+                                </div>
                                 <small @class('text-muted d-block mt-1')>
                                     Docs: {{ count($document->documents ?? []) }}/6 | 
-                                    %: {{ $document->getCompletionPercentage() }}
+                                    %: {{ number_format($document->getCompletionPercentage(), 0) }}%
                                 </small>
                             </td>
                             <td @class('gap-3')>
@@ -217,14 +227,24 @@
                                 </div>
                             </td>
                             <td>
-                                @if($draft->getCompletionPercentage() == 100)
-                                    <span @class('badge bg-success text-white')>Complete</span>
-                                @else
-                                    <span @class('badge bg-warning text-white')>Incomplete</span>
-                                @endif
+                                <div @class('d-flex flex-column gap-1')>
+                                    {{-- Status Badge --}}
+                                    @if($draft->status === 'draft')
+                                        <span @class('badge bg-secondary text-white')>Draft</span>
+                                    @else
+                                        <span @class('badge bg-success text-white')>Active</span>
+                                    @endif
+                                    
+                                    {{-- Completion Badge --}}
+                                    @if($draft->getCompletionPercentage() == 100)
+                                        <span @class('badge bg-primary text-white')>Complete</span>
+                                    @else
+                                        <span @class('badge bg-warning text-white')>Incomplete</span>
+                                    @endif
+                                </div>
                                 <small @class('text-muted d-block mt-1')>
                                     Docs: {{ count($draft->documents ?? []) }}/6 | 
-                                    %: {{ $draft->getCompletionPercentage() }}
+                                    %: {{ number_format($draft->getCompletionPercentage(), 0) }}%
                                 </small>
                             </td>
                             <td>

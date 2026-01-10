@@ -118,14 +118,27 @@ class OrientationSchedule extends Component
     public function addOrientation()
     {
         try {
+            // Debug: Log incoming data
+            logger('Add Orientation Data:', [
+                'employeeName' => $this->employeeName,
+                'email' => $this->email,
+                'orientationDate' => $this->orientationDate,
+                'location' => $this->location,
+                'facilitator' => $this->facilitator,
+                'status' => $this->status,
+                'notes' => $this->notes
+            ]);
+
             $this->validate([
                 'employeeName' => 'required|string|max:255|unique:orientations,employee_name',
                 'email' => 'nullable|email|max:255',
-                'orientationDate' => 'required|date|after:now',
+                'orientationDate' => 'required|date',
                 'location' => 'required|string|max:255',
                 'facilitator' => 'required|string|max:255',
                 'status' => 'required|in:scheduled,completed,cancelled',
             ]);
+
+            logger('Validation passed, creating orientation...');
 
             Orientation::create([
                 'employee_name' => $this->employeeName,
@@ -137,6 +150,8 @@ class OrientationSchedule extends Component
                 'status' => $this->status,
             ]);
 
+            logger('Orientation created successfully');
+
             // Send email notification if email is provided
             if ($this->email) {
                 $this->sendOrientationEmail($this->email, $this->employeeName, $this->orientationDate, $this->location, $this->facilitator);
@@ -147,6 +162,7 @@ class OrientationSchedule extends Component
             $this->reset(['employeeName', 'email', 'orientationDate', 'location', 'facilitator', 'notes', 'status']);
             
         } catch (\Exception $e) {
+            logger('Add Orientation Error: ' . $e->getMessage());
             session()->flash('error', 'Error scheduling orientation: ' . $e->getMessage());
         }
     }
@@ -259,7 +275,8 @@ class OrientationSchedule extends Component
 
     public function export()
     {
-        return (new \App\Exports\Onboarding\OrientationSchedulesExport)->download('orientation-schedules.xlsx');
+        $export = new \App\Exports\Onboarding\OrientationSchedulesExport();
+        return $export->export();
     }
 
     public function render()

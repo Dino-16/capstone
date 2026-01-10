@@ -438,5 +438,8 @@
             {{ $drafts->links() }}
         </div>
     @endif
+{{-- Edit Evaluation Modal --}}
+    @include('livewire.user.performance.includes.evaluation-edit')
+
 </div>
 </div>

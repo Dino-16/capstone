@@ -3,23 +3,17 @@
 namespace App\Exports\Performance;
 
 use App\Models\Performance\Evaluation;
-use Maatwebsite\Excel\Concerns\FromQuery;
-use Maatwebsite\Excel\Concerns\Exportable;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
+use App\Services\ExportService;
+use Illuminate\Support\Collection;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class EvaluationRecordsExport implements FromQuery, WithHeadings, WithMapping
+class EvaluationRecordsExport
 {
-    use Exportable;
-
-    public function query()
+    public function export(): StreamedResponse
     {
-        return Evaluation::query();
-    }
-
-    public function headings(): array
-    {
-        return [
+        $query = Evaluation::query();
+        
+        $headers = [
             'Employee Name',
             'Email',
             'Evaluation Date',
@@ -42,32 +36,41 @@ class EvaluationRecordsExport implements FromQuery, WithHeadings, WithMapping
             'Created At',
             'Updated At',
         ];
-    }
 
-    public function map($evaluation): array
-    {
-        return [
-            $evaluation->employee_name,
-            $evaluation->email,
-            $evaluation->evaluation_date->format('Y-m-d'),
-            $evaluation->evaluator_name,
-            $evaluation->position,
-            $evaluation->department,
-            $evaluation->employment_date ? $evaluation->employment_date->format('Y-m-d') : '',
-            $evaluation->evaluation_type,
-            $evaluation->overall_score,
-            $evaluation->job_knowledge,
-            $evaluation->work_quality,
-            $evaluation->initiative,
-            $evaluation->communication,
-            $evaluation->dependability,
-            $evaluation->attendance,
-            $evaluation->strengths,
-            $evaluation->areas_for_improvement,
-            $evaluation->comments,
-            $evaluation->status,
-            $evaluation->created_at->format('Y-m-d H:i:s'),
-            $evaluation->updated_at->format('Y-m-d H:i:s'),
+        $mappings = [
+            'Employee Name' => 'employee_name',
+            'Email' => 'email',
+            'Evaluation Date' => function($item) {
+                return $item->evaluation_date->format('Y-m-d');
+            },
+            'Evaluator Name' => 'evaluator_name',
+            'Position' => 'position',
+            'Department' => 'department',
+            'Employment Date' => function($item) {
+                return $item->employment_date ? $item->employment_date->format('Y-m-d') : '';
+            },
+            'Evaluation Type' => 'evaluation_type',
+            'Overall Score' => 'overall_score',
+            'Job Knowledge' => 'job_knowledge',
+            'Work Quality' => 'work_quality',
+            'Initiative' => 'initiative',
+            'Communication' => 'communication',
+            'Dependability' => 'dependability',
+            'Attendance' => 'attendance',
+            'Strengths' => 'strengths',
+            'Areas for Improvement' => 'areas_for_improvement',
+            'Comments' => 'comments',
+            'Status' => 'status',
+            'Created At' => function($item) {
+                return $item->created_at ? $item->created_at->format('Y-m-d H:i:s') : '';
+            },
+            'Updated At' => function($item) {
+                return $item->updated_at ? $item->updated_at->format('Y-m-d H:i:s') : '';
+            },
         ];
+
+        $data = ExportService::transformQuery($query, $mappings);
+        
+        return ExportService::exportToXls($data, $headers, 'evaluation_records_' . date('Y-m-d') . '.xls');
     }
 }

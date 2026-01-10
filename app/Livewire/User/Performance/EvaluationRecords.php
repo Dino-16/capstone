@@ -15,6 +15,18 @@ class EvaluationRecords extends Component
     public $scoreFilter = '';
     public $dateFilter = '';
     public $showDrafts = false;
+    
+    // Modal properties
+    public $showEditModal = false;
+    public $editingEvaluationId = null;
+    public $employeeName;
+    public $email;
+    public $evaluationDate;
+    public $evaluatorName;
+    public $overallScore;
+    public $performanceAreas;
+    public $notes;
+    public $status = 'Pending';
 
     protected $paginationTheme = 'bootstrap';
 
@@ -64,8 +76,53 @@ class EvaluationRecords extends Component
 
     public function editEvaluation($id)
     {
-        // Redirect to evaluations page with the evaluation ID for editing
-        return redirect()->route('evaluations', ['edit' => $id]);
+        $evaluation = Evaluation::findOrFail($id);
+        
+        $this->editingEvaluationId = $id;
+        $this->employeeName = $evaluation->employee_name;
+        $this->email = $evaluation->email;
+        $this->evaluationDate = $evaluation->evaluation_date->format('Y-m-d\TH:i');
+        $this->evaluatorName = $evaluation->evaluator_name;
+        $this->overallScore = $evaluation->overall_score;
+        $this->performanceAreas = $evaluation->performance_areas;
+        $this->notes = $evaluation->notes;
+        $this->status = $evaluation->status;
+        $this->showEditModal = true;
+    }
+
+    public function updateEvaluation()
+    {
+        try {
+            $this->validate([
+                'employeeName' => 'required|string|max:255',
+                'email' => 'nullable|email|max:255',
+                'evaluationDate' => 'required|date',
+                'evaluatorName' => 'required|string|max:255',
+                'overallScore' => 'required|numeric|min:0|max:100',
+                'performanceAreas' => 'required|string',
+                'status' => 'required|in:Draft,Pending,Completed',
+            ]);
+
+            $evaluation = Evaluation::findOrFail($this->editingEvaluationId);
+            
+            $evaluation->update([
+                'employee_name' => $this->employeeName,
+                'email' => $this->email,
+                'evaluation_date' => $this->evaluationDate,
+                'evaluator_name' => $this->evaluatorName,
+                'overall_score' => $this->overallScore,
+                'performance_areas' => $this->performanceAreas,
+                'notes' => $this->notes,
+                'status' => $this->status,
+            ]);
+
+            session()->flash('message', 'Evaluation updated successfully!');
+            $this->showEditModal = false;
+            $this->reset(['employeeName', 'email', 'evaluationDate', 'evaluatorName', 'overallScore', 'performanceAreas', 'notes', 'status', 'editingEvaluationId']);
+            
+        } catch (\Exception $e) {
+            session()->flash('error', 'Error updating evaluation: ' . $e->getMessage());
+        }
     }
 
     public function deleteEvaluation($id)

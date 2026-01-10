@@ -3,23 +3,16 @@
 namespace App\Exports\Recognition;
 
 use App\Models\Recognition\GiveReward;
-use Maatwebsite\Excel\Concerns\FromQuery;
-use Maatwebsite\Excel\Concerns\Exportable;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
+use App\Services\ExportService;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class GiveRewardsExport implements FromQuery, WithHeadings, WithMapping
+class GiveRewardsExport
 {
-    use Exportable;
-
-    public function query()
+    public function export(): StreamedResponse
     {
-        return GiveReward::with('reward')->orderBy('created_at', 'desc');
-    }
-
-    public function headings(): array
-    {
-        return [
+        $query = GiveReward::with('reward')->orderBy('created_at', 'desc');
+        
+        $headers = [
             'ID',
             'Employee Name',
             'Employee Email',
@@ -35,25 +28,42 @@ class GiveRewardsExport implements FromQuery, WithHeadings, WithMapping
             'Created At',
             'Updated At'
         ];
-    }
 
-    public function map($giveReward): array
-    {
-        return [
-            $giveReward->id,
-            $giveReward->employee_name,
-            $giveReward->employee_email,
-            $giveReward->employee_position,
-            $giveReward->employee_department,
-            $giveReward->reward ? $giveReward->reward->name : 'N/A',
-            $giveReward->reward ? $giveReward->reward->type : 'N/A',
-            $giveReward->given_by,
-            $giveReward->given_date->format('Y-m-d'),
-            ucfirst($giveReward->status),
-            $giveReward->reason ?? 'N/A',
-            $giveReward->notes ?? 'N/A',
-            $giveReward->created_at->format('Y-m-d H:i:s'),
-            $giveReward->updated_at->format('Y-m-d H:i:s'),
+        $mappings = [
+            'ID' => 'id',
+            'Employee Name' => 'employee_name',
+            'Employee Email' => 'employee_email',
+            'Employee Position' => 'employee_position',
+            'Employee Department' => 'employee_department',
+            'Reward Name' => function($item) {
+                return $item->reward ? $item->reward->name : 'N/A';
+            },
+            'Reward Type' => function($item) {
+                return $item->reward ? $item->reward->type : 'N/A';
+            },
+            'Given By' => 'given_by',
+            'Given Date' => function($item) {
+                return $item->given_date->format('Y-m-d');
+            },
+            'Status' => function($item) {
+                return ucfirst($item->status);
+            },
+            'Reason' => function($item) {
+                return $item->reason ?? 'N/A';
+            },
+            'Notes' => function($item) {
+                return $item->notes ?? 'N/A';
+            },
+            'Created At' => function($item) {
+                return $item->created_at ? $item->created_at->format('Y-m-d H:i:s') : '';
+            },
+            'Updated At' => function($item) {
+                return $item->updated_at ? $item->updated_at->format('Y-m-d H:i:s') : '';
+            },
         ];
+
+        $data = ExportService::transformQuery($query, $mappings);
+        
+        return ExportService::exportToXls($data, $headers, 'give_rewards_' . date('Y-m-d') . '.xls');
     }
 }

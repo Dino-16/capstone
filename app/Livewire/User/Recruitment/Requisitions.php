@@ -42,7 +42,8 @@ class Requisitions extends Component
 
     public function export()
     {
-        return (new RequisitionsExport)->download('requisition.xlsx');
+        $export = new RequisitionsExport();
+        return $export->export();
     }
 
 

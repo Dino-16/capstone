@@ -167,7 +167,8 @@ class Rewards extends Component
 
     public function export()
     {
-        return (new \App\Exports\Recognition\RewardsExport)->download('rewards.xlsx');
+        $export = new \App\Exports\Recognition\RewardsExport();
+        return $export->export();
     }
 
     public function render()
