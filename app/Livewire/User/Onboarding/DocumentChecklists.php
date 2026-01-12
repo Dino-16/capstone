@@ -38,6 +38,16 @@ class DocumentChecklists extends Component
     public $messageSubject;
     public $messageContent;
 
+    // Available document types
+    public $documentTypes = [
+        'resume' => 'Resume',
+        'medical_certificate' => 'Medical Certificate',
+        'valid_government_id' => 'Valid Government ID',
+        'transcript_of_records' => 'Transcript of Records',
+        'nbi_clearance' => 'NBI Clearance',
+        'barangay_clearance' => 'Barangay Clearance',
+    ];
+
     public function mount()
     {
         $response = Http::get('http://hr4.jetlougetravels-ph.com/api/employees');
@@ -46,7 +56,7 @@ class DocumentChecklists extends Component
             $this->employees = $response->json();
             $this->filteredEmployees = $this->employees;
         } else {
-            $this->employees = []; // fallback if API fails
+            $this->employees = [];
             $this->filteredEmployees = [];
         }
     }
@@ -94,7 +104,7 @@ class DocumentChecklists extends Component
     {
         $this->resetValidation();
         $this->reset(['employeeName', 'email', 'notes', 'selectedDocuments', 'showEmployeeDropdown']);
-        $this->selectedDocuments = []; // Ensure it's an empty array
+        $this->selectedDocuments = array_keys($this->documentTypes); // Select all by default
         $this->showModal = true;
     }
 
@@ -117,32 +127,18 @@ class DocumentChecklists extends Component
                 'employeeName' => 'required|string|max:255',
                 'email' => 'nullable|email|max:255',
                 'notes' => 'nullable|string',
+                'selectedDocuments' => 'required|array|min:1',
             ]);
 
-            // Initialize documents JSON with all 6 default documents
-            $defaultDocuments = [
-                'resume' => 'incomplete',
-                'medical_certificate' => 'incomplete',
-                'valid_government_id' => 'incomplete',
-                'transcript_of_records' => 'incomplete',
-                'nbi_clearance' => 'incomplete',
-                'barangay_clearance' => 'incomplete',
-            ];
-
-            // If specific documents are selected, use only those
-            if (!empty($this->selectedDocuments) && is_array($this->selectedDocuments)) {
-                $documents = [];
-                foreach ($this->selectedDocuments as $docType) {
-                    if (isset($defaultDocuments[$docType])) {
-                        $documents[$docType] = 'incomplete';
-                    }
+            // Initialize documents with selected types
+            $documents = [];
+            foreach ($this->selectedDocuments as $docType) {
+                if (isset($this->documentTypes[$docType])) {
+                    $documents[$docType] = 'incomplete';
                 }
-            } else {
-                // Use all default documents if none selected
-                $documents = $defaultDocuments;
             }
 
-            $employee = DocumentChecklist::create([
+            DocumentChecklist::create([
                 'employee_name' => $this->employeeName,
                 'email' => $this->email,
                 'documents' => $documents,
@@ -168,10 +164,10 @@ class DocumentChecklists extends Component
 
             $employee = DocumentChecklist::findOrFail($this->editingEmployeeId);
             
-            // Update documents with selected ones and their statuses
+            // Update documents with selected ones
             $documents = [];
             foreach ($this->selectedDocuments as $docType) {
-                // Use the toggled status from the form
+                // Preserve existing status if document exists, otherwise set to incomplete
                 $documents[$docType] = $this->documents[$docType] ?? 'incomplete';
             }
 
@@ -190,22 +186,19 @@ class DocumentChecklists extends Component
         }
     }
 
-    public function updatingSelectedDocuments($value, $key)
+    public function toggleDocumentStatus($docType)
     {
-        // When a document is checked, mark it as complete and save immediately
-        if (in_array($value, $this->selectedDocuments)) {
-            $this->documents[$value] = 'complete';
-        } else {
-            // When unchecked, remove from documents
-            unset($this->documents[$value]);
+        if (!isset($this->documents[$docType])) {
+            return;
         }
+
+        // Toggle between complete and incomplete
+        $this->documents[$docType] = $this->documents[$docType] === 'complete' ? 'incomplete' : 'complete';
         
-        // Save immediately to database
+        // Save immediately if editing
         if ($this->editingEmployeeId) {
             $employee = DocumentChecklist::findOrFail($this->editingEmployeeId);
-            $employee->update([
-                'documents' => $this->documents,
-            ]);
+            $employee->update(['documents' => $this->documents]);
         }
     }
 
@@ -312,13 +305,18 @@ class DocumentChecklists extends Component
             $query->where('employee_name', 'like', '%' . $this->search . '%');
         }
 
-        // For now, show all employees without status filtering
+        // Filter by status
+        if ($this->showDrafts) {
+            $query->where('status', 'draft');
+        } else {
+            $query->where('status', 'active');
+        }
+
         $documentChecklists = $query->latest()->paginate($this->perPage);
-        $drafts = null;
 
         return view('livewire.user.onboarding.document-checklists', [
             'documentChecklists' => $documentChecklists,
-            'drafts' => $drafts,
+            'documentTypes' => $this->documentTypes,
         ])->layout('layouts.app');
     }
 }

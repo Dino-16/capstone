@@ -18,7 +18,7 @@
                             placeholder="Type to search employees..."
                             autocomplete="off"
                         >
-                        @error('employeeName') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        @error('employeeName') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                         
                         {{-- Employee Dropdown --}}
                         @if($showEmployeeDropdown && count($filteredEmployees) > 0)
@@ -47,7 +47,7 @@
                             placeholder="employee@example.com"
                             readonly
                         >
-                        @error('email') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        @error('email') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                         <small class="text-muted">Email is automatically filled when you select an employee</small>
                     </div>
 
@@ -55,98 +55,32 @@
                         <label class="form-label fw-bold">Select Documents to Add</label>
                         <div class="border rounded p-3 bg-light">
                             <div class="row g-2">
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input 
-                                            class="form-check-input" 
-                                            type="checkbox" 
-                                            id="add_resume"
-                                            wire:model.live="selectedDocuments"
-                                            value="resume"
-                                        >
-                                        <label class="form-check-label" for="add_resume">
-                                            <strong>Resume</strong>
-                                        </label>
+                                @foreach($documentTypes as $docKey => $docLabel)
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input 
+                                                class="form-check-input" 
+                                                type="checkbox" 
+                                                id="add_{{ $docKey }}"
+                                                wire:model.live="selectedDocuments"
+                                                value="{{ $docKey }}"
+                                            >
+                                            <label class="form-check-label" for="add_{{ $docKey }}">
+                                                <strong>{{ $docLabel }}</strong>
+                                            </label>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input 
-                                            class="form-check-input" 
-                                            type="checkbox" 
-                                            id="add_medical"
-                                            wire:model.live="selectedDocuments"
-                                            value="medical_certificate"
-                                        >
-                                        <label class="form-check-label" for="add_medical">
-                                            <strong>Medical Certificate</strong>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input 
-                                            class="form-check-input" 
-                                            type="checkbox" 
-                                            id="add_gov_id"
-                                            wire:model.live="selectedDocuments"
-                                            value="valid_government_id"
-                                        >
-                                        <label class="form-check-label" for="add_gov_id">
-                                            <strong>Valid Government ID</strong>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input 
-                                            class="form-check-input" 
-                                            type="checkbox" 
-                                            id="add_transcript"
-                                            wire:model.live="selectedDocuments"
-                                            value="transcript_of_records"
-                                        >
-                                        <label class="form-check-label" for="add_transcript">
-                                            <strong>Transcript of Records</strong>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input 
-                                            class="form-check-input" 
-                                            type="checkbox" 
-                                            id="add_nbi"
-                                            wire:model.live="selectedDocuments"
-                                            value="nbi_clearance"
-                                        >
-                                        <label class="form-check-label" for="add_nbi">
-                                            <strong>NBI Clearance</strong>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input 
-                                            class="form-check-input" 
-                                            type="checkbox" 
-                                            id="add_barangay"
-                                            wire:model.live="selectedDocuments"
-                                            value="barangay_clearance"
-                                        >
-                                        <label class="form-check-label" for="add_barangay">
-                                            <strong>Barangay Clearance</strong>
-                                        </label>
-                                    </div>
-                                </div>
+                                @endforeach
                             </div>
                         </div>
-                        <small class="text-muted">Select which documents to add for this employee</small>
+                        @error('selectedDocuments') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                        <small class="text-muted">Select which documents to add for this employee ({{ count($selectedDocuments) }}/6 selected)</small>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-bold">Notes (Optional)</label>
                         <textarea class="form-control" wire:model="notes" rows="3" placeholder="Add notes about this employee..."></textarea>
+                        @error('notes') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                     </div>
                 </div>
 

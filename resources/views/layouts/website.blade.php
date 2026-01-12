@@ -32,28 +32,28 @@
                         <span class="navbar-toggler-icon"></span>
                     </button>
                     <div @class('collapse navbar-collapse') id="navbarTogglerDemo01">
+
                         <ul @class('navbar-nav ms-auto mb-2 mb-lg-0')>
                             <li @class('nav-item')>
-                                <a @class('nav-link d-flex align-items-center gap-1 text-white') href="{{ route('home') }}">
+                                <a @class('nav-link d-flex align-items-center gap-1 text-white' . (request()->routeIs('home') ? '' : 'text-black')) href="{{ route('home') }}">
                                     <i class="bi bi-house-door-fill"></i> Home
                                 </a>
                             </li>
                             <li @class('nav-item')>
-                                <a @class('nav-link d-flex align-items-center gap-1 text-white') href="{{ route('about') }}">
+                                <a @class('nav-link d-flex align-items-center gap-1 text-white' . (request()->routeIs('about') ? '' : 'text-black')) href="{{ route('about') }}">
                                     <i class="bi bi-info-circle-fill"></i> About
                                 </a>
                             </li>
                             <li @class('nav-item')>
-                                <a @class('nav-link d-flex align-items-center gap-1 text-white') href="{{ route('contact') }}">
+                                <a @class('nav-link d-flex align-items-center gap-1 text-white' . (request()->routeIs('contact') ? '' : 'text-black')) href="{{ route('contact') }}">
                                     <i class="bi bi-envelope-fill"></i> Contact
                                 </a>
                             </li>
-                            {{-- 
                             <li @class('nav-item')>
-                                <a @class('nav-link d-flex align-items-center gap-1 text-white') href="{{ route('careers') }}">
+                                <a @class('nav-link d-flex align-items-center gap-1 text-black' . (request()->routeIs('careers') ? 'text-black' : '')) href="{{ route('careers') }}">
                                     <i class="bi bi-briefcase-fill"></i> Careers
                                 </a>
-                            </li>--}}
+                            </li>
                         </ul>
                     </div>
                 </div>
