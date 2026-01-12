@@ -57,7 +57,9 @@
                                     <td>{{ $job->updated_at }}</td>
                                     <td>{{ $job->expiration_date }}</td>
                                     <td>{{ $job->status }}</td>
-                                    <td><button wire:click="deactivateJob({{ $job->id }})" class="btn btn-sm btn-danger"><i @class('bi bi-slash-circle')></i></button></td>
+                                    <td>
+                                        <button wire:click="deactivateJob({{ $job->id }})" class="btn btn-sm btn-danger" title="Deactivate"><i @class('bi bi-slash-circle')></i></button>
+                                    </td>
                                 </tr>
                             @endif
                         @empty
