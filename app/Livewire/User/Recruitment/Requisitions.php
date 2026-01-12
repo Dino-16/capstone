@@ -117,7 +117,7 @@ class Requisitions extends Component
                 'statusCounts' => $statusCounts,
                 'requisitions' => null,
                 'drafts'       => $drafts,
-            ]);
+            ])->layout('layouts.app');
         }
 
         return view('livewire.user.recruitment.requisitions', [

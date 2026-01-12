@@ -10,7 +10,57 @@
     {{-- STATUS CARDS --}}
     @include('livewire.user.includes.report-cards')
 
-    {{-- HEADER ACTIONS --}}
+
+    {{-- CREATE REPORT FORM --}}
+    <div @class('card mb-4')>
+        <div @class('card-header bg-secondary text-white')>
+            <h5 @class('mb-0')>Create New Report</h5>
+        </div>
+        <div @class('card-body')>
+            <form wire:submit="saveReport">
+                <div @class('row g-3')>
+                    <div @class('col-md-6')>
+                        <label for="reportName" @class('form-label')>Report Name</label>
+                        <input 
+                            type="text" 
+                            @class('form-control') 
+                            id="reportName" 
+                            wire:model="reportName" 
+                            placeholder="Enter report name"
+                            required
+                        >
+                        @error('reportName')
+                            <div @class('text-danger small mt-1')>{{ $message }}</div>
+                        @enderror
+                    </div>
+                    <div @class('col-md-6')>
+                        <label for="reportType" @class('form-label')>Report Type</label>
+                        <select 
+                            @class('form-select') 
+                            id="reportType" 
+                            wire:model="reportType"
+                            required
+                        >
+                            <option value="">Select Report Type</option>
+                            @foreach($reportTypes as $value => $label)
+                                <option value="{{ $value }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        @error('reportType')
+                            <div @class('text-danger small mt-1')>{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
+                <div @class('mt-3 d-flex justify-content-end')>
+                    <button type="submit" @class('btn btn-primary')>
+                        <i @class('bi bi-save me-2')></i>Generate Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+        {{-- HEADER ACTIONS --}}
     <div @class('d-flex justify-content-between align-items-center mb-4')>
 
         {{-- LEFT SIDE --}}
@@ -25,6 +75,11 @@
                 />
             </div>
 
+
+        </div>
+
+        {{-- RIGHT SIDE --}}
+        <div @class('mb-3')>
             {{-- FILTER DROPDOWN --}}
             <div @class('dropdown')>
                 <button
@@ -53,21 +108,8 @@
                 </ul>
             </div>
         </div>
-
-        {{-- RIGHT SIDE --}}
-        <div @class('mb-3')>
-            <div @class('d-flex justify-content-between align-items-center gap-2')>
-                
-                <button
-                    @class('btn btn-primary')
-                    data-bs-toggle="modal"
-                    data-bs-target="#createReportModal"
-                >
-                    <i @class('bi bi-plus-lg me-2')></i>Create Report
-                </button>
-            </div>
-        </div>
     </div>
+
 
     {{-- MAIN TABLE --}}
     <div @class('p-5 bg-white rounded border rounded-bottom-0 border-bottom-0')>
@@ -99,7 +141,7 @@
                         </td>
                         <td>
                             <span @class('badge bg-info')>
-                                {{ strtoupper($report->report_file) }}
+                                {{ $report->report_file }}
                             </span>
                         </td>
                         <td>
@@ -185,58 +227,5 @@
                 @endforelse
             </tbody>
         </table>
-    </div>
-
-    {{-- CREATE REPORT MODAL --}}
-    <div @class('modal fade') id="createReportModal" tabindex="-1" aria-labelledby="createReportModalLabel" aria-hidden="true">
-        <div @class('modal-dialog')>
-            <div @class('modal-content')>
-                <div @class('modal-header')>
-                    <h5 @class('modal-title') id="createReportModalLabel">Create New Report</h5>
-                    <button type="button" @class('btn-close') data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form wire:submit="saveReport">
-                    <div @class('modal-body')>
-                        <div @class('mb-3')>
-                            <label for="reportName" @class('form-label')>Report Name</label>
-                            <input 
-                                type="text" 
-                                @class('form-control') 
-                                id="reportName" 
-                                wire:model="reportName" 
-                                placeholder="Enter report name"
-                                required
-                            >
-                            @error('reportName')
-                                <div @class('text-danger small mt-1')>{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <div @class('mb-3')>
-                            <label for="reportType" @class('form-label')>Report Type</label>
-                            <select 
-                                @class('form-select') 
-                                id="reportType" 
-                                wire:model="reportType"
-                                required
-                            >
-                                <option value="">Select Report Type</option>
-                                @foreach($reportTypes as $value => $label)
-                                    <option value="{{ $value }}">{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            @error('reportType')
-                                <div @class('text-danger small mt-1')>{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                    <div @class('modal-footer')>
-                        <button type="button" @class('btn btn-secondary') data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" @class('btn btn-primary')>
-                            <i @class('bi bi-save me-2')></i>Save Report
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
     </div>
 </div>

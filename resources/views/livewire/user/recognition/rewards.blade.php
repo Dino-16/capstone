@@ -126,7 +126,7 @@
                         <tr wire:key="reward-{{ $reward->id }}">
                             <td>
                                 <div @class('d-flex align-items-center')>
-                                    <div @class='rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-2' style="width: 32px; height: 32px;">
+                                    <div @class('rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-2') style="width: 32px; height: 32px;">
                                         @if($reward->icon)
                                             <i @class('{{ $reward->icon }} text-primary')></i>
                                         @else
@@ -147,42 +147,29 @@
                                 @if($reward->value > 0)
                                     ${{ number_format($reward->value, 2) }}
                                 @else
-                                    <span @class('text-muted')">---</span>
+                                    <span @class('text-muted')>---</span>
                                 @endif
                             </td>
                             <td>
                                 @if($reward->points_required > 0)
                                     {{ $reward->points_required }}
                                 @else
-                                    <span @class('text-muted')">---</span>
+                                    <span @class('text-muted')>---</span>
                                 @endif
                             </td>
                             <td>{!! $reward->status_badge !!}</td>
-                            <td @class('gap-3')>
-                                <button
-                                    @class('btn btn-primary btn-sm me-2')
-                                    wire:click="editReward({{ $reward->id }})"
-                                    title="Edit"
-                                >
-                                    <i @class('bi bi-pencil')></i>
-                                </button>
+                            <td>
                                 @if($reward->status === 'active')
                                     <button
-                                        @class('btn btn-warning btn-sm me-2')
+                                        @class('btn btn-danger btn-sm')
                                         wire:click="draft({{ $reward->id }})"
                                         title="Draft"
                                     >
                                         <i @class('bi bi-journal-text')></i>
                                     </button>
+                                @else
+                                    <span>---</span>
                                 @endif
-                                <button
-                                    @class('btn btn-danger btn-sm')
-                                    wire:click="deleteReward({{ $reward->id }})"
-                                    wire:confirm="Are you sure you want to delete this reward?"
-                                    title="Delete"
-                                >
-                                    <i @class('bi bi-trash')></i>
-                                </button>
                             </td>
                         </tr>
                     @empty
@@ -213,13 +200,13 @@
             <table @class('table')>
                 <thead>
                     <tr @class('bg-dark')>
-                        <th @class('text-secondary')">Reward Name</th>
-                        <th @class('text-secondary')">Category</th>
-                        <th @class('text-secondary')">Type</th>
-                        <th @class('text-secondary')">Value</th>
-                        <th @class('text-secondary')">Points</th>
-                        <th @class('text-secondary')">Status</th>
-                        <th @class('text-secondary')">Action</th>
+                        <th @class('text-secondary')>Reward Name</th>
+                        <th @class('text-secondary')>Category</th>
+                        <th @class('text-secondary')>Type</th>
+                        <th @class('text-secondary')>Value</th>
+                        <th @class('text-secondary')>Points</th>
+                        <th @class('text-secondary')>Status</th>
+                        <th @class('text-secondary')>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -227,7 +214,7 @@
                         <tr wire:key="draft-{{ $draft->id }}">
                             <td>
                                 <div @class('d-flex align-items-center')>
-                                    <div @class='rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-2' style="width: 32px; height: 32px;">
+                                    <div @class('rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-2') style="width: 32px; height: 32px;">
                                         @if($draft->icon)
                                             <i @class('{{ $draft->icon }} text-primary')></i>
                                         @else
@@ -248,14 +235,14 @@
                                 @if($draft->value > 0)
                                     ${{ number_format($draft->value, 2) }}
                                 @else
-                                    <span @class('text-muted')">---</span>
+                                    <span @class('text-muted')>---</span>
                                 @endif
                             </td>
                             <td>
                                 @if($draft->points_required > 0)
                                     {{ $draft->points_required }}
                                 @else
-                                    <span @class('text-muted')">---</span>
+                                    <span @class('text-muted')>---</span>
                                 @endif
                             </td>
                             <td>{!! $draft->status_badge !!}</td>
@@ -279,14 +266,6 @@
                 </tbody>
             </table>
             {{ $drafts->links() }}
-        </div>
-    @endif
-
-    <!-- Success Message -->
-    @if(session()->has('message'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('message') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
@@ -371,14 +350,6 @@
                     </form>
                 </div>
             </div>
-        </div>
-    @endif
-
-    <!-- Success Message -->
-    @if(session()->has('message'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('message') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 </div>

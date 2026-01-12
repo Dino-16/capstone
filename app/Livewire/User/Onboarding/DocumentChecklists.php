@@ -93,7 +93,8 @@ class DocumentChecklists extends Component
     public function openModal()
     {
         $this->resetValidation();
-        $this->reset(['employeeName', 'email', 'notes', 'selectedDocuments']);
+        $this->reset(['employeeName', 'email', 'notes', 'selectedDocuments', 'showEmployeeDropdown']);
+        $this->selectedDocuments = []; // Ensure it's an empty array
         $this->showModal = true;
     }
 
@@ -112,22 +113,14 @@ class DocumentChecklists extends Component
     public function addEmployee()
     {
         try {
-            // Debug: Log the incoming data
-            logger('Add Employee Data:', [
-                'employeeName' => $this->employeeName,
-                'email' => $this->email,
-                'selectedDocuments' => $this->selectedDocuments,
-                'notes' => $this->notes
-            ]);
-
             $this->validate([
                 'employeeName' => 'required|string|max:255',
                 'email' => 'nullable|email|max:255',
-                'selectedDocuments' => 'required|array|min:1',
+                'notes' => 'nullable|string',
             ]);
 
-            // Initialize documents JSON with selected documents
-            $allDocuments = [
+            // Initialize documents JSON with all 6 default documents
+            $defaultDocuments = [
                 'resume' => 'incomplete',
                 'medical_certificate' => 'incomplete',
                 'valid_government_id' => 'incomplete',
@@ -136,17 +129,20 @@ class DocumentChecklists extends Component
                 'barangay_clearance' => 'incomplete',
             ];
 
-            $documents = [];
-            foreach ($this->selectedDocuments as $docType) {
-                $documents[$docType] = $allDocuments[$docType] ?? 'incomplete';
+            // If specific documents are selected, use only those
+            if (!empty($this->selectedDocuments) && is_array($this->selectedDocuments)) {
+                $documents = [];
+                foreach ($this->selectedDocuments as $docType) {
+                    if (isset($defaultDocuments[$docType])) {
+                        $documents[$docType] = 'incomplete';
+                    }
+                }
+            } else {
+                // Use all default documents if none selected
+                $documents = $defaultDocuments;
             }
 
-            logger('Documents to create:', [
-                'documents' => $documents,
-                'status' => 'active'
-            ]);
-
-            DocumentChecklist::create([
+            $employee = DocumentChecklist::create([
                 'employee_name' => $this->employeeName,
                 'email' => $this->email,
                 'documents' => $documents,
@@ -154,12 +150,11 @@ class DocumentChecklists extends Component
                 'status' => 'active',
             ]);
 
-            session()->flash('status', 'Employee added successfully with ' . count($this->selectedDocuments) . ' documents.');
+            session()->flash('status', 'Employee added successfully with ' . count($documents) . ' documents.');
             $this->showModal = false;
             $this->reset(['employeeName', 'email', 'notes', 'selectedDocuments']);
             
         } catch (\Exception $e) {
-            logger('Add Employee Error: ' . $e->getMessage());
             session()->flash('error', 'Error adding employee: ' . $e->getMessage());
         }
     }
@@ -230,13 +225,8 @@ class DocumentChecklists extends Component
     public function restore($employeeId) 
     {
         try {
-            logger('Restore called for employee ID: ' . $employeeId);
-            
             $employee = DocumentChecklist::findOrFail($employeeId);
-            logger('Employee found:', ['id' => $employee->id, 'name' => $employee->employee_name, 'current_status' => $employee->status]);
-            
             $employee->update(['status' => 'active']);
-            logger('Employee status updated to active');
             
             session()->flash('status', 'Employee restored to active status!');
             
@@ -244,8 +234,10 @@ class DocumentChecklists extends Component
             $this->showDrafts = false;
             $this->resetPage();
             
+            // Force component refresh
+            $this->dispatch('refresh-component');
+            
         } catch (\Exception $e) {
-            logger('Restore Error: ' . $e->getMessage());
             session()->flash('error', 'Error restoring employee: ' . $e->getMessage());
         }
     }
@@ -320,25 +312,13 @@ class DocumentChecklists extends Component
             $query->where('employee_name', 'like', '%' . $this->search . '%');
         }
 
-        if ($this->showDrafts) {
-            // Show only draft employees
-            $query->where('status', 'draft');
-            $drafts = $query->latest()->paginate($this->perPage);
+        // For now, show all employees without status filtering
+        $documentChecklists = $query->latest()->paginate($this->perPage);
+        $drafts = null;
 
-            return view('livewire.user.onboarding.document-checklists', [
-                'documentChecklists' => null,
-                'drafts' => $drafts,
-            ])->layout('layouts.app');
-        }
-
-        // Show incomplete employees (less than 6 documents) but exclude draft status
-        $query->where(function($q) {
-            $q->whereRaw("JSON_LENGTH(documents) < 6")
-              ->orWhereNull('documents');
-        })->where('status', '!=', 'draft');
         return view('livewire.user.onboarding.document-checklists', [
-            'documentChecklists' => $query->latest()->paginate($this->perPage),
-            'drafts' => null,
+            'documentChecklists' => $documentChecklists,
+            'drafts' => $drafts,
         ])->layout('layouts.app');
     }
 }

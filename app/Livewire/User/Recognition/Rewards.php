@@ -99,7 +99,7 @@ class Rewards extends Component
             'icon' => $this->icon,
         ]);
 
-        $this->dispatch('reward-added', 'Reward created successfully!');
+        session()->push('status', 'Reward created successfully!');
         $this->showModal = false;
     }
 
@@ -121,18 +121,8 @@ class Rewards extends Component
                 'icon' => $this->icon,
             ]);
 
-            $this->dispatch('reward-updated', 'Reward updated successfully!');
+            session()->push('status', 'Reward updated successfully!');
             $this->showModal = false;
-        }
-    }
-
-    public function deleteReward($id)
-    {
-        $reward = Reward::find($id);
-        
-        if ($reward) {
-            $reward->delete();
-            session()->flash('message', 'Reward deleted successfully!');
         }
     }
 
@@ -141,7 +131,7 @@ class Rewards extends Component
         $reward = Reward::findOrFail($id);
         $reward->status = 'draft';
         $reward->save();
-        session()->flash('message', 'Reward drafted successfully!');
+        session()->push('status', 'Reward drafted successfully!');
     }
 
     public function restore($id) 
@@ -149,7 +139,7 @@ class Rewards extends Component
         $reward = Reward::findOrFail($id);
         $reward->status = 'active';
         $reward->save();    
-        session()->flash('message', 'Reward restored successfully!');
+        session()->push('status', 'Reward restored successfully!');
     }
 
     // Drafted Section
@@ -169,6 +159,12 @@ class Rewards extends Component
     {
         $export = new \App\Exports\Recognition\RewardsExport();
         return $export->export();
+    }
+
+        // Clear Message Status
+    public function clearStatus()
+    {
+        session()->forget('status');
     }
 
     public function render()
@@ -203,6 +199,9 @@ class Rewards extends Component
             $query->where('status', $this->statusFilter);
         }
 
+        // Exclude draft rewards from main table
+        $query->where('status', '!=', 'draft');
+
         $rewards = $query->paginate(10);
 
         if ($this->showDrafts) {
@@ -214,7 +213,7 @@ class Rewards extends Component
                 'statusCounts' => $statusCounts,
                 'rewards' => null,
                 'drafts'  => $drafts,
-            ]);
+            ])->layout('layouts.app');
         }
 
         return view('livewire.user.recognition.rewards', [

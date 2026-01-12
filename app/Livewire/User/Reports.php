@@ -4,14 +4,15 @@ namespace App\Livewire\User;
 
 use Livewire\Component;
 use App\Exports\Recruitment\RequisitionsExport;
-use App\Exports\Recruitmnet\JobPostsExport;
+use App\Exports\Recruitment\JobPostsExport;
 use App\Exports\Onboarding\EmployeesExport;
-use App\Exports\Onboarding\DocumentChecklistExport;
-use App\Onboarding\OrientationScheduleExport;
+use App\Exports\Onboarding\DocumentChecklistsExport;
+use App\Exports\Onboarding\OrientationSchedulesExport;
 use App\Performance\EvaluationRecordsExport;
 use App\Recognition\RewardsExport;
 use App\Recognition\GiveRewardsExport;
 use App\Models\Report;
+use App\Models\Onboarding\DocumentChecklist;
 
 class Reports extends Component
 {
@@ -84,19 +85,30 @@ class Reports extends Component
     
     public function exportEmployee()
     {
-        $export = new EmployeesExport();
+        $employees = DocumentChecklist::get()->map(function ($checklist) {
+            return [
+                'Name' => $checklist->employee_name,
+                'Position' => 'N/A',
+                'Department' => 'N/A',
+                'Contract Signing' => $checklist->getDocumentStatus('resume'),
+                'HR Documents' => $checklist->getDocumentStatus('medical_certificate'),
+                'Training Modules' => $checklist->getDocumentStatus('valid_government_id'),
+            ];
+        })->toArray();
+        
+        $export = new EmployeesExport($employees);
         return $export->export();
     }
     
     public function exportDocumentChecklist()
     {
-        $export = new DocumentChecklistExport();
+        $export = new DocumentChecklistsExport();
         return $export->export();
     }
     
     public function exportOrientationSchedule()
     {
-        $export = new OrientationScheduleExport();
+        $export = new OrientationSchedulesExport();
         return $export->export();
     }
     
@@ -128,16 +140,14 @@ class Reports extends Component
         Report::create([
             'report_name' => $this->reportName,
             'report_type' => $this->reportType,
-            'report_file' => 'xlsx',
+            'report_file' => $this->reportName . '_' . date('Y-m-d_H-i-s') . '.xlsx',
             'status' => 'published',
         ]);
 
         $this->reset(['reportName', 'reportType']);
         $this->reports = Report::latest()->get();
         
-        // Close modal and show success message
-        $this->dispatch('closeModal');
-        session()->flash('message', 'Report created successfully!');
+        session()->flash('message', 'Report created successfully! Click the download button to generate the file.');
     }
 
     public function render()

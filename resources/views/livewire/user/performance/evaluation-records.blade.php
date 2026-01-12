@@ -256,29 +256,18 @@
                                         <div @class("progress-bar {{ $evaluation->overall_score >= 80 ? 'bg-success' : ($evaluation->overall_score >= 60 ? 'bg-warning' : 'bg-danger') }}") 
                                              style="width: {{ $evaluation->overall_score }}%"></div>
                                     </div>
-                                    <span @class("badge {{ $evaluation->overall_score >= 80 ? 'bg-success' : ($evaluation->overall_score >= 60 ? 'bg-warning' : 'bg-danger') }}")>
-                                        {{ $evaluation->overall_score }}/100
-                                    </span>
+                                    <div @class('d-flex flex-column ms-2')>
+                                        <span @class("badge {{ $evaluation->overall_score >= 80 ? 'bg-success' : ($evaluation->overall_score >= 60 ? 'bg-warning' : 'bg-danger') }}")>
+                                            {{ $evaluation->overall_score }}%
+                                        </span>
+                                        <small @class('text-muted')>{{ $evaluation->overall_score }}/100</small>
+                                    </div>
                                 </div>
                             </td>
-                            <td>{!! $evaluation->status_badge !!}</td>
                             <td>
-                                @if($evaluation->performance_areas)
-                                    <div @class('d-flex flex-wrap gap-1')>
-                                        @php
-                                            $areas = explode(',', $evaluation->performance_areas);
-                                            $areas = array_slice($areas, 0, 3);
-                                        @endphp
-                                        @foreach($areas as $area)
-                                            <span @class('badge bg-light text-dark')>{{ trim($area) }}</span>
-                                        @endforeach
-                                        @if(count(explode(',', $evaluation->performance_areas)) > 3)
-                                            <span @class('badge bg-secondary')>+{{ count(explode(',', $evaluation->performance_areas)) - 3 }}</span>
-                                        @endif
-                                    </div>
-                                @else
-                                    <span @class('text-muted')>Not specified</span>
-                                @endif
+                                <span @class('badge {{ $evaluation->status === 'Accepted' ? 'bg-success' : ($evaluation->status === 'Pending' ? 'bg-warning' : 'bg-danger') }}')>
+                                    {{ $evaluation->status }}
+                                </span>
                             </td>
                             <td>
                                 <div @class('d-flex align-items-center')>
@@ -382,13 +371,16 @@
                             </td>
                             <td>
                                 <div @class('d-flex align-items-center')>
-                                    <div @class('progress me-2') style="width: 60px; height: 8px;">
+                                    <div @class('progress me-2' style="width: 60px; height: 8px;">
                                         <div @class("progress-bar {{ $draft->overall_score >= 80 ? 'bg-success' : ($draft->overall_score >= 60 ? 'bg-warning' : 'bg-danger') }}") 
                                              style="width: {{ $draft->overall_score }}%"></div>
                                     </div>
-                                    <span @class("badge {{ $draft->overall_score >= 80 ? 'bg-success' : ($draft->overall_score >= 60 ? 'bg-warning' : 'bg-danger') }}")>
-                                        {{ $draft->overall_score }}/100
-                                    </span>
+                                    <div @class='d-flex flex-column ms-2'>
+                                        <span @class("badge {{ $draft->overall_score >= 80 ? 'bg-success' : ($draft->overall_score >= 60 ? 'bg-warning' : 'bg-danger') }}")>
+                                            {{ $draft->overall_score }}%
+                                        </span>
+                                        <small @class='text-muted'>{{ $draft->overall_score }}/100</small>
+                                    </div>
                                 </div>
                             </td>
                             <td>{{ $draft->status }}</td>
