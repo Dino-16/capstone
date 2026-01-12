@@ -1,5 +1,5 @@
 <div>
-    <!-- Header -->
+    {{-- Header --}}
     <div @class('mb-4')>
         <h3 @class('fw-bold')>Performance Evaluations</h3>
         <p @class('text-muted')>Create and manage employee performance evaluations</p>
