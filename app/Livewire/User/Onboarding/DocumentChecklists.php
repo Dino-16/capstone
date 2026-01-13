@@ -104,7 +104,7 @@ class DocumentChecklists extends Component
     {
         $this->resetValidation();
         $this->reset(['employeeName', 'email', 'notes', 'selectedDocuments', 'showEmployeeDropdown']);
-        $this->selectedDocuments = array_keys($this->documentTypes); // Select all by default
+        $this->selectedDocuments = []; // Start with empty selection
         $this->showModal = true;
     }
 

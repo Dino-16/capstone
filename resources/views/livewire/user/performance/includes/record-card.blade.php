@@ -29,12 +29,12 @@
             <div @class('ps-2')>
                 {{-- Count --}}
                 <div @class('fw-semi fs-4')>
-                    {{ $stats['pending'] }}
+                    {{ $stats['ongoing'] }}
                 </div>
 
                 {{-- Label --}}
                 <div @class('text-muted small')>
-                    Pending
+                    Ongoing
                 </div>
             </div>
         </div>
