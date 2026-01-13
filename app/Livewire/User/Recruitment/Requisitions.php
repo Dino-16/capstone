@@ -57,7 +57,6 @@ class Requisitions extends Component
    public function showAll()
     {
         $this->showDrafts = false;
-        $this->resetPage();
     } 
 
     // Pagination Page when Filtered
@@ -79,50 +78,36 @@ class Requisitions extends Component
 
     public function render()
     {
-
-        // Numerical Status 
         $statusCounts = [
-            'Pending'   => Requisition::where('status', 'Pending')->count(),
-            'Accepted'  => Requisition::where('status', 'Accepted')->count(),
-            'Drafted'   => Requisition::where('status', 'Drafted')->count(),
-            'All'       => Requisition::count(),
+            'Pending'  => Requisition::where('status', 'Pending')->count(),
+            'Accepted' => Requisition::where('status', 'Accepted')->count(),
+            'Drafted'  => Requisition::where('status', 'Drafted')->count(),
+            'All'      => Requisition::count(),
         ];
-        
 
-        // Query
         $query = Requisition::query()->latest();
 
-        // Filters and Search
-
-        if  ($this->search) {
-            $query->where(function ($q) {
-                $q->where('requested_by', 'like', "%{$this->search}%")
-                  ->orWhere('department', 'like', "%{$this->search}%")
-                  ->orWhere('position', 'like', "%{$this->search}%");
-            }); 
-        }
-
-        if ($this->statusFilter !== 'All') {
-            $query->where('status', $this->statusFilter);
-        }
-
-        $requisitions = $query->paginate(10);
-
         if ($this->showDrafts) {
-            $drafts = Requisition::where('status', 'Drafted')
-                        ->latest()
-                        ->paginate(10);
+            $query->where('status', 'Drafted');
+        } else {
+            
+            if ($this->search) {
+                $query->where(function ($q) {
+                    $q->where('requested_by', 'like', "%{$this->search}%")
+                    ->orWhere('department', 'like', "%{$this->search}%")
+                    ->orWhere('position', 'like', "%{$this->search}%");
+                });
+            }
 
-            return view('livewire.user.recruitment.requisitions', [
-                'statusCounts' => $statusCounts,
-                'requisitions' => null,
-                'drafts'       => $drafts,
-            ])->layout('layouts.app');
+            if ($this->statusFilter !== 'All') {
+                $query->where('status', $this->statusFilter);
+            }
         }
 
         return view('livewire.user.recruitment.requisitions', [
-                'requisitions' => $requisitions,
-                'statusCounts' => $statusCounts,
+            'statusCounts' => $statusCounts,
+            'requisitions' => $query->paginate(10),
+            'drafts'       => $this->showDrafts ? $query->paginate(10) : null,
         ])->layout('layouts.app');
     }
 }

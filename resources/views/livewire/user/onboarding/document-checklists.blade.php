@@ -120,13 +120,6 @@
                             </td>
                             <td>
                                 <div @class('d-flex flex-column gap-1')>
-                                    {{-- Status Badge --}}
-                                    @if($document->status === 'draft')
-                                        <span @class('badge bg-secondary text-white')>Draft</span>
-                                    @else
-                                        <span @class('badge bg-success text-white')>Active</span>
-                                    @endif
-                                    
                                     {{-- Completion Badge --}}
                                     @if($document->getCompletionPercentage() == 100)
                                         <span @class('badge bg-primary text-white')>Complete</span>
@@ -139,28 +132,30 @@
                                     %: {{ number_format($document->getCompletionPercentage(), 0) }}%
                                 </small>
                             </td>
-                            <td @class('gap-3')>
-                                <button
-                                    @class('btn btn-primary btn-sm me-2')
-                                    wire:click="editEmployee({{ $document->id }})"
-                                    title="Edit"
-                                >
-                                    <i @class('bi bi-pencil')></i>
-                                </button>
-                                <button
-                                    @class('btn btn-info btn-sm me-2')
-                                    wire:click="openMessageModal({{ $document->id }})"
-                                    title="Message"
-                                >
-                                    <i @class('bi bi-envelope')></i>
-                                </button>
-                                <button
-                                    @class('btn btn-danger btn-sm')
-                                    wire:click="draft({{ $document->id }})"
-                                    title="Draft Employee"
-                                >
-                                    <i @class('bi bi-journal-text')></i>
-                                </button>
+                            <td>
+                                <div @class('d-flex gap-2 align-items-center')>
+                                    <button
+                                        @class('btn btn-primary btn-sm')
+                                        wire:click="editEmployee({{ $document->id }})"
+                                        title="Edit"
+                                    >
+                                        <i @class('bi bi-pencil')></i>
+                                    </button>
+                                    <button
+                                        @class('btn btn-info btn-sm')
+                                        wire:click="openMessageModal({{ $document->id }})"
+                                        title="Message"
+                                    >
+                                        <i @class('bi bi-envelope')></i>
+                                    </button>
+                                    <button
+                                        @class('btn btn-danger btn-sm')
+                                        wire:click="draft({{ $document->id }})"
+                                        title="Draft Employee"
+                                    >
+                                        <i @class('bi bi-journal-text')></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -228,13 +223,6 @@
                             </td>
                             <td>
                                 <div @class('d-flex flex-column gap-1')>
-                                    {{-- Status Badge --}}
-                                    @if($draft->status === 'draft')
-                                        <span @class('badge bg-secondary text-white')>Draft</span>
-                                    @else
-                                        <span @class('badge bg-success text-white')>Active</span>
-                                    @endif
-                                    
                                     {{-- Completion Badge --}}
                                     @if($draft->getCompletionPercentage() == 100)
                                         <span @class('badge bg-primary text-white')>Complete</span>

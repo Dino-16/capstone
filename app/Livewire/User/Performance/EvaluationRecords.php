@@ -100,7 +100,7 @@ class EvaluationRecords extends Component
                 'evaluatorName' => 'required|string|max:255',
                 'overallScore' => 'required|numeric|min:0|max:100',
                 'performanceAreas' => 'required|string',
-                'status' => 'required|in:Draft,Pending,Completed',
+                'status' => 'required|in:Draft,Ongoing,Completed',
             ]);
 
             $evaluation = Evaluation::findOrFail($this->editingEvaluationId);
@@ -147,7 +147,7 @@ class EvaluationRecords extends Component
     public function restore($id) 
     {
         $evaluation = Evaluation::findOrFail($id);
-        $evaluation->status = 'Pending';
+        $evaluation->status = 'Ongoing';
         $evaluation->save();    
         session()->flash('message', 'Draft restored successfully!');
     }
@@ -224,7 +224,7 @@ class EvaluationRecords extends Component
         // Get statistics
         $stats = [
             'total' => Evaluation::count(),
-            'pending' => Evaluation::where('status', 'Pending')->count(),
+            'ongoing' => Evaluation::where('status', 'Ongoing')->count(),
             'completed' => Evaluation::where('status', 'Completed')->count(),
             'draft' => Evaluation::where('status', 'Draft')->count(),
             'average_score' => Evaluation::avg('overall_score'),

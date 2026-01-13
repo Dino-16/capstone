@@ -20,7 +20,7 @@
             <div>
                 <x-text-input
                     type="search"
-                    wire:model.live.debounce.3s="search"
+                    wire:model.live.debounce.500ms="search" 
                     placeholder="Search..."
                 />
             </div>

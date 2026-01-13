@@ -319,10 +319,9 @@
                                             <div @class('mb-3')>
                                                 <label @class('form-label fw-semibold')>Status</label>
                                                 <select @class('form-select') wire:model="status">
-                                                    <option value="Pending">Pending</option>
-                                                    <option value="In Progress">In Progress</option>
+                                                    <option value="Draft">Draft</option>
+                                                    <option value="Ongoing">Ongoing</option>
                                                     <option value="Completed">Completed</option>
-                                                    <option value="Cancelled">Cancelled</option>
                                                 </select>
                                                 @error('status') <div @class('invalid-feedback')>{{ $message }}</div> @enderror
                                             </div>

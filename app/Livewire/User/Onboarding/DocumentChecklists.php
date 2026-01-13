@@ -120,40 +120,31 @@ class DocumentChecklists extends Component
         $this->showEditModal = true;
     }
 
-    public function addEmployee()
-    {
-        try {
-            $this->validate([
-                'employeeName' => 'required|string|max:255',
-                'email' => 'nullable|email|max:255',
-                'notes' => 'nullable|string',
-                'selectedDocuments' => 'required|array|min:1',
-            ]);
+public function addEmployee()
+{
+    $this->validate([
+        'employeeName' => 'required',
+        'email' => 'required|email',
+        'selectedDocuments' => 'required|array|min:1'
+    ]);
 
-            // Initialize documents with selected types
-            $documents = [];
-            foreach ($this->selectedDocuments as $docType) {
-                if (isset($this->documentTypes[$docType])) {
-                    $documents[$docType] = 'incomplete';
-                }
-            }
-
-            DocumentChecklist::create([
-                'employee_name' => $this->employeeName,
-                'email' => $this->email,
-                'documents' => $documents,
-                'notes' => $this->notes,
-                'status' => 'active',
-            ]);
-
-            session()->flash('status', 'Employee added successfully with ' . count($documents) . ' documents.');
-            $this->showModal = false;
-            $this->reset(['employeeName', 'email', 'notes', 'selectedDocuments']);
-            
-        } catch (\Exception $e) {
-            session()->flash('error', 'Error adding employee: ' . $e->getMessage());
-        }
+    // Transform flat array into key-value pairs for the JSON/Array column
+    $formattedDocuments = [];
+    foreach ($this->selectedDocuments as $docKey) {
+        $formattedDocuments[$docKey] = 'incomplete'; // Set default status
     }
+
+    DocumentChecklist::create([
+        'employee_name' => $this->employeeName,
+        'email' => $this->email,
+        'documents' => $formattedDocuments,
+        'notes' => $this->notes,
+        'status' => 'active', // or 'draft'
+    ]);
+
+    $this->reset(['showModal', 'employeeName', 'email', 'selectedDocuments', 'notes']);
+    $this->dispatch('notify', 'Employee added successfully!'); 
+}
 
     public function updateEmployee()
     {
@@ -316,6 +307,7 @@ class DocumentChecklists extends Component
 
         return view('livewire.user.onboarding.document-checklists', [
             'documentChecklists' => $documentChecklists,
+            'drafts' => $documentChecklists,
             'documentTypes' => $this->documentTypes,
         ])->layout('layouts.app');
     }

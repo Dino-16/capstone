@@ -265,9 +265,21 @@
                                 </div>
                             </td>
                             <td>
-                                <span @class('badge {{ $evaluation->status === 'Accepted' ? 'bg-success' : ($evaluation->status === 'Pending' ? 'bg-warning' : 'bg-danger') }}')>
+                                <span @class('badge {{ $evaluation->status === "Completed" ? "bg-success" : ($evaluation->status === "Ongoing" ? "bg-info" : ($evaluation->status === "Draft" ? "bg-secondary" : "bg-danger")) }}')>
                                     {{ $evaluation->status }}
                                 </span>
+                            </td>
+                            <td>
+                                <div @class('d-flex align-items-start')>
+                                    <i @class('bi bi-clipboard-check me-2 text-muted mt-1')></i>
+                                    <div>
+                                        @if($evaluation->performance_areas)
+                                            {{ $evaluation->performance_areas }}
+                                        @else
+                                            <span @class('text-muted')>No performance areas specified</span>
+                                        @endif
+                                    </div>
+                                </div>
                             </td>
                             <td>
                                 <div @class('d-flex align-items-center')>
@@ -371,15 +383,15 @@
                             </td>
                             <td>
                                 <div @class('d-flex align-items-center')>
-                                    <div @class('progress me-2' style="width: 60px; height: 8px;">
+                                    <div @class('progress me-2') style="width: 60px; height: 8px;">
                                         <div @class("progress-bar {{ $draft->overall_score >= 80 ? 'bg-success' : ($draft->overall_score >= 60 ? 'bg-warning' : 'bg-danger') }}") 
                                              style="width: {{ $draft->overall_score }}%"></div>
                                     </div>
-                                    <div @class='d-flex flex-column ms-2'>
+                                    <div @class('d-flex flex-column ms-2')>
                                         <span @class("badge {{ $draft->overall_score >= 80 ? 'bg-success' : ($draft->overall_score >= 60 ? 'bg-warning' : 'bg-danger') }}")>
                                             {{ $draft->overall_score }}%
                                         </span>
-                                        <small @class='text-muted'>{{ $draft->overall_score }}/100</small>
+                                        <small @class('text-muted')>{{ $draft->overall_score }}/100</small>
                                     </div>
                                 </div>
                             </td>
