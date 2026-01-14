@@ -170,6 +170,7 @@
             <p @class('text-secondary mb-0')>
                 Only draft requisitions
             </p>
+            <p>Test</p>
         </div>
         <div @class('table-responsive border rounded bg-white px-5 rounded-top-0 border-top-0')>
             <table @class('table')>
