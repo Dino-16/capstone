@@ -94,7 +94,7 @@
     </div>
 
     {{-- MAIN TABLE --}}
-    @if($requisitions !== null)
+    @if($requisitions)
         <div @class('p-5 bg-white rounded border rounded-bottom-0 border-bottom-0')>
             <h3>All Requisitions</h3>
             <p @class('text-secondary mb-0')>
@@ -164,10 +164,8 @@
             </table>
             {{ $requisitions->links() }}
         </div>
-
-    {{-- DRAFT TABLE --}}
-    @elseif($drafts !== null)
-        <div @class('p-5 bg-white rounded border rounded-bottom-0 border-bottom-0')>
+    @elseif($showDrafts)
+            <div @class('p-5 bg-white rounded border rounded-bottom-0 border-bottom-0')>
             <h3>Draft Requisitions</h3>
             <p @class('text-secondary mb-0')>
                 Only draft requisitions
@@ -187,6 +185,7 @@
                 </thead>
                 <tbody>
                     @forelse($drafts as $draft)
+                        @if($draft->status === 'Drafted')
                         <tr>
                             <td>{{ $draft->requested_by }}</td>
                             <td>{{ $draft->department }}</td>
@@ -203,6 +202,7 @@
                                 </button>
                             </td>
                         </tr>
+                        @endif
                     @empty
                         <tr>
                             <td colspan="7" @class('text-center text-muted')>

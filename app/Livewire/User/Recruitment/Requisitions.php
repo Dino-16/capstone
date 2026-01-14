@@ -51,7 +51,6 @@ class Requisitions extends Component
     public function openDraft()
     {
         $this->showDrafts = true;
-        $this->resetPage();
     }
 
    public function showAll()
@@ -85,29 +84,35 @@ class Requisitions extends Component
             'All'      => Requisition::count(),
         ];
 
+        // When drafts are open → only draft data
+        if ($this->showDrafts) {
+            return view('livewire.user.recruitment.requisitions', [
+                'statusCounts' => $statusCounts,
+                'requisitions' => null,
+                'drafts'       => Requisition::where('status', 'Drafted')->latest()->paginate(10),
+            ])->layout('layouts.app');
+        }
+
+        // Otherwise show normal list
         $query = Requisition::query()->latest();
 
-        if ($this->showDrafts) {
-            $query->where('status', 'Drafted');
-        } else {
-            
-            if ($this->search) {
-                $query->where(function ($q) {
-                    $q->where('requested_by', 'like', "%{$this->search}%")
-                    ->orWhere('department', 'like', "%{$this->search}%")
-                    ->orWhere('position', 'like', "%{$this->search}%");
-                });
-            }
+        if ($this->search) {
+            $query->where(function ($q) {
+                $q->where('requested_by', 'like', "%{$this->search}%")
+                ->orWhere('department', 'like', "%{$this->search}%")
+                ->orWhere('position', 'like', "%{$this->search}%");
+            });
+        }
 
-            if ($this->statusFilter !== 'All') {
-                $query->where('status', $this->statusFilter);
-            }
+        if ($this->statusFilter !== 'All') {
+            $query->where('status', $this->statusFilter);
         }
 
         return view('livewire.user.recruitment.requisitions', [
             'statusCounts' => $statusCounts,
             'requisitions' => $query->paginate(10),
-            'drafts'       => $this->showDrafts ? $query->paginate(10) : null,
+            'drafts'       => null,
         ])->layout('layouts.app');
     }
+
 }
