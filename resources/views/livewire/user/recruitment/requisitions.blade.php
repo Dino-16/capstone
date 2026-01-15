@@ -93,6 +93,11 @@
         </div>
     </div>
 
+    @if($showDrafts)
+        <div @class('mb-3')>
+            <button @class('btn btn-default') wire:click="showAll"><i class="bi bi-arrow-left-circle-fill me-1"></i>Back to All</button>
+        </div>
+    @endif
     {{-- MAIN TABLE --}}
     @if($requisitions)
         <div @class('p-5 bg-white rounded border rounded-bottom-0 border-bottom-0')>
@@ -166,7 +171,6 @@
         </div>
     @elseif($showDrafts)
             <div @class('p-5 bg-white rounded border rounded-bottom-0 border-bottom-0')>
-            <button @class('btn btn-default btn-sm') wire:click="showAll"><i class="bi bi-arrow-left-circle-fill"></i> Back to All</button>
             <h3>Draft Requisitions</h3>
             <p @class('text-secondary mb-0')>
                 Only draft requisitions
