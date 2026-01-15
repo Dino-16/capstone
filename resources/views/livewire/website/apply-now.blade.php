@@ -91,24 +91,24 @@
                     <x-input-error field="selectedRegion" />
                 </div>
 
+                @if($selectedRegion !== '130000000')
                 <div class="col-md-6">
                     <x-input-label for="province" :value="__('Province')" />
-                    <select wire:model.live="selectedProvince" id="province" class="form-select form-select-lg" 
-                        {{ count($provinces) > 0 || $selectedRegion === '130000000' ? '' : 'disabled' }}>
-                        @if($selectedRegion === '130000000')
-                            <option value="NCR">Metropolitan Manila (NCR)</option>
-                        @else
-                            <option value="">Select Province</option>
-                            @foreach($provinces as $province)
-                                <option value="{{ $province['code'] }}">{{ $province['name'] }}</option>
-                            @endforeach
-                        @endif
+                    <select wire:model.live="selectedProvince" id="province" class="form-select form-select-lg" {{ empty($provinces) ? 'disabled' : '' }}>
+                        <option value="">Select Province</option>
+                        @foreach($provinces as $province)
+                            <option value="{{ $province['code'] }}">{{ $province['name'] }}</option>
+                        @endforeach
                     </select>
                     <x-input-error field="selectedProvince" />
                 </div>
+                @endif
 
-                <div class="col-md-6">
+                <div class="col-md-{{ $selectedRegion === '130000000' ? '12' : '6' }}">
                     <x-input-label for="city" :value="__('City / Municipality')" />
+                    @if($selectedRegion === '130000000')
+                        <small class="text-info d-block mb-2">NCR Cities Available: {{ count($cities) }}</small>
+                    @endif
                     <select wire:model.live="selectedCity" id="city" class="form-select form-select-lg" {{ empty($cities) ? 'disabled' : '' }}>
                         <option value="">Select City</option>
                         @foreach($cities as $city)

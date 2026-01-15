@@ -44,8 +44,8 @@
                         </a>
                     </li>
                     <li>
-                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'Open')">
-                            Open
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'Pending')">
+                           Pending
                         </a>
                     </li>
                     <li>
@@ -54,8 +54,8 @@
                         </a>
                     </li>
                     <li>
-                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'Draft')">
-                            Draft
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'Drafted')">
+                            Drafted
                         </a>
                     </li>
                 </ul>
@@ -151,7 +151,7 @@
                                         wire:click="draft({{ $req->id }})"
                                         title="Draft"
                                     >
-                                        <i @class('bi bi-x')></i>
+                                        <i @class('bi bi-file-earmark-text')></i>
                                     </button>
                                 </td>
                             @else
@@ -159,11 +159,35 @@
                             @endif
                         </tr>
                     @empty
-                        <tr>
-                            <td colspan="7" @class('text-center text-muted')>
-                                No requisitions found.
-                            </td>
-                        </tr>
+                        @if($statusFilter === 'Pending')
+                            <tr>
+                                <td colspan="7" @class('text-center text-muted py-5')>
+                                    <i @class('bi bi-hourglass-split d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No pending requisitions found.</div>
+                                </td>
+                            </tr>
+                        @elseif($statusFilter === 'Drafted')
+                            <tr>
+                                <td colspan="7" @class('text-center text-muted py-5')>
+                                    <i @class('bi bi-file-earmark-text d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No drafted requisitions found.</div>
+                                </td>
+                            </tr>
+                        @elseif($statusFilter === 'Accepted')
+                            <tr>
+                                <td colspan="7" @class('text-center text-muted py-5')>
+                                    <i @class('bi bi-check-circle d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No approved requisitions found.</div>
+                                </td>
+                            </tr>
+                        @else
+                            <tr>
+                                <td colspan="7" @class('text-center text-muted py-5')>
+                                    <i @class('bi bi-inbox d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No requisitions found.</div>
+                                </td>
+                            </tr>
+                        @endif
                     @endforelse
                 </tbody>
             </table>
@@ -196,7 +220,7 @@
                             <td>{{ $draft->department }}</td>
                             <td>{{ $draft->position }}</td>
                             <td>{{ $draft->opening }}</td>
-                            <td>{{ $draft->status }}</td>
+                            <td><span @class('badge bg-danger')>{{ $draft->status }}</span></td>
                             <td>
                                 <button
                                     @class('btn btn-primary btn-sm')

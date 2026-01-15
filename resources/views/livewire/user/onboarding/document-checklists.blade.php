@@ -22,20 +22,18 @@
                     placeholder="Search..."
                 />
             </div>
-
-            {{-- ADD EMPLOYEE BUTTON --}}
-            <button
-                @class('btn btn-primary')
-                wire:click="openModal"
-            >
-                <i @class('bi bi-plus-circle me-2')></i>
-                Add Employee
-            </button>
         </div>
 
         {{-- RIGHT SIDE --}}
         <div @class('mb-3')>
             <div @class('d-flex justify-content-between align-items-center gap-2')>
+                {{-- ADD EMPLOYEE BUTTON --}}
+                <button
+                    @class('btn btn-primary')
+                    wire:click="openModal"
+                >
+                Add Checklist
+                </button>
                 <button
                     @class('btn btn-success')
                     wire:click="export"
@@ -94,20 +92,11 @@
                                 <div @class('d-flex align-items-center')>
                                     <div>
                                         <strong>{{ $document->employee_name }}</strong>
-                                        @if($document->notes)
-                                            <br><small @class('text-muted')>{{ $document->notes }}</small>
-                                        @endif
                                     </div>
                                 </div>
                             </td>
                             <td>
-                                @if($document->email)
-                                    <a href="mailto:{{ $document->email }}" @class('text-decoration-none')>
-                                        <i @class('bi bi-envelope me-1')></i>{{ $document->email }}
-                                    </a>
-                                @else
-                                    <span @class('text-muted')>No email</span>
-                                @endif
+                                {{ $document->email }}
                             </td>
                             <td>
                                 <div @class('d-flex flex-wrap gap-1')>

@@ -51,21 +51,24 @@
                     </thead>
                     <tbody>
                         @forelse($jobs as $job)
-                            @if($job->status === 'Active')
-                                <tr wire:key="{{ $job->id }}">
-                                    <td>{{ $job->position }}</td>
-                                    <td>{{ $job->updated_at }}</td>
-                                    <td>{{ $job->expiration_date }}</td>
-                                    <td>{{ $job->status }}</td>
-                                    <td>
-                                        <button wire:click="deactivateJob({{ $job->id }})" class="btn btn-sm btn-danger" title="Deactivate"><i @class('bi bi-slash-circle')></i></button>
-                                    </td>
-                                </tr>
-                            @endif
+                            <tr wire:key="{{ $job->id }}">
+                                <td>{{ $job->position }}</td>
+                                <td>{{ $job->updated_at }}</td>
+                                <td>{{ $job->expiration_date }}</td>
+                                <td><span class="badge bg-primary">{{ $job->status }}</span></td>
+                                <td>
+                                    <button wire:click="deactivateJob({{ $job->id }})" 
+                                        @class("btn btn-sm btn-orange" )
+                                        title="Deactivate">
+                                        <i @class('bi bi-slash-circle')></i>
+                                    </button>
+                                </td>
+                            </tr>
                         @empty
                             <tr>
-                                <td colspan="7" @class('text-center text-muted')>
-                                    No Active Jobs.
+                                <td colspan="7" @class('text-center text-muted py-5')>
+                                    <i @class('bi bi-briefcase d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No Active Jobs.</div>
                                 </td>
                             </tr>
                         @endforelse
@@ -162,5 +165,5 @@
     </div>
 
     {{-- Modal --}}
-    @include('livewire.user.recruitment.includes.job-details');
+    @include('livewire.user.recruitment.includes.job-details')
 </div>

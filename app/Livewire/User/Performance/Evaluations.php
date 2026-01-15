@@ -10,15 +10,11 @@ use Illuminate\Support\Facades\Http;
 class Evaluations extends Component
 {
 
-    public $showModal = false;
-    public $editing = false;
-    public $evaluationId = null;
-
     // Form fields
     public $employeeName = '';
     public $email = '';
-    public $evaluationDate = '';
-    public $evaluatorName = '';
+    public $evaluationDate = '2026-01-15';
+    public $evaluatorName = 'HR Manager';
     public $position = '';
     public $department = '';
     public $employmentDate = '';
@@ -33,7 +29,7 @@ class Evaluations extends Component
     public $strengths = '';
     public $areasForImprovement = '';
     public $comments = '';
-    public $status = 'Pending';
+    public $status = 'Draft';
 
     // Employee search
     public $employees = [];
@@ -60,7 +56,7 @@ class Evaluations extends Component
         'strengths' => 'nullable|string',
         'areasForImprovement' => 'nullable|string',
         'comments' => 'nullable|string',
-        'status' => 'required|in:Pending,In Progress,Completed,Cancelled',
+        'status' => 'required|in:Draft,Ongoing,Completed',
     ];
 
     public function mount()
@@ -114,19 +110,6 @@ class Evaluations extends Component
         $this->filteredEmployees = $this->employees;
     }
 
-    public function openModal()
-    {
-        $this->reset([
-            'employeeName', 'email', 'evaluationDate', 'evaluatorName',
-            'position', 'department', 'employmentDate', 'evaluationType',
-            'overallScore', 'jobKnowledge', 'workQuality',
-            'initiative', 'communication', 'dependability', 'attendance',
-            'strengths', 'areasForImprovement', 'comments',
-            'status', 'editing', 'evaluationId'
-        ]);
-        $this->showModal = true;
-    }
-
     // Calculate overall score when performance ratings change
     public function updatedJobKnowledge()
     {
@@ -177,27 +160,6 @@ class Evaluations extends Component
         }
     }
 
-    public function editEvaluation($id)
-    {
-        $evaluation = Evaluation::find($id);
-        
-        if ($evaluation) {
-            $this->evaluationId = $id;
-            $this->employeeName = $evaluation->employee_name;
-            $this->email = $evaluation->email;
-            $this->evaluationDate = $evaluation->evaluation_date->format('Y-m-d');
-            $this->evaluatorName = $evaluation->evaluator_name;
-            $this->performanceAreas = $evaluation->performance_areas;
-            $this->overallScore = $evaluation->overall_score;
-            $this->strengths = $evaluation->strengths;
-            $this->areasForImprovement = $evaluation->areas_for_improvement;
-            $this->comments = $evaluation->comments;
-            $this->status = $evaluation->status;
-            $this->editing = true;
-            $this->showModal = true;
-        }
-    }
-
     public function addEvaluation()
     {
         $this->validate();
@@ -225,44 +187,22 @@ class Evaluations extends Component
             'status' => $this->status,
         ]);
 
-        $this->dispatch('evaluation-added', 'Evaluation scheduled successfully!');
-        $this->showModal = false;
-    }
-
-    public function updateEvaluation()
-    {
-        $this->validate();
-
-        $evaluation = Evaluation::find($this->evaluationId);
+        session()->flash('status', 'Evaluation scheduled successfully!');
         
-        if ($evaluation) {
-            $evaluation->update([
-                'employee_name' => $this->employeeName,
-                'email' => $this->email,
-                'evaluation_date' => $this->evaluationDate,
-                'evaluator_name' => $this->evaluatorName,
-                'overall_score' => $this->overallScore,
-                'strengths' => $this->strengths,
-                'areas_for_improvement' => $this->areasForImprovement,
-                'comments' => $this->comments,
-                'status' => $this->status,
-            ]);
-
-            $this->dispatch('evaluation-updated', 'Evaluation updated successfully!');
-            $this->showModal = false;
-        }
+        $this->reset([
+            'employeeName', 'email', 'evaluationDate', 'evaluatorName',
+            'position', 'department', 'employmentDate', 'evaluationType',
+            'overallScore', 'jobKnowledge', 'workQuality',
+            'initiative', 'communication', 'dependability', 'attendance',
+            'strengths', 'areasForImprovement', 'comments',
+            'status'
+        ]);
     }
 
-    public function deleteEvaluation($id)
+    public function clearStatus()
     {
-        $evaluation = Evaluation::find($id);
-        
-        if ($evaluation) {
-            $evaluation->delete();
-            $this->dispatch('evaluation-deleted', 'Evaluation deleted successfully!');
-        }
+        session()->forget(['status', 'error']);
     }
-
 
     public function render()
     {

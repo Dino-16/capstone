@@ -12,7 +12,7 @@
         >
             @foreach((array) session('status') as $message)
                 <div
-                    @class('')
+                    @class('mb-2')
                     role="alert"
                     aria-live="assertive"
                     aria-atomic="true"

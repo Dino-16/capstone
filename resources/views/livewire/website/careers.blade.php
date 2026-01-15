@@ -52,8 +52,11 @@
                             </div>
                         </div>
                     @empty
-                        <div @class('card p-5')>
-                            <h3 @class('text-center')>No Available Jobs</h3>
+                        <div @class('card p-5 d-flex align-items-center justify-content-center')>
+                            <div>
+                                <i @class('bi bi-search d-block fs-1 text-secondary mb-3 text-center')></i>
+                                <h3 @class('text-center text-secondary')>No Available Jobs</h3>
+                            </div>
                         </div>
                     @endforelse
                 </div>

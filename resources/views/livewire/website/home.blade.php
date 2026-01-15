@@ -86,7 +86,7 @@
                 <div @class('col-lg-12 col-12')>
                     <h1 @class('text-white fw-bold')>BUILD YOUR CAREER IN <span @class('text-warning')>TRAVEL & TOURISM</span> - GROW, EXPLORE, AND MAKE AN IMPACT</h1>
                     <p @class('text-white w-75')>Join a workforce that travels the world, deliver unforgettable experiences and builds real career opportunities</p>
-                    <button @class('btn btn-dark btn-lg')>Apply Now</button>
+                    <a href="{{ route('careers') }}" @class('btn btn-dark btn-lg fs-3')>View Careers</a>
                 </div>
             </div>
         </div>

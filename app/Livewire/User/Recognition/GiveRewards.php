@@ -165,7 +165,7 @@ class GiveRewards extends Component
     {
         $this->validate();
 
-        $rewardGiven = RewardGiven::find($this->rewardGivenId);
+        $rewardGiven = GiveReward::find($this->rewardGivenId);
         
         if ($rewardGiven) {
             $rewardGiven->update([
@@ -188,7 +188,7 @@ class GiveRewards extends Component
 
     public function deleteRewardGiven($id)
     {
-        $rewardGiven = RewardGiven::find($id);
+        $rewardGiven = GiveReward::find($id);
         
         if ($rewardGiven) {
             $rewardGiven->delete();

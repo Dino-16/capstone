@@ -8,6 +8,7 @@ use Livewire\Attributes\Url;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use App\Exports\Onboarding\EmployeesExport;
 
 class Employees extends Component
 {
@@ -38,57 +39,64 @@ class Employees extends Component
     public function updatingSearch()
     {
         $this->resetPage();
+
+        // Update employees array when search term changes
+        $response = Http::get('http://hr4.jetlougetravels-ph.com/api/employees', [
+            'search' => $this->search,
+        ]);
+
+        if ($response->successful() && is_array($response->json())) {
+            $this->employees = $response->json();
+        } else {
+            $this->employees = [];
+        }
     }
 
     public function export()
     {
         // Export current filtered employees data to Excel
-        return response()->streamDownload(function () {
-            $page = \Illuminate\Pagination\Paginator::resolveCurrentPage('page');
-            $response = Http::get('http://hr4.jetlougetravels-ph.com/api/employees', [
-                'search' => $this->search,
-                'page' => $page,
-                'per_page' => -1, // Get all results for export
-            ]);
+        $response = Http::get('http://hr4.jetlougetravels-ph.com/api/employees', [
+            'search' => $this->search,
+            'per_page' => 1000, // Set a high but valid per_page value
+        ]);
 
-            if ($response->successful()) {
-                $allEmployees = collect($response->json());
-                
-                // Filter based on current search
-                if (!empty($this->search)) {
-                    $searchTerm = strtolower(trim($this->search));
-                    $filteredEmployees = $allEmployees->filter(function ($employee) use ($searchTerm) {
-                        $name = strtolower($employee['name'] ?? '');
-                        $role = strtolower($employee['role'] ?? '');
-                        return str_contains($name, $searchTerm) || str_contains($role, $searchTerm);
-                    });
-                } else {
-                    $filteredEmployees = $allEmployees;
-                }
-                
-                // Check if there's any data to export
-                if ($filteredEmployees->isEmpty()) {
-                    return "No employee data found to export.";
-                }
-                
-                // Generate CSV content for Excel
-                $csv = "Name,Position,Department,Contract Signing,HR Documents,Training Modules\n";
-                
-                foreach ($filteredEmployees as $employee) {
-                    $csv .= '"' . str_replace('"', '""', $employee['name'] ?? '—') . '",';
-                    $csv .= '"' . str_replace('"', '""', $employee['role'] ?? '—') . '",';
-                    $csv .= '"' . str_replace('"', '""', $employee['department'] ?? 'Not Integrated') . '",';
-                    $csv .= '"' . str_replace('"', '""', 'Completed') . '",';
-                    $csv .= '"' . str_replace('"', '""', 'Not Integrated') . '",';
-                    $csv .= '"' . str_replace('"', '""', 'Not Integrated') . '"';
-                    $csv .= "\n";
-                }
-                
-                return $csv;
+        if ($response->successful()) {
+            $allEmployees = collect($response->json());
+
+            // Filter based on current search
+            if (!empty($this->search)) {
+                $searchTerm = strtolower(trim($this->search));
+                $filteredEmployees = $allEmployees->filter(function ($employee) use ($searchTerm) {
+                    $name = strtolower($employee['name'] ?? '');
+                    $role = strtolower($employee['role'] ?? '');
+                    return str_contains($name, $searchTerm) || str_contains($role, $searchTerm);
+                });
+            } else {
+                $filteredEmployees = $allEmployees;
             }
-        }, 'employees.csv', [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename=employees.csv',
+
+            // Transform data for export
+            $exportData = $filteredEmployees->map(function ($employee) {
+                return [
+                    'Name' => $employee['name'] ?? '—',
+                    'Position' => $employee['role'] ?? '—',
+                    'Department' => $employee['department'] ?? 'Not Integrated',
+                    'Contract Signing' => 'Completed',
+                    'HR Documents' => 'Not Integrated',
+                    'Training Modules' => 'Not Integrated',
+                ];
+            });
+
+            $export = new EmployeesExport($exportData->toArray());
+            return $export->export();
+        }
+
+        // Return empty response if API fails
+        return response()->streamDownload(function () {
+            echo "No employee data available to export.";
+        }, 'employees_' . date('Y-m-d') . '.xls', [
+            'Content-Type' => 'application/vnd.ms-excel',
+            'Content-Disposition' => 'attachment; filename=employees_' . date('Y-m-d') . '.xls',
         ]);
     }
 

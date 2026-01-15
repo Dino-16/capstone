@@ -5,8 +5,18 @@
         <p @class('text-muted')>Create and manage employee performance evaluations</p>
     </div>
 
-    {{-- SUCCESS TOAST --}}
-    <x-toast />
+    <!-- Toast Notification -->
+    <style>
+        .fixed-toast {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1050;
+        }
+    </style>
+    <div class="fixed-toast">
+        <x-toast />
+    </div>
 
     <!-- Evaluation Form -->
     <div @class('card')>
