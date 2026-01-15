@@ -90,15 +90,22 @@
                     </button>
                 @else
                     <button
-                        @class('btn btn-secondary')
-                        wire:click="showAll"
+                        @class('btn btn-danger')
+                        wire:click="openDraft"
+                        disabled
                     >
-                        Back to All
+                        Open Drafts
                     </button>
                 @endif
             </div>
         </div>
     </div>
+
+    @if($showDrafts)
+        <div @class('mb-3')>
+            <button @class('btn btn-default') wire:click="showAll"><i class="bi bi-arrow-left-circle-fill me-1"></i>Back to All</button>
+        </div>
+    @endif
 
     {{-- MAIN TABLE --}}
     @if($rewards !== null)
