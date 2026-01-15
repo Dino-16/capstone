@@ -80,13 +80,13 @@
                     >
                         Open Drafts
                     </button>
-
                 @else
                     <button
-                        @class('btn btn-secondary')
-                        wire:click="showAll"
+                        @class('btn btn-danger')
+                        wire:click="openDraft"
+                        disabled
                     >
-                        Back to All
+                        Open Drafts
                     </button>
                 @endif
             </div>
@@ -166,11 +166,11 @@
         </div>
     @elseif($showDrafts)
             <div @class('p-5 bg-white rounded border rounded-bottom-0 border-bottom-0')>
+            <button @class('btn btn-default btn-sm') wire:click="showAll"><i class="bi bi-arrow-left-circle-fill"></i> Back to All</button>
             <h3>Draft Requisitions</h3>
             <p @class('text-secondary mb-0')>
                 Only draft requisitions
             </p>
-            <p>Test</p>
         </div>
         <div @class('table-responsive border rounded bg-white px-5 rounded-top-0 border-top-0')>
             <table @class('table')>
