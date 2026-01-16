@@ -21,22 +21,14 @@ class Rewards extends Component
     // Form fields
     public $name = '';
     public $description = '';
-    public $category = '';
-    public $value = 0;
-    public $type = 'recognition';
-    public $isActive = true;
-    public $pointsRequired = 0;
-    public $icon = '';
+    public $type = 'monetary';
+    public $benefits = '';
 
     protected $rules = [
         'name' => 'required|string|max:255',
         'description' => 'required|string',
-        'category' => 'required|string|max:255',
-        'value' => 'nullable|numeric|min:0',
-        'type' => 'required|in:monetary,non_monetary,recognition',
-        'isActive' => 'boolean',
-        'pointsRequired' => 'required|integer|min:0',
-        'icon' => 'nullable|string|max:255',
+        'type' => 'required|in:monetary,non_monetary',
+        'benefits' => 'required|string',
     ];
 
     public function mount()
@@ -47,14 +39,10 @@ class Rewards extends Component
     public function resetForm()
     {
         $this->reset([
-            'name', 'description', 'category', 'value', 'type', 
-            'isActive', 'pointsRequired', 'icon', 'editing', 'rewardId',
-            'typeFilter', 'statusFilter'
+            'name', 'description', 'type', 'benefits', 
+            'editing', 'rewardId', 'typeFilter', 'statusFilter'
         ]);
-        $this->isActive = true;
-        $this->type = 'recognition';
-        $this->pointsRequired = 0;
-        $this->value = 0;
+        $this->type = 'monetary';
         $this->typeFilter = '';
         $this->statusFilter = '';
     }
@@ -73,12 +61,8 @@ class Rewards extends Component
             $this->rewardId = $id;
             $this->name = $reward->name;
             $this->description = $reward->description;
-            $this->category = $reward->category;
-            $this->value = $reward->value;
             $this->type = $reward->type;
-            $this->isActive = $reward->is_active;
-            $this->pointsRequired = $reward->points_required;
-            $this->icon = $reward->icon;
+            $this->benefits = $reward->benefits;
             $this->editing = true;
             $this->showModal = true;
         }
@@ -91,12 +75,8 @@ class Rewards extends Component
         Reward::create([
             'name' => $this->name,
             'description' => $this->description,
-            'category' => $this->category,
-            'value' => $this->value,
             'type' => $this->type,
-            'is_active' => $this->isActive,
-            'points_required' => $this->pointsRequired,
-            'icon' => $this->icon,
+            'benefits' => $this->benefits,
         ]);
 
         session()->push('status', 'Reward created successfully!');
@@ -113,12 +93,8 @@ class Rewards extends Component
             $reward->update([
                 'name' => $this->name,
                 'description' => $this->description,
-                'category' => $this->category,
-                'value' => $this->value,
                 'type' => $this->type,
-                'is_active' => $this->isActive,
-                'points_required' => $this->pointsRequired,
-                'icon' => $this->icon,
+                'benefits' => $this->benefits,
             ]);
 
             session()->push('status', 'Reward updated successfully!');
@@ -185,7 +161,7 @@ class Rewards extends Component
             $query->where(function ($q) {
                 $q->where('name', 'like', '%' . $this->search . '%')
                   ->orWhere('description', 'like', '%' . $this->search . '%')
-                  ->orWhere('category', 'like', '%' . $this->search . '%');
+                  ->orWhere('benefits', 'like', '%' . $this->search . '%');
             });
         }
 

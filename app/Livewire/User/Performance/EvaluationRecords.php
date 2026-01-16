@@ -13,12 +13,13 @@ class EvaluationRecords extends Component
     public $search = '';
     public $statusFilter = '';
     public $scoreFilter = '';
-    public $dateFilter = '';
     public $showDrafts = false;
     
     // Modal properties
     public $showEditModal = false;
+    public $showViewModal = false;
     public $editingEvaluationId = null;
+    public $viewingEvaluation = null;
     public $employeeName;
     public $email;
     public $evaluationDate;
@@ -45,10 +46,6 @@ class EvaluationRecords extends Component
         $this->resetPage();
     }
 
-    public function updatingDateFilter()
-    {
-        $this->resetPage();
-    }
 
     public function exportData()
     {
@@ -72,6 +69,12 @@ class EvaluationRecords extends Component
         return response()->streamDownload(function () use ($csvContent) {
             echo $csvContent;
         }, $filename);
+    }
+
+    public function viewEvaluation($id)
+    {
+        $this->viewingEvaluation = Evaluation::findOrFail($id);
+        $this->showViewModal = true;
     }
 
     public function editEvaluation($id)
@@ -200,24 +203,6 @@ class EvaluationRecords extends Component
             }
         }
 
-        // Filter by date
-        if ($this->dateFilter) {
-            switch ($this->dateFilter) {
-                case 'today':
-                    $query->whereDate('evaluation_date', today());
-                    break;
-                case 'week':
-                    $query->whereBetween('evaluation_date', [now()->startOfWeek(), now()->endOfWeek()]);
-                    break;
-                case 'month':
-                    $query->whereMonth('evaluation_date', now()->month)
-                          ->whereYear('evaluation_date', now()->year);
-                    break;
-                case 'year':
-                    $query->whereYear('evaluation_date', now()->year);
-                    break;
-            }
-        }
 
         $evaluations = $query->latest('evaluation_date')->paginate(10);
 
@@ -227,10 +212,6 @@ class EvaluationRecords extends Component
             'ongoing' => Evaluation::where('status', 'Ongoing')->count(),
             'completed' => Evaluation::where('status', 'Completed')->count(),
             'draft' => Evaluation::where('status', 'Draft')->count(),
-            'average_score' => Evaluation::avg('overall_score'),
-            'this_month' => Evaluation::whereMonth('evaluation_date', now()->month)
-                                   ->whereYear('evaluation_date', now()->year)
-                                   ->count(),
         ];
 
         if ($this->showDrafts) {

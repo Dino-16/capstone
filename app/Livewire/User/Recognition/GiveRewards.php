@@ -19,7 +19,6 @@ class GiveRewards extends Component
     public $rewardGivenId = null;
     public $statusFilter = '';
     public $dateFilter = '';
-    public $inTodayCount = 0;
 
     // Form fields
     public $rewardId = '';
@@ -73,12 +72,11 @@ class GiveRewards extends Component
         $this->reset([
             'rewardId', 'employeeName', 'employeeEmail', 'employeePosition', 
             'employeeDepartment', 'givenDate', 'givenBy', 'reason', 'status', 
-            'notes', 'editing', 'rewardGivenId', 'statusFilter', 'dateFilter'
+            'notes', 'editing', 'rewardGivenId', 'statusFilter'
         ]);
         $this->givenDate = now()->format('Y-m-d');
         $this->status = 'pending';
         $this->statusFilter = '';
-        $this->dateFilter = '';
     }
 
     public function openModal()
@@ -222,29 +220,8 @@ class GiveRewards extends Component
             $query->where('status', $this->statusFilter);
         }
 
-        // Filter by date
-        if ($this->dateFilter) {
-            switch ($this->dateFilter) {
-                case 'today':
-                    $query->whereDate('given_date', today());
-                    break;
-                case 'week':
-                    $query->whereBetween('given_date', [now()->startOfWeek(), now()->endOfWeek()]);
-                    break;
-                case 'month':
-                    $query->whereMonth('given_date', now()->month)->whereYear('given_date', now()->year);
-                    break;
-                case 'year':
-                    $query->whereYear('given_date', now()->year);
-                    break;
-            }
-        }
-
         $rewardsGiven = $query->orderBy('created_at', 'desc')->paginate(10);
-        $rewards = Reward::where('is_active', true)->get();
-        
-        // Calculate today's count
-        $this->inTodayCount = GiveReward::whereDate('given_date', today())->count();
+        $rewards = Reward::where('status', 'active')->get();
 
         return view('livewire.user.recognition.give-rewards', [
             'rewardsGiven' => $rewardsGiven,

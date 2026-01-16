@@ -106,47 +106,6 @@
                     </li>
                 </ul>
             </div>
-
-            {{-- DATE FILTER DROPDOWN --}}
-            <div @class('dropdown')>
-                <button
-                    type="button"
-                    id="dateFilterDropdown"
-                    data-bs-toggle="dropdown"
-                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
-                >
-                    <i @class('bi bi-calendar-fill me-2')></i>
-                    Date: {{ $dateFilter ?: 'All' }}
-                </button>
-
-                <ul @class('dropdown-menu') aria-labelledby="dateFilterDropdown">
-                    <li>
-                        <a @class('dropdown-item') wire:click="$set('dateFilter', '')">
-                            All Dates
-                        </a>
-                    </li>
-                    <li>
-                        <a @class('dropdown-item') wire:click="$set('dateFilter', 'today')">
-                            Today
-                        </a>
-                    </li>
-                    <li>
-                        <a @class('dropdown-item') wire:click="$set('dateFilter', 'week')">
-                            This Week
-                        </a>
-                    </li>
-                    <li>
-                        <a @class('dropdown-item') wire:click="$set('dateFilter', 'month')">
-                            This Month
-                        </a>
-                    </li>
-                    <li>
-                        <a @class('dropdown-item') wire:click="$set('dateFilter', 'year')">
-                            This Year
-                        </a>
-                    </li>
-                </ul>
-            </div>
         </div>
 
         {{-- RIGHT SIDE --}}
@@ -174,16 +133,6 @@
                         disabled
                     >
                         Open Drafts
-                    </button>
-                @endif
-
-                {{-- CLEAR FILTERS BUTTON --}}
-                @if($search || $statusFilter || $scoreFilter || $dateFilter)
-                    <button
-                        @class('btn btn-outline-secondary')
-                        wire:click="$set('search', ''); $set('statusFilter', ''); $set('scoreFilter', ''); $set('dateFilter', '');"
-                    >
-                        <i @class('bi bi-x-circle me-2')></i>Clear Filters
                     </button>
                 @endif
             </div>
@@ -214,7 +163,6 @@
                         <th @class('text-secondary')>Evaluator</th>
                         <th @class('text-secondary')>Score</th>
                         <th @class('text-secondary')>Status</th>
-                        <th @class('text-secondary')>Performance Areas</th>
                         <th @class('text-secondary')>Created</th>
                         <th @class('text-secondary')>Actions</th>
                     </tr>
@@ -223,38 +171,16 @@
                     @forelse($evaluations as $evaluation)
                         <tr wire:key="{{ $evaluation->id }}">
                             <td>
-                                <div @class('d-flex align-items-center')>
-                                    <div @class('avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center me-2')>
-                                        <i @class('bi bi-person-fill text-white')></i>
-                                    </div>
-                                    <div>
-                                        <strong>{{ $evaluation->employee_name }}</strong>
-                                    </div>
-                                </div>
+                                <strong>{{ $evaluation->employee_name }}</strong>
                             </td>
                             <td>
-                                @if($evaluation->email)
-                                    <a href="mailto:{{ $evaluation->email }}" @class('text-decoration-none')>
-                                        {{ $evaluation->email }}
-                                        <i @class('bi bi-envelope-fill text-primary')></i>
-                                    </a>
-                                @else
-                                    <span @class('text-muted')>No email</span>
-                                @endif
+                                {{ $evaluation->email }}
                             </td>
                             <td>
-                                <div @class('d-flex align-items-center')>
-                                    <i @class('bi bi-calendar3 me-2 text-muted')></i>
-                                    {{ $evaluation->evaluation_date->format('M d, Y') }}
-                                </div>
+                                {{ $evaluation->evaluation_date->format('M d, Y') }}
                             </td>
                             <td>
-                                <div @class('d-flex align-items-center')>
-                                    <div @class('avatar-sm bg-info rounded-circle d-flex align-items-center justify-content-center me-2')>
-                                        <i @class('bi bi-person-badge-fill text-white')></i>
-                                    </div>
-                                    {{ $evaluation->evaluator_name }}
-                                </div>
+                                {{ $evaluation->evaluator_name }}                            
                             </td>
                             <td>
                                 <div @class('d-flex align-items-center')>
@@ -271,21 +197,7 @@
                                 </div>
                             </td>
                             <td>
-                                <span @class('badge {{ $evaluation->status === "Completed" ? "bg-success" : ($evaluation->status === "Ongoing" ? "bg-info" : ($evaluation->status === "Draft" ? "bg-secondary" : "bg-danger")) }}')>
-                                    {{ $evaluation->status }}
-                                </span>
-                            </td>
-                            <td>
-                                <div @class('d-flex align-items-start')>
-                                    <i @class('bi bi-clipboard-check me-2 text-muted mt-1')></i>
-                                    <div>
-                                        @if($evaluation->performance_areas)
-                                            {{ $evaluation->performance_areas }}
-                                        @else
-                                            <span @class('text-muted')>No performance areas specified</span>
-                                        @endif
-                                    </div>
-                                </div>
+                                {{ $evaluation->status }}
                             </td>
                             <td>
                                 <div @class('d-flex align-items-center')>
@@ -294,6 +206,14 @@
                                 </div>
                             </td>
                             <td @class('gap-3')>
+                                <button
+                                    @class('btn btn-info btn-sm')
+                                    wire:click="viewEvaluation({{ $evaluation->id }})"
+                                    title="View Evaluation"
+                                >
+                                    <i @class('bi bi-eye-fill')></i>
+                                </button>
+
                                 <button
                                     @class('btn btn-primary btn-sm')
                                     wire:click="editEvaluation({{ $evaluation->id }})"
@@ -313,8 +233,9 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" @class('text-center text-muted')>
-                                <p @class('text-muted mb-0')>No evaluation records found</p>
+                            <td colspan="9" @class('text-center text-muted py-5')>
+                                <i @class('bi bi-file-text d-block mx-auto fs-1')></i>
+                                <p @class('text-muted mb-0 mt-3')>No evaluation records found</p>
                             </td>
                         </tr>
                     @endforelse
@@ -323,7 +244,6 @@
             
             {{-- PAGINATION --}}
             <div>
-
                 {{ $evaluations->links() }}
             </div>
         </div>
@@ -428,6 +348,14 @@
                             </td>
                             <td>
                                 <button
+                                    @class('btn btn-info btn-sm')
+                                    wire:click="viewEvaluation({{ $draft->id }})"
+                                    title="View Evaluation"
+                                >
+                                    <i @class('bi bi-eye-fill')></i>
+                                </button>
+                                
+                                <button
                                     @class('btn btn-primary btn-sm')
                                     wire:click="restore({{ $draft->id }})"
                                     title="Restore Draft"
@@ -450,6 +378,9 @@
     @endif
 {{-- Edit Evaluation Modal --}}
     @include('livewire.user.performance.includes.evaluation-edit')
+    
+    {{-- View Evaluation Modal --}}
+    @include('livewire.user.performance.includes.evaluation-view')
 
 </div>
 </div>

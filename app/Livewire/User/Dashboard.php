@@ -45,7 +45,7 @@ class Dashboard extends Component
         // Recognition Stats
         $recognitionStats = [
             'rewards' => Reward::count(),
-            'active_rewards' => Reward::where('is_active', true)->count(),
+            'active_rewards' => Reward::where('status', 'active')->count(),
             'rewards_given' => GiveReward::count(),
             'pending_rewards' => GiveReward::where('status', 'pending')->count(),
         ];

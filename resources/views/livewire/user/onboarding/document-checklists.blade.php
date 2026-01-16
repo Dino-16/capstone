@@ -22,6 +22,37 @@
                     placeholder="Search..."
                 />
             </div>
+
+            {{-- COMPLETION FILTER DROPDOWN --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    id="completionFilterDropdown"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-funnel-fill me-2')></i>
+                    Completion: {{ $completionFilter }}
+                </button>
+
+                <ul @class('dropdown-menu') aria-labelledby="completionFilterDropdown">
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('completionFilter', 'All')">
+                            All
+                        </a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('completionFilter', 'Complete')">
+                            Complete
+                        </a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('completionFilter', 'Incomplete')">
+                            Incomplete
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
 
         {{-- RIGHT SIDE --}}
@@ -153,12 +184,32 @@
                             </td>
                         </tr>
                     @empty
-                        <tr>
-                            <td colspan="5" @class('text-center text-muted')>No employees found</td>
-                        </tr>
+                        @if($completionFilter === 'Complete')
+                            <tr>
+                                <td colspan="5" @class('text-center text-muted py-5')>
+                                    <i @class('bi bi-check-circle d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No complete checklists found</div>
+                                </td>
+                            </tr>
+                        @elseif($completionFilter === 'Incomplete')
+                            <tr>
+                                <td colspan="5" @class('text-center text-muted py-5')>
+                                    <i @class('bi bi-x d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No incomplete checklists found.</div>
+                                </td>
+                            </tr>
+                        @else
+                            <tr>
+                                <td colspan="5" @class('text-center text-muted py-5')>
+                                    <i @class('bi bi-bookmark-check d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No checklists found</div>
+                                </td>
+                            </tr>
+                        @endif
                     @endforelse
                 </tbody>
             </table>
+            {{ $documentChecklists->links() }}
         </div>
     @else
         {{-- DRAFT TABLE --}}

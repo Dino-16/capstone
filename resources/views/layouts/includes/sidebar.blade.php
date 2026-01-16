@@ -23,19 +23,19 @@
         <li @class("nav-item")>
             <a href="#recruitmentMenu"
             role="button"
-            aria-expanded="{{ (request()->is('requisitions') || request()->is('job-postings')) ? 'true' : 'false' }}"
+            aria-expanded="{{ (request()->is('positions') || request()->is('job-postings')) ? 'true' : 'false' }}"
             aria-controls="recruitmentMenu"
             data-bs-toggle="collapse"
             @class("nav-link text-dark d-flex justify-content-between align-items-center")>
                 <span><i @class('bi bi-briefcase-fill me-2')></i> Recruitment</span>
                 <i @class('bi bi-chevron-down small')></i>
             </a>
-            <div id="recruitmentMenu" @class('collapse ps-4 ' . ((request()->is('requisitions') || request()->is('job-postings')) ? 'show' : ''))>
+            <div id="recruitmentMenu" @class('collapse ps-4 ' . ((request()->is('positions') || request()->is('job-postings')) ? 'show' : ''))>
                 <ul @class('nav flex-column')>
                     <li @class("nav-item")>
-                        <a href="{{ route('requisitions') }}"
-                            @class('nav-link text-dark' . (request()->is('requisitions') ? 'active' : ''))>
-                            <i @class('bi bi-file-earmark-plus me-2')></i> Requisition
+                        <a href="{{ route('positions') }}"
+                            @class('nav-link text-dark' . (request()->is('positions') ? 'active' : ''))>
+                            <i @class('bi bi-file-earmark-plus me-2')></i> Position Request
                         </a>
                     </li>
                     <li @class("nav-item")>

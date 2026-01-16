@@ -122,7 +122,10 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" @class('text-center text-muted')>No orientations scheduled</td>
+                        <td colspan="6" @class('text-center text-muted py-5')>
+                            <i @class('bi bi-calendar d-block mx-auto fs-1')></i>
+                            No orientations scheduled
+                        </td>
                     </tr>
                 @endforelse
             </tbody>

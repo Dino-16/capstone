@@ -9,7 +9,7 @@
 
     {{-- STATUS CARDS --}}
     <div @class('row g-3 mb-3')>
-        <div @class('col-2')>
+        <div @class('col-md-3')>
             <div @class('card p-3 shadow-sm border-0 h-100')>
                 {{-- Icon --}}
                 <div @class('mb-2')>
@@ -18,18 +18,18 @@
 
                 <div @class('ps-2')>
                     {{-- Count --}}
-                    <div @class='fw-semi fs-4'>
+                    <div @class('fw-semi fs-4')>
                         {{ $rewardsGiven->total() }}
                     </div>
 
                     {{-- Label --}}
-                    <div @class='text-muted small'>
+                    <div @class('text-muted small')>
                         Total Given
                     </div>
                 </div>
             </div>
         </div>
-        <div @class('col-2')>
+        <div @class('col-md-3')>
             <div @class('card p-3 shadow-sm border-0 h-100')>
                 {{-- Icon --}}
                 <div @class('mb-2')>
@@ -38,18 +38,18 @@
 
                 <div @class('ps-2')>
                     {{-- Count --}}
-                    <div @class='fw-semi fs-4'>
+                    <div @class('fw-semi fs-4')>
                         {{ $rewardsGiven->where('status', 'pending')->count() }}
                     </div>
 
                     {{-- Label --}}
-                    <div @class='text-muted small'>
+                    <div @class('text-muted small')>
                         Pending
                     </div>
                 </div>
             </div>
         </div>
-        <div @class('col-2')>
+        <div @class('col-md-3')>
             <div @class('card p-3 shadow-sm border-0 h-100')>
                 {{-- Icon --}}
                 <div @class('mb-2')>
@@ -58,58 +58,18 @@
 
                 <div @class('ps-2')>
                     {{-- Count --}}
-                    <div @class='fw-semi fs-4'>
+                    <div @class('fw-semi fs-4')>
                         {{ $rewardsGiven->where('status', 'approved')->count() }}
                     </div>
 
                     {{-- Label --}}
-                    <div @class='text-muted small'>
+                    <div @class('text-muted small')>
                         Approved
                     </div>
                 </div>
             </div>
         </div>
-        <div @class('col-2')>
-            <div @class('card p-3 shadow-sm border-0 h-100')>
-                {{-- Icon --}}
-                <div @class('mb-2')>
-                    <i @class('bi bi-calendar-day text-info fs-3')></i>
-                </div>
-
-                <div @class('ps-2')>
-                    {{-- Count --}}
-                    <div @class='fw-semi fs-4'>
-                        {{ $inTodayCount }}
-                    </div>
-
-                    {{-- Label --}}
-                    <div @class='text-muted small'>
-                        Today
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div @class('col-2')>
-            <div @class('card p-3 shadow-sm border-0 h-100')>
-                {{-- Icon --}}
-                <div @class('mb-2')>
-                    <i @class('bi bi-file-text text-secondary fs-3')></i>
-                </div>
-
-                <div @class('ps-2')>
-                    {{-- Count --}}
-                    <div @class='fw-semi fs-4'>
-                        {{ $rewardsGiven->count() }}
-                    </div>
-
-                    {{-- Label --}}
-                    <div @class='text-muted small'>
-                        This Page
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div @class('col-2')>
+        <div @class('col-md-3')>
             <div @class('card p-3 shadow-sm border-0 h-100')>
                 {{-- Icon --}}
                 <div @class('mb-2')>
@@ -118,12 +78,12 @@
 
                 <div @class('ps-2')>
                     {{-- Count --}}
-                    <div @class='fw-semi fs-4'>
+                    <div @class('fw-semi fs-4')>
                         {{ $rewards->count() }}
                     </div>
 
                     {{-- Label --}}
-                    <div @class='text-muted small'>
+                    <div @class('text-muted small')>
                         Available Rewards
                     </div>
                 </div>
@@ -181,48 +141,10 @@
                     </li>
                 </ul>
             </div>
+        </div>
 
-            {{-- DATE FILTER DROPDOWN --}}
-            <div @class('dropdown')>
-                <button
-                    type="button"
-                    id="dateFilterDropdown"
-                    data-bs-toggle="dropdown"
-                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
-                >
-                    <i @class('bi bi-calendar3 me-2')></i>
-                    Date: {{ $dateFilter ?: 'All' }}
-                </button>
-
-                <ul @class('dropdown-menu') aria-labelledby="dateFilterDropdown">
-                    <li>
-                        <a @class('dropdown-item') wire:click="$set('dateFilter', '')">
-                            All Dates
-                        </a>
-                    </li>
-                    <li>
-                        <a @class('dropdown-item') wire:click="$set('dateFilter', 'today')">
-                            Today
-                        </a>
-                    </li>
-                    <li>
-                        <a @class('dropdown-item') wire:click="$set('dateFilter', 'week')">
-                            This Week
-                        </a>
-                    </li>
-                    <li>
-                        <a @class('dropdown-item') wire:click="$set('dateFilter', 'month')">
-                            This Month
-                        </a>
-                    </li>
-                    <li>
-                        <a @class('dropdown-item') wire:click="$set('dateFilter', 'year')">
-                            This Year
-                        </a>
-                    </li>
-                </ul>
-            </div>
-
+        {{-- RIGHT SIDE --}}
+        <div @class('mb-3')>
             {{-- GIVE REWARD BUTTON --}}
             <button
                 @class('btn btn-primary')
@@ -231,35 +153,18 @@
                 <i @class('bi bi-heart-fill me-2')></i>
                 Give Reward
             </button>
-        </div>
-
-        {{-- RIGHT SIDE --}}
-        <div @class('mb-3')>
-            <div @class('d-flex justify-content-between align-items-center gap-2')>
-                <button
-                    @class('btn btn-success')
-                    wire:click="export"
-                >
-                    Export to Excel
-                </button>
-                
-                {{-- CLEAR FILTERS BUTTON --}}
-                @if($search || $statusFilter || $dateFilter)
-                    <button
-                        @class('btn btn-outline-secondary btn-sm')
-                        wire:click="$set('search', ''); $set('statusFilter', ''); $set('dateFilter', '');"
-                    >
-                        <i @class('bi bi-x-circle me-2')></i>
-                        Clear All Filters
-                    </button>
-                @endif
-            </div>
+            <button
+                @class('btn btn-success')
+                wire:click="export"
+            >
+                Export to Excel
+            </button>
         </div>
     </div>
 
     {{-- MAIN TABLE --}}
     <div @class('p-5 bg-white rounded border rounded-bottom-0 border-bottom-0')>
-        <h3 @class('mb-0')">Give Rewards Management</h3>
+        <h3 @class('mb-0')>Give Rewards Management</h3>
         <p @class('text-secondary mb-0')>
             Overview of rewards given to employees
         </p>
@@ -268,13 +173,13 @@
         <table @class('table')>
             <thead>
             <tr @class('bg-dark')>
-                <th @class('text-secondary')">Employee</th>
-                <th @class('text-secondary')">Reward</th>
-                <th @class('text-secondary')">Given By</th>
-                <th @class('text-secondary')">Date</th>
-                <th @class('text-secondary')">Status</th>
-                <th @class('text-secondary')">Reason</th>
-                <th @class('text-secondary')">Actions</th>
+                <th @class('text-secondary')>Employee</th>
+                <th @class('text-secondary')>Reward</th>
+                <th @class('text-secondary')>Given By</th>
+                <th @class('text-secondary')>Date</th>
+                <th @class('text-secondary')>Status</th>
+                <th @class('text-secondary')>Reason</th>
+                <th @class('text-secondary')>Actions</th>
             </tr>
         </thead>
             <tbody>
@@ -282,7 +187,7 @@
                     <tr wire:key="reward-given-{{ $rewardGiven->id }}">
                         <td>
                             <div @class('d-flex align-items-center')>
-                                <div @class='rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-2' style="width: 32px; height: 32px;">
+                                <div @class('rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-2') style="width: 32px; height: 32px;">
                                     <i @class('bi bi-person-fill text-primary')></i>
                                 </div>
                                 <div>
@@ -294,11 +199,12 @@
                         <td>
                             @if($rewardGiven->reward)
                                 <div @class('d-flex align-items-center')>
-                                    <div @class='rounded-circle bg-info bg-opacity-10 d-flex align-items-center justify-content-center me-2' style="width: 32px; height: 32px;">
+                                    <div @class('rounded-circle bg-info bg-opacity-10 d-flex align-items-center justify-content-center me-2') style="width: 32px; height: 32px;">
                                         <i @class('bi bi-gift text-info')></i>
                                     </div>
                                     <div>
                                         <strong>{{ $rewardGiven->reward->name }}</strong>
+                                        <br><small @class('text-muted')>{{ Str::limit($rewardGiven->reward->description, 50) }}</small>
                                         <br><small @class('text-muted')>{{ $rewardGiven->reward->type }}</small>
                                     </div>
                                 </div>
@@ -308,7 +214,7 @@
                         </td>
                         <td>
                             <div @class('d-flex align-items-center')>
-                                <div @class='rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center me-2' style="width: 32px; height: 32px;">
+                                <div @class('rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center me-2') style="width: 32px; height: 32px;">
                                     <i @class('bi bi-person-badge-fill text-success')></i>
                                 </div>
                                 {{ $rewardGiven->given_by }}
@@ -350,10 +256,9 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" @class('text-center text-muted')>
-                            <i @class('bi bi-heart text-muted') style="font-size: 3rem;"></i>
-                            <p @class('text-muted mt-3 mb-0')">No rewards given yet</p>
-                            <small @class('text-muted')">Start giving rewards to recognize employee achievements</small>
+                        <td colspan="7" @class('text-center text-muted py-5')>
+                            <i @class('bi bi-heart text-muted fs-1')></i>
+                            <p @class('text-muted mt-3 mb-0')>No rewards given yet</p>
                         </td>
                     </tr>
                 @endforelse
@@ -370,15 +275,15 @@
 
     <!-- Add/Edit Reward Given Modal -->
     @if($showModal)
-        <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0, 0, 0, 0.5);">
-            <div class="modal-dialog modal-lg">
+        <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px);">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg">
-                    <div class="modal-header bg-primary text-white border-0">
-                        <h5 class="modal-title">{{ $editing ? 'Edit Reward Given' : 'Give Reward to Employee' }}</h5>
-                        <button type="button" class="btn-close btn-close-white" wire:click="$set('showModal', false)"></button>
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold">{{ $editing ? 'Edit Reward Given' : 'Give Reward to Employee' }}</h5>
+                        <button type="button" class="btn-close" wire:click="$set('showModal', false)"></button>
                     </div>
 
-                    <form wire:submit="{{ $editing ? 'updateRewardGiving' : 'addRewardGiving' }}">
+                    <form wire:submit.prevent="{{ $editing ? 'updateRewardGiving' : 'addRewardGiving' }}">
                         <div class="modal-body p-4">
                             <!-- Reward Selection -->
                             <div class="row mb-3">
@@ -400,34 +305,41 @@
                             </div>
 
                             <!-- Employee Information -->
-                            <div class="mb-4 position-relative">
-                            <label class="form-label fw-bold">Search Employee</label>
+                            <div @class('mb-4 position-relative')>
+                            <label @class('form-label fw-bold')>Search Employee</label>
                             <input 
                                 type="text" 
-                                class="form-control @error('employeeName') is-invalid @enderror" 
+                                @class('form-control') 
                                 wire:model.live="employeeName" 
                                 placeholder="Type to search employees..."
                                 autocomplete="off"
                             >
-                            @error('employeeName') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            @error('employeeName') <div @class('invalid-feedback d-block')>{{ $message }}</div> @enderror
                             
                             {{-- Employee Dropdown --}}
                             @if($showEmployeeDropdown && count($filteredEmployees) > 0)
-                                <div class="position-absolute w-100 bg-white border rounded shadow-lg mt-1" style="z-index: 1000; max-height: 200px; overflow-y: auto;">
+                                <div @class('position-absolute w-100 bg-white border rounded shadow-lg mt-1') style="z-index: 1000; max-height: 200px; overflow-y: auto;">
                                     @foreach($filteredEmployees as $employee)
                                         <div 
-                                            class="px-3 py-2 hover:bg-light cursor-pointer"
+                                            @class('px-3 py-2 hover:bg-light cursor-pointer')
                                             wire:click="selectEmployee('{{ $employee['name'] ?? $employee['employee_name'] ?? 'Unknown' }}')"
                                         >
                                             <strong>{{ $employee['name'] ?? $employee['employee_name'] ?? 'Unknown' }}</strong>
                                             @if(isset($employee['department']))
-                                                <br><small class="text-muted">{{ $employee['department'] }}</small>
+                                                <br><small @class('text-muted')>{{ $employee['department'] }}</small>
                                             @endif
                                             @if(isset($employee['email']))
-                                                <br><small class="text-muted">{{ $employee['email'] }}</small>
+                                                <br><small @class('text-muted')>{{ $employee['email'] }}</small>
                                             @endif
                                         </div>
                                     @endforeach
+                                </div>
+                            @elseif($showEmployeeDropdown && count($filteredEmployees) == 0)
+                                <div @class('position-absolute w-100 bg-white border rounded shadow-lg mt-1') style="z-index: 1000;">
+                                    <div @class('px-3 py-4 text-center text-muted')>
+                                        <i @class('bi bi-person-x fs-3 d-block mx-auto mb-2')></i>
+                                        Employee not found
+                                    </div>
                                 </div>
                             @endif
                         </div>
@@ -481,12 +393,10 @@
                             </div>
                         </div>
 
-                        <div class="modal-footer bg-light border-0">
-                            <button type="button" class="btn btn-secondary" wire:click="$set('showModal', false)">
-                                <i class="bi bi-x-circle me-2"></i>Cancel
-                            </button>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle me-2"></i>{{ $editing ? 'Update Reward' : 'Give Reward' }}
+                        <div @class('modal-footer')>
+                            <button type="button" @class('btn btn-secondary') wire:click="$set('showModal', false)">Cancel</button>
+                            <button type="submit" @class('btn btn-primary')>
+                                <i @class('bi bi-check-circle me-2')></i>{{ $editing ? 'Update Reward' : 'Give Reward' }}
                             </button>
                         </div>
                     </form>

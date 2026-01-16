@@ -28,7 +28,7 @@
 
                     {{-- Label --}}
                     <div @class('text-muted small')>
-                        {{ $status }} requisitions
+                        {{ $status }} positions
                     </div>
                 </div>
             </div>

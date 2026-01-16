@@ -290,7 +290,7 @@ class OrientationSchedule extends Component
         }
 
         return view('livewire.user.onboarding.orientation-schedule', [
-            'orientations' => $query->latest('orientation_date')->paginate($this->perPage),
+            'orientations' => $query->latest()->paginate($this->perPage),
         ])->layout('layouts.app');
     }
 }

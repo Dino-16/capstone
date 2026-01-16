@@ -30,7 +30,7 @@ Route::middleware('guest')->group(function() {
 Route::get('/dashboard', Dashboard::class)->name('dashboard');
 
 
-Route::get('/requisitions', Requisitions::class)->name('requisitions');
+Route::get('/positions', Requisitions::class)->name('positions');
 
 
 Route::get('/job-postings', JobPostings::class)->name('job-postings');    

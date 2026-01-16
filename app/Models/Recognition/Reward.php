@@ -10,20 +10,11 @@ class Reward extends Model
     protected $fillable = [
         'name',
         'description',
-        'category',
-        'value',
         'type',
-        'is_active',
+        'benefits',
         'status',
-        'points_required',
-        'icon',
     ];
 
-    protected $casts = [
-        'value' => 'decimal:2',
-        'is_active' => 'boolean',
-        'points_required' => 'integer',
-    ];
 
     public function rewardGiven()
     {
@@ -35,7 +26,6 @@ class Reward extends Model
         $badges = [
             'monetary' => '<span class="badge bg-success">Monetary</span>',
             'non_monetary' => '<span class="badge bg-info">Non-Monetary</span>',
-            'recognition' => '<span class="badge bg-warning">Recognition</span>',
         ];
 
         return $badges[$this->type] ?? '<span class="badge bg-secondary">' . $this->type . '</span>';

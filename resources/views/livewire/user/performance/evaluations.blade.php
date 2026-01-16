@@ -55,6 +55,13 @@
                                                             </div>
                                                         @endforeach
                                                     </div>
+                                                @elseif($showEmployeeDropdown && count($filteredEmployees) == 0)
+                                                    <div @class('position-absolute w-100 bg-white border rounded shadow-lg mt-1') style="z-index: 1000;">
+                                                        <div @class('px-3 py-4 text-center text-muted')>
+                                                            <i @class('bi bi-person-x fs-3 d-block mx-auto mb-2')></i>
+                                                            Employee not found
+                                                        </div>
+                                                    </div>
                                                 @endif
                                             </div>
                                         </div>

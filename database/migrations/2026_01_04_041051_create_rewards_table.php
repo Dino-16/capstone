@@ -15,12 +15,9 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->text('description');
-            $table->string('category');
-            $table->decimal('value', 10, 2)->nullable();
             $table->string('type'); 
-            $table->boolean('is_active')->default(true);
-            $table->integer('points_required')->default(0);
-            $table->string('icon')->nullable();
+            $table->text('benefits')->nullable();
+            $table->string('status')->default('active');
             $table->timestamps();
         });
     }

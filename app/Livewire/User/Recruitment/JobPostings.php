@@ -144,7 +144,7 @@ class JobPostings extends Component
             });
         }
 
-        $jobs = $query->where('status', 'Active')->paginate(10);
+        $jobs = $query->where('status', 'Active')->latest()->paginate(10);
 
         // Get all jobs for the sidebar card with its own sort
         $sidebarJobsQuery = JobListing::query();

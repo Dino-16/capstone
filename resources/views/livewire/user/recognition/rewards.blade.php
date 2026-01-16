@@ -120,10 +120,9 @@
                 <thead>
                 <tr @class('bg-dark')>
                     <th @class('text-secondary')>Reward Name</th>
-                    <th @class('text-secondary')>Category</th>
+                    <th @class('text-secondary')>Description</th>
                     <th @class('text-secondary')>Type</th>
-                    <th @class('text-secondary')>Value</th>
-                    <th @class('text-secondary')>Points</th>
+                    <th @class('text-secondary')>Benefits</th>
                     <th @class('text-secondary')>Status</th>
                     <th @class('text-secondary')>Actions</th>
                 </tr>
@@ -132,39 +131,14 @@
                     @forelse($rewards as $reward)
                         <tr wire:key="reward-{{ $reward->id }}">
                             <td>
-                                <div @class('d-flex align-items-center')>
-                                    <div @class('rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-2') style="width: 32px; height: 32px;">
-                                        @if($reward->icon)
-                                            <i @class('{{ $reward->icon }} text-primary')></i>
-                                        @else
-                                            <i @class('bi bi-gift text-primary')></i>
-                                        @endif
-                                    </div>
-                                    <div>
-                                        <strong>{{ $reward->name }}</strong>
-                                        <br><small @class('text-muted')>{{ Str::limit($reward->description, 50) }}</small>
-                                    </div>
-                                </div>
+                                <strong>{{ $reward->name }}</strong>
                             </td>
                             <td>
-                                <span @class('badge bg-light text-dark')>{{ $reward->category }}</span>
+                                {{ Str::limit($reward->description, 30)}}
                             </td>
-                            <td>{!! $reward->type_badge !!}</td>
-                            <td>
-                                @if($reward->value > 0)
-                                    ${{ number_format($reward->value, 2) }}
-                                @else
-                                    <span @class('text-muted')>---</span>
-                                @endif
-                            </td>
-                            <td>
-                                @if($reward->points_required > 0)
-                                    {{ $reward->points_required }}
-                                @else
-                                    <span @class('text-muted')>---</span>
-                                @endif
-                            </td>
-                            <td>{!! $reward->status_badge !!}</td>
+                            <td>{{ $reward->type }}</td>
+                            <td>{{ $reward->benefits }}</td>
+                            <td>{{ $reward->status }}</td>
                             <td>
                                 @if($reward->status === 'active')
                                     <button
@@ -181,7 +155,10 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" @class('text-center text-muted')>No rewards found</td>
+                            <td colspan="7" @class('text-center text-muted')>
+                                <i @class('bi bi-gift d-block mx-auto fs-1 py-5')></i>
+                                <p @class('text-muted mb-0 mt-3')>No rewards found</p>
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -208,51 +185,25 @@
                 <thead>
                     <tr @class('bg-dark')>
                         <th @class('text-secondary')>Reward Name</th>
-                        <th @class('text-secondary')>Category</th>
+                        <th @class('text-secondary')>Description</th>
                         <th @class('text-secondary')>Type</th>
-                        <th @class('text-secondary')>Value</th>
-                        <th @class('text-secondary')>Points</th>
+                        <th @class('text-secondary')>Benefits</th>
                         <th @class('text-secondary')>Status</th>
-                        <th @class('text-secondary')>Action</th>
+                        <th @class('text-secondary')>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($drafts as $draft)
                         <tr wire:key="draft-{{ $draft->id }}">
                             <td>
-                                <div @class('d-flex align-items-center')>
-                                    <div @class('rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-2') style="width: 32px; height: 32px;">
-                                        @if($draft->icon)
-                                            <i @class('{{ $draft->icon }} text-primary')></i>
-                                        @else
-                                            <i @class('bi bi-gift text-primary')></i>
-                                        @endif
-                                    </div>
-                                    <div>
-                                        <strong>{{ $draft->name }}</strong>
-                                        <br><small @class('text-muted')>{{ Str::limit($draft->description, 50) }}</small>
-                                    </div>
-                                </div>
+                                <strong>{{ $draft->name }}</strong>
                             </td>
                             <td>
-                                <span @class('badge bg-light text-dark')>{{ $draft->category }}</span>
+                                {{ Str::limit($draft->description, 30)}}
                             </td>
-                            <td>{!! $draft->type_badge !!}</td>
-                            <td>
-                                @if($draft->value > 0)
-                                    ${{ number_format($draft->value, 2) }}
-                                @else
-                                    <span @class('text-muted')>---</span>
-                                @endif
-                            </td>
-                            <td>
-                                @if($draft->points_required > 0)
-                                    {{ $draft->points_required }}
-                                @else
-                                    <span @class('text-muted')>---</span>
-                                @endif
-                            </td>
-                            <td>{!! $draft->status_badge !!}</td>
+                            <td>{{ $draft->type }}</td>
+                            <td>{{ $draft->benefits }}</td>
+                            <td>{{ $draft->status }}</td>
                             <td>
                                 <button
                                     @class('btn btn-primary btn-sm')
@@ -265,8 +216,9 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" @class('text-center text-muted')>
-                                No drafts found.
+                            <td colspan="6" @class('text-center text-muted py-5')>
+                                <i @class('bi bi-gift d-block mx-auto fs-1')></i>
+                                <p @class('text-muted mb-0 mt-3')>No drafts found</p>
                             </td>
                         </tr>
                     @endforelse

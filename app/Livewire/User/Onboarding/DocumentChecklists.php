@@ -21,6 +21,7 @@ class DocumentChecklists extends Component
     public $showEditModal = false;
     public $showMessageModal = false;
     public $showDrafts = false;
+    public $completionFilter = 'All';
     public $editingEmployeeId = null;
     public $employees = [];
     public $filteredEmployees = [];
@@ -96,6 +97,11 @@ class DocumentChecklists extends Component
     }
 
     public function updatingSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedCompletionFilter()
     {
         $this->resetPage();
     }
@@ -303,12 +309,56 @@ public function addEmployee()
             $query->where('status', 'active');
         }
 
-        $documentChecklists = $query->latest()->paginate($this->perPage);
+        $documentChecklists = $query->latest()->get();
+
+        // Filter by completion status using the same logic as the view badges
+        if ($this->completionFilter !== 'All') {
+            if ($this->completionFilter === 'Complete') {
+                $documentChecklists = $documentChecklists->filter(function($document) {
+                    return $document->getCompletionPercentage() == 100;
+                });
+            } elseif ($this->completionFilter === 'Incomplete') {
+                $documentChecklists = $documentChecklists->filter(function($document) {
+                    return $document->getCompletionPercentage() != 100;
+                });
+            }
+        }
+
+        // Get separate drafts data for the drafts table
+        $draftsQuery = DocumentChecklist::where('status', 'draft');
+        if ($this->search) {
+            $draftsQuery->where('employee_name', 'like', '%' . $this->search . '%');
+        }
+        $drafts = $draftsQuery->latest()->get();
+
+        // Paginate the filtered results
+        $documentChecklists = $this->paginateCollection($documentChecklists, $this->perPage);
+        $drafts = $this->paginateCollection($drafts, $this->perPage);
 
         return view('livewire.user.onboarding.document-checklists', [
             'documentChecklists' => $documentChecklists,
-            'drafts' => $documentChecklists,
+            'drafts' => $drafts,
             'documentTypes' => $this->documentTypes,
         ])->layout('layouts.app');
+    }
+
+    private function paginateCollection($items, $perPage)
+    {
+        $currentPage = request()->get('page', 1);
+        $offset = ($currentPage - 1) * $perPage;
+        
+        $total = $items->count();
+        $itemsForCurrentPage = $items->slice($offset, $perPage);
+        
+        return new \Illuminate\Pagination\LengthAwarePaginator(
+            $itemsForCurrentPage,
+            $total,
+            $perPage,
+            $currentPage,
+            [
+                'path' => request()->url(),
+                'pageName' => 'page',
+            ]
+        );
     }
 }
