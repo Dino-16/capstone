@@ -6,16 +6,20 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use App\Models\Applicants\Application;
 use App\Models\Recruitment\JobListing;
-use App\Jobs\ProcessResumeAI;
 use App\Data\NCRAddressData;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
+use Smalot\PdfParser\Parser;
+use OpenAI\Laravel\Facades\OpenAI;
+use OpenAI\Client;
 
 class ApplyNow extends Component
 {
     use WithFileUploads;
 
     public $applicantLastName, $applicantFirstName, $applicantMiddleName, $applicantSuffixName, $applicantPhone, $applicantEmail, $applicantResumeFile;
+    public $isUploading = false;
+    public $lastAnalysisTime = null;
     public $job, $agreedToTerms = false, $showTerms = false, $showSuccessToast = false;
     public $regions = [], $provinces = [], $cities = [], $barangays = [];
     public $selectedRegion, $selectedProvince, $selectedCity, $selectedBarangay, $houseStreet;
@@ -101,7 +105,22 @@ class ApplyNow extends Component
         }
     }
 
-    public function removeResume() { $this->applicantResumeFile = null; }
+    public function removeResume() { 
+        $this->applicantResumeFile = null; 
+        $this->isUploading = false;
+    }
+
+    public function uploading($property, $value)
+    {
+        $this->isUploading = true;
+    }
+
+    public function updated($property)
+    {
+        if ($property === 'applicantResumeFile' && $this->applicantResumeFile) {
+            $this->isUploading = false;
+        }
+    }
 
     public function submitApplication()
     {
@@ -157,6 +176,7 @@ class ApplyNow extends Component
             // CRITICAL FIX: Mapping properties to Migration column names
             $application = Application::create([
                 'applied_position' => $this->job->position,
+                'department'       => $this->job->department,
                 'first_name'       => $this->applicantFirstName,
                 'middle_name'      => $this->applicantMiddleName,
                 'last_name'        => $this->applicantLastName,
@@ -172,10 +192,17 @@ class ApplyNow extends Component
                 'agreed_to_terms'  => $this->agreedToTerms,
             ]);
 
-            DB::commit();
+            // Resume analysis integration
+            $resumeContent = $this->extractResumeContent($path);
+            $analysis = $this->analyzeResumeAgainstJob($resumeContent, $this->job);
 
-            // Dispatch AI processing job
-            ProcessResumeAI::dispatch($application);
+            // Store analysis results in the database (new columns needed in the applications table)
+            $application->update([
+                'resume_score' => $analysis['score'],
+                'resume_analysis' => $analysis['explanation'],
+            ]);
+
+            DB::commit();
 
             $this->showSuccessToast = true;
             
@@ -191,6 +218,77 @@ class ApplyNow extends Component
             DB::rollBack();
             // This will show the error on your screen if the insert fails
             $this->addError('submission', 'Database Error: ' . $e->getMessage());
+        }
+    }
+
+    private function extractResumeContent($filePath)
+    {
+        $filePath = storage_path('app/public/' . $filePath);
+        $fileContent = file_get_contents($filePath);
+
+        // Use Smalot PDF parser to extract text from PDF file
+        $parser = new Parser();
+        $pdf = $parser->parseContent($fileContent);
+        $text = $pdf->getText();
+
+        return $text;
+    }
+
+    private function analyzeResumeAgainstJob($resumeContent, $job)
+    {
+        try {
+            // Rate limiting: Check if last analysis was less than 30 seconds ago
+            if ($this->lastAnalysisTime && (time() - $this->lastAnalysisTime) < 30) {
+                return ['score' => 0, 'explanation' => 'Please wait before requesting another analysis.'];
+            }
+            
+            $this->lastAnalysisTime = time();
+
+            $prompt = "Given the following job description: \n" . $job->description . "\n\n" .
+                      "And the following resume content: \n" . $resumeContent . "\n\n" .
+                      "Rate the relevance of the resume to the job description on a scale of 0 to 100 and provide a brief explanation.";
+
+            // Create custom client with SSL verification disabled
+            $client = \OpenAI::factory()
+                ->withApiKey(env('OPENAI_API_KEY'))
+                ->withHttpHeader('Content-Type', 'application/json')
+                ->withHttpClient(new \GuzzleHttp\Client([
+                    'verify' => false,
+                    'timeout' => 30,
+                ]))
+                ->make();
+
+            $response = $client->completions()->create([
+                'model' => 'gpt-3.5-turbo-instruct',
+                'prompt' => $prompt,
+                'max_tokens' => 200,
+            ]);
+
+            $analysis = $response['choices'][0]['text'] ?? null;
+
+            if ($analysis) {
+                // Extract score and explanation from the response
+                preg_match('/\d+/', $analysis, $scoreMatch);
+                $score = $scoreMatch[0] ?? 0;
+                $explanation = str_replace($score, '', $analysis);
+
+                return [
+                    'score' => (int) $score,
+                    'explanation' => trim($explanation),
+                ];
+            }
+
+            return ['score' => 0, 'explanation' => 'Unable to analyze resume.'];
+
+        } catch (\OpenAI\Exceptions\RateLimitException $e) {
+            // Handle rate limit exceeded
+            return ['score' => 0, 'explanation' => 'AI analysis temporarily unavailable due to rate limits. Please try again later.'];
+        } catch (\OpenAI\Exceptions\ErrorException $e) {
+            // Handle other OpenAI errors
+            return ['score' => 0, 'explanation' => 'AI analysis service temporarily unavailable.'];
+        } catch (\Exception $e) {
+            // Handle general errors
+            return ['score' => 0, 'explanation' => 'Unable to analyze resume at this time.'];
         }
     }
 

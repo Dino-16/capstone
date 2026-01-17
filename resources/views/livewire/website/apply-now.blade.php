@@ -138,7 +138,14 @@
                 {{-- File Upload --}}
                 <div class="col-12 mt-5">
                     <h5 class="text-uppercase tracking-wider text-secondary fw-bold small mb-3">Professional Documents</h5>
-                    @if (!$applicantResumeFile)
+                    @if ($isUploading)
+                        <div class="upload-box d-flex flex-column justify-content-center align-items-center p-4 border border-2 border-dashed rounded-4 bg-light text-center" style="min-height: 150px;">
+                            <div class="spinner-border text-primary mb-2" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <span class="fw-bold text-muted">Uploading file...</span>
+                        </div>
+                    @elseif (!$applicantResumeFile)
                         <label for="resume" class="w-100">
                             <input wire:model="applicantResumeFile" type="file" id="resume" class="d-none" />
                             <div class="upload-box d-flex flex-column justify-content-center align-items-center p-4 border border-2 border-dashed rounded-4 bg-light text-center" style="cursor: pointer; min-height: 150px;">

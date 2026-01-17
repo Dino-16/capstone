@@ -12,6 +12,7 @@ class Application extends Model
 
     protected $fillable = [
         'applied_position', // Storing the string name of the job
+        'department',
         'first_name',
         'middle_name',
         'last_name',
