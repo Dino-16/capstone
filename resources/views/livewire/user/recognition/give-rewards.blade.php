@@ -178,7 +178,6 @@
                 <th @class('text-secondary')>Given By</th>
                 <th @class('text-secondary')>Date</th>
                 <th @class('text-secondary')>Status</th>
-                <th @class('text-secondary')>Reason</th>
                 <th @class('text-secondary')>Actions</th>
             </tr>
         </thead>
@@ -227,15 +226,6 @@
                             </div>
                         </td>
                         <td>{!! $rewardGiven->status_badge !!}</td>
-                        <td>
-                            @if($rewardGiven->reason)
-                                <span @class('text-truncate d-inline-block') style="max-width: 150px;" title="{{ $rewardGiven->reason }}">
-                                    {{ Str::limit($rewardGiven->reason, 30) }}
-                                </span>
-                            @else
-                                <span @class('text-muted')">No reason</span>
-                            @endif
-                        </td>
                         <td @class('gap-3')>
                             <button
                                 @class('btn btn-primary btn-sm me-2')
@@ -375,15 +365,7 @@
                                 </div>
                             </div>
 
-                            <!-- Reason and Notes -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label class="form-label fw-semibold">Remarks for Reward</label>
-                                    <textarea class="form-control @error('reason') is-invalid @enderror" wire:model="reason" rows="3" placeholder="Add remarks for this reward..."></textarea>
-                                    @error('reason') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                </div>
-                            </div>
-
+                            <!-- Notes -->
                             <div class="row mb-3">
                                 <div class="col-md-12">
                                     <label class="form-label fw-semibold">Additional Notes</label>

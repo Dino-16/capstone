@@ -4,19 +4,22 @@ namespace App\Models\Applicants;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use App\Models\FilteredResume;
 
 class Application extends Model
 {
     protected $table = 'applications';
 
     protected $fillable = [
-        'applied_position', // Storing the string name of the job
+        'applied_position',
         'department',
+
+        // Personal Info
         'first_name',
         'middle_name',
         'last_name',
         'suffix_name',
+
+        // Contact & Address
         'email',
         'phone',
         'region',
@@ -24,14 +27,21 @@ class Application extends Model
         'city',
         'barangay',
         'house_street',
+
+        // Resume
         'resume_path',
+
+        // Application status
         'status',
         'agreed_to_terms',
     ];
 
-    public function filteredResume(): \Illuminate\Database\Eloquent\Relations\HasOne
+    /**
+     * Relationship:
+     * One Application → One Filtered Resume (AI analyzed)
+     */
+    public function filteredResume(): HasOne
     {
-        // Explicitly use the correct class path
-        return $this->hasOne(\App\Models\Applicants\FilteredResume::class);
+        return $this->hasOne(FilteredResume::class, 'application_id');
     }
 }

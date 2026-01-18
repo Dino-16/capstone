@@ -28,7 +28,6 @@ class GiveRewards extends Component
     public $employeeDepartment = '';
     public $givenDate = '';
     public $givenBy = '';
-    public $reason = '';
     public $status = 'pending';
     public $notes = '';
 
@@ -45,7 +44,6 @@ class GiveRewards extends Component
         'employeeDepartment' => 'nullable|string|max:255',
         'givenDate' => 'required|date',
         'givenBy' => 'required|string|max:255',
-        'reason' => 'nullable|string',
         'status' => 'required|in:pending,approved,rejected',
         'notes' => 'nullable|string',
     ];
@@ -71,7 +69,7 @@ class GiveRewards extends Component
     {
         $this->reset([
             'rewardId', 'employeeName', 'employeeEmail', 'employeePosition', 
-            'employeeDepartment', 'givenDate', 'givenBy', 'reason', 'status', 
+            'employeeDepartment', 'givenDate', 'givenBy', 'status', 
             'notes', 'editing', 'rewardGivenId', 'statusFilter'
         ]);
         $this->givenDate = now()->format('Y-m-d');
@@ -130,7 +128,6 @@ class GiveRewards extends Component
             $this->employeeDepartment = $rewardGiven->employee_department;
             $this->givenDate = $rewardGiven->given_date->format('Y-m-d');
             $this->givenBy = $rewardGiven->given_by;
-            $this->reason = $rewardGiven->reason;
             $this->status = $rewardGiven->status;
             $this->notes = $rewardGiven->notes;
             $this->editing = true;
@@ -150,7 +147,6 @@ class GiveRewards extends Component
             'employee_department' => $this->employeeDepartment,
             'given_date' => $this->givenDate,
             'given_by' => $this->givenBy,
-            'reason' => $this->reason,
             'status' => $this->status,
             'notes' => $this->notes,
         ]);
@@ -174,7 +170,6 @@ class GiveRewards extends Component
                 'employee_department' => $this->employeeDepartment,
                 'given_date' => $this->givenDate,
                 'given_by' => $this->givenBy,
-                'reason' => $this->reason,
                 'status' => $this->status,
                 'notes' => $this->notes,
             ]);

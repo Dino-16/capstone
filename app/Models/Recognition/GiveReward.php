@@ -15,7 +15,6 @@ class GiveReward extends Model
         'employee_department',
         'given_date',
         'given_by',
-        'reason',
         'status',
         'notes',
     ];

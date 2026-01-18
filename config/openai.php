@@ -4,26 +4,35 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | OpenAI API Key and Organization
+    | OpenAI API Key
     |--------------------------------------------------------------------------
     |
-    | Here you may specify your OpenAI API Key and organization. This will be
-    | used to authenticate with the OpenAI API - you can find your API key
-    | and organization on your OpenAI dashboard, at https://openai.com.
+    | Your OpenAI API key. This MUST be set in your .env file.
+    |
     */
 
     'api_key' => env('OPENAI_API_KEY'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | OpenAI Organization (Optional)
+    |--------------------------------------------------------------------------
+    |
+    | Only needed if your account explicitly uses an organization ID.
+    |
+    */
+
     'organization' => env('OPENAI_ORGANIZATION'),
 
     /*
     |--------------------------------------------------------------------------
-    | OpenAI API Project
+    | OpenAI Project (Optional)
     |--------------------------------------------------------------------------
     |
-    | Here you may specify your OpenAI API project. This is used optionally in
-    | situations where you are using a legacy user API key and need association
-    | with a project. This is not required for the newer API keys.
+    | Used only for legacy keys that require project association.
+    |
     */
+
     'project' => env('OPENAI_PROJECT'),
 
     /*
@@ -31,18 +40,17 @@ return [
     | OpenAI Base URL
     |--------------------------------------------------------------------------
     |
-    | Here you may specify your OpenAI API base URL used to make requests. This
-    | is needed if using a custom API endpoint. Defaults to: api.openai.com/v1
+    | Default: https://api.openai.com/v1
+    | Change only if using a proxy or custom endpoint.
+    |
     */
-    'base_uri' => env('OPENAI_BASE_URL'),
+
+    'base_uri' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
 
     /*
     |--------------------------------------------------------------------------
-    | Request Timeout
+    | Request Timeout (seconds)
     |--------------------------------------------------------------------------
-    |
-    | The timeout may be used to specify the maximum number of seconds to wait
-    | for a response. By default, the client will time out after 30 seconds.
     */
 
     'request_timeout' => env('OPENAI_REQUEST_TIMEOUT', 30),
@@ -52,9 +60,9 @@ return [
     | SSL Verification
     |--------------------------------------------------------------------------
     |
-    | Whether to verify SSL certificates. Set to false to disable SSL verification
-    | for development environments or when encountering SSL certificate issues.
-    | WARNING: This is not secure for production environments.
+    | Disable ONLY for local development if SSL errors occur.
+    | NEVER disable in production.
+    |
     */
 
     'verify' => env('OPENAI_SSL_VERIFY', true),
@@ -63,9 +71,6 @@ return [
     |--------------------------------------------------------------------------
     | HTTP Client Options
     |--------------------------------------------------------------------------
-    |
-    | Additional options for the HTTP client. This can be used to configure
-    | custom headers, proxy settings, or other Guzzle HTTP client options.
     */
 
     'http_options' => [

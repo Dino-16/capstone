@@ -20,7 +20,6 @@ return new class extends Migration
             $table->string('employee_department')->nullable();
             $table->date('given_date');
             $table->string('given_by'); // who gave the reward
-            $table->text('reason')->nullable(); // reason for giving the reward
             $table->string('status')->default('pending'); // pending, approved, rejected
             $table->text('notes')->nullable();
             $table->timestamps();
