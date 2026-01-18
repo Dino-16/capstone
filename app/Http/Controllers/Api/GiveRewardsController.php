@@ -10,6 +10,6 @@ class GiveRewardsController extends Controller
 {
     public function index()
     {
-        return GiveReward::with('reward')->latest()->get();
+        return GiveReward::with('reward')->latest()->get(); // new
     }
 }
