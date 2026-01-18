@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Recruitment_Management\Requisition;
+use App\Models\Recruitment\Requisition;
 
 class RequisitionsController extends Controller
 {
