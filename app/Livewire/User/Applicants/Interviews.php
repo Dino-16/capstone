@@ -17,10 +17,38 @@ class Interviews extends Component
     public $interviewAnswers = [];
     public $practicalAnswers = [];
     public $search;
+    public $showCandidateDropdown = false;
+    public $filteredCandidates = [];
 
     public function updatedSearch()
     {
         $this->resetPage();
+    }
+    
+    public function updatedCandidateName()
+    {
+        if ($this->candidateName) {
+            $this->filteredCandidates = Candidate::where('candidate_name', 'like', '%' . $this->candidateName . '%')
+                ->limit(5)
+                ->get()
+                ->toArray();
+            $this->showCandidateDropdown = true;
+        } else {
+            $this->filteredCandidates = [];
+            $this->showCandidateDropdown = false;
+        }
+    }
+    
+    public function selectCandidateFromSearch($candidateName)
+    {
+        $this->candidateName = $candidateName;
+        $this->showCandidateDropdown = false;
+        
+        // Get the candidate to set position
+        $candidate = Candidate::where('candidate_name', $candidateName)->first();
+        if ($candidate) {
+            $this->selectedPosition = $candidate->applied_position ?? 'Travel Agent';
+        }
     }
     
     public function render()
@@ -60,28 +88,28 @@ class Interviews extends Component
     {
         $questions = [
             'Travel Agent' => [
-                'What experience do you have in the travel and tourism industry?',
-                'How do you handle difficult customers or complaints?',
-                'What destinations are you most familiar with and why?',
-                'How do you stay updated with travel regulations and safety protocols?',
-                'Describe a time when you had to plan a complex travel itinerary.'
+                'What is your experience in the travel and tourism industry?',
+                'How do you handle difficult customer complaints?',
+                'What are your favorite travel destinations and why?',
+                'How do you stay updated with recent travel regulations and safety protocols?',
+                'Can you describe a time when you planned a complex travel itinerary?'
             ],
             'Driver' => [
-                'What type of driving license do you hold and what vehicles can you operate?',
-                'How do you ensure vehicle safety before and during trips?',
+                'What type of driving license do you hold and which vehicles can you operate?',
+                'How do you ensure the safety of passengers and yourself while driving?',
                 'Describe your experience with long-distance driving.',
                 'How do you handle traffic violations or accidents?',
                 'What navigation tools or apps do you use for route planning?'
             ],
             'Procurement Officer' => [
-                'What experience do you have with procurement and supply chain management?',
-                'How do you evaluate and select suppliers?',
+                'What is your experience with procurement and supply chain management?',
+                'How do you evaluate and select suppliers for the company?',
                 'Describe your experience with budget management and cost reduction.',
-                'What procurement software or tools are you familiar with?',
+                'What procurement software or tools do you use for procurement processes?',
                 'How do you ensure compliance with procurement policies and regulations?'
             ],
             'Logistics Staff' => [
-                'What experience do you have in warehouse operations and inventory management?',
+                'What is your experience in warehouse operations and inventory management?',
                 'How do you ensure timely and accurate order fulfillment?',
                 'Describe your experience with logistics software and tracking systems.',
                 'How do you handle damaged or lost goods?',
@@ -90,8 +118,8 @@ class Interviews extends Component
             'Financial Staff' => [
                 'What accounting software are you proficient in?',
                 'Describe your experience with financial reporting and analysis.',
-                'How do you ensure accuracy in financial data entry and calculations?',
-                'What experience do you have with budget preparation and monitoring?',
+                'How do you ensure the accuracy of financial data entry and calculations?',
+                'What is your experience with budget preparation and monitoring?',
                 'How do you handle confidential financial information?'
             ],
             'Admin' => [
@@ -99,7 +127,7 @@ class Interviews extends Component
                 'How do you prioritize multiple tasks and deadlines?',
                 'Describe your experience with scheduling and calendar management.',
                 'How do you handle confidential documents and information?',
-                'What experience do you have with organizing meetings and events?'
+                'What is your experience with organizing meetings and events?'
             ]
         ];
         
