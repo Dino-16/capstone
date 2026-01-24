@@ -18,11 +18,14 @@ class ApplyNow extends Component
     use WithFileUploads;
 
     public $applicantLastName, $applicantFirstName, $applicantMiddleName, $applicantSuffixName, $applicantPhone, $applicantEmail, $applicantResumeFile;
+    public $applicantAge, $applicantGender;
     public $isUploading = false;
     public $lastAnalysisTime = null;
     public $job, $agreedToTerms = false, $showTerms = false, $showSuccessToast = false;
     public $regions = [], $provinces = [], $cities = [], $barangays = [];
     public $selectedRegion, $selectedProvince, $selectedCity, $selectedBarangay, $houseStreet;
+    public $showRecaptchaModal = true;
+    public $recaptchaVerified = false;
 
     public function mount($id)
     {
@@ -99,6 +102,29 @@ class ApplyNow extends Component
         }
     }
 
+    public function verifyRecaptcha($token = null)
+    {
+        if (!$token) {
+            $this->addError('recaptcha', 'Please complete the reCAPTCHA verification.');
+            return;
+        }
+
+        $response = Http::withoutVerifying()->asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+            'secret' => env('RECAPTCHA_SECRET_KEY'),
+            'response' => $token,
+            'remoteip' => request()->ip(),
+        ]);
+
+        $result = $response->json();
+
+        if ($result['success']) {
+            $this->recaptchaVerified = true;
+            $this->showRecaptchaModal = false;
+        } else {
+            $this->addError('recaptcha', 'reCAPTCHA verification failed. Please try again.');
+        }
+    }
+
     public function submitApplication()
     {
         $this->validate([
@@ -107,6 +133,8 @@ class ApplyNow extends Component
             'applicantMiddleName' => 'required|max:50',
             'applicantEmail' => 'required|email',
             'applicantPhone' => 'required',
+            'applicantAge' => 'required|integer|min:18|max:65',
+            'applicantGender' => 'required|in:male,female',
             'applicantResumeFile' => 'required|file|mimes:pdf|max:2048',
             'selectedRegion' => 'required',
             'selectedProvince' => 'required_if:selectedRegion,!=,130000000',
@@ -133,6 +161,8 @@ class ApplyNow extends Component
                 'middle_name'      => $this->applicantMiddleName,
                 'last_name'        => $this->applicantLastName,
                 'suffix_name'      => $this->applicantSuffixName,
+                'age'              => $this->applicantAge,
+                'gender'           => $this->applicantGender,
                 'email'            => $this->applicantEmail,
                 'phone'            => $this->applicantPhone,
                 'region'           => $regionName,
@@ -163,7 +193,7 @@ class ApplyNow extends Component
                 }
 
                 if (!empty($resumeContent)) {
-                    $prompt = "You are an AI that extracts structured data from resumes for automated screening.\n\nJob position: {$application->applied_position}.\n\nResume content:\n{$resumeContent}\n\nReturn a single valid JSON object with EXACTLY these keys and types:\n- age: number (best estimate of candidate age, or null)\n- gender: string (e.g. 'Male', 'Female', or 'Unknown')\n- skills: array of strings (each string is a single skill or technology, e.g. 'PHP', 'Laravel', 'Customer Service'). Always return at least 3 skills; if not explicit, infer from context or use generic skills like 'Communication', 'Teamwork'.\n- summary: string (2-4 sentence summary of the candidate)\n- experience: array of strings (each string is one job or role, e.g. 'Software Developer at Company A (2019-2022)'). Always return at least 1 experience item; if no job is given, use a best-guess like 'Work experience not clearly specified'.\n- education: array of strings (each string is one degree or education item, e.g. 'BS Computer Science - University X (2018)'). Always return at least 1 education item; if missing, use a placeholder like 'Education not clearly specified'.\n- score: number from 0 to 100 (overall suitability rating for the job)\n- qualification: string, either 'Qualified' or 'Not Qualified'.\n\nNever leave skills, experience, or education as empty arrays; always infer reasonable values or use an 'not clearly specified' placeholder string.\n\nExample JSON format (do NOT wrap in markdown):\n{\n  \"age\": 25,\n  \"gender\": \"Male\",\n  \"skills\": [\"PHP\", \"Laravel\", \"Customer Support\"],\n  \"summary\": \"Short summary here...\",\n  \"experience\": [\"Software Developer - Company A (2019-2022)\"],\n  \"education\": [\"BS Computer Science - University X (2018)\"],\n  \"score\": 85,\n  \"qualification\": \"Qualified\"\n}.\n\nReturn ONLY the JSON object, with no extra text, labels, or explanations before or after.";
+                    $prompt = "You are an AI that extracts structured data from resumes for automated screening.\n\nJob position: {$application->applied_position}.\n\nResume content:\n{$resumeContent}\n\nReturn a single valid JSON object with EXACTLY these keys and types:\n- skills: array of strings (each string is a single skill or technology, e.g. 'PHP', 'Laravel', 'Customer Service'). Always return at least 3 skills; if not explicit, infer from context or use generic skills like 'Communication', 'Teamwork'.\n- experience: array of strings (each string is one job or role, e.g. 'Software Developer at Company A (2019-2022)'). Always return at least 1 experience item; if no job is given, use a best-guess like 'Work experience not clearly specified'.\n- education: array of strings (each string is one degree or education item, e.g. 'BS Computer Science - University X (2018)'). Always return at least 1 education item; if missing, use a placeholder like 'Education not clearly specified'.\n- score: number from 0 to 100 (overall suitability rating for the job)\n- qualification: string, either 'Qualified' or 'Not Qualified'.\n\nNever leave skills, experience, or education as empty arrays; always infer reasonable values or use an 'not clearly specified' placeholder string.\n\nExample JSON format (do NOT wrap in markdown):\n{\n  \"skills\": [\"PHP\", \"Laravel\", \"Customer Support\"],\n  \"experience\": [\"Software Developer - Company A (2019-2022)\"],\n  \"education\": [\"BS Computer Science - University X (2018)\"],\n  \"score\": 85,\n  \"qualification\": \"Qualified\"\n}.\n\nReturn ONLY the JSON object, with no extra text, labels, or explanations before or after.";
 
                     // Analyze resume
                     $response = OpenAI::chat()->create([
@@ -216,19 +246,6 @@ class ApplyNow extends Component
             $parsedExperience = $parsedSections['experience'] ?? [];
             $parsedEducation = $parsedSections['education'] ?? [];
 
-            $ageFromResume = $this->extractAgeFromResume($resumeContent ?? '');
-
-            // Normalize AI data so important fields are never null/empty
-            $age = $aiData['age'] ?? $aiData['Age'] ?? $ageFromResume;
-            if ($age === null || $age === '') {
-                $age = 0; // fallback when AI cannot infer age
-            }
-
-            $gender = $aiData['gender'] ?? $aiData['Gender'] ?? null;
-            if (empty($gender)) {
-                $gender = 'Unknown';
-            }
-
             // Normalize skills (accept array or comma/semicolon/newline-separated string)
             $rawSkills = $aiData['skills'] ?? $aiData['Skills'] ?? $parsedSkills;
             if (is_string($rawSkills)) {
@@ -277,20 +294,15 @@ class ApplyNow extends Component
                 $education = ['Education not clearly specified'];
             }
 
-            $summary = $aiData['summary'] ?? $aiData['Summary'] ?? $resumeContent;
-
-            $ratingScore = $aiData['score'] ?? $aiData['Score'] ?? 0;
+            $ratingScore = $aiData['score'] ?? $aiData['Score'] ?? 50;
             $qualificationStatus = $aiData['qualification'] ?? $aiData['Qualification'] ?? 'Not Qualified';
 
             // Save filtered resume
             $application->filteredResume()->create([
-                'age'                  => $age,
-                'gender'               => $gender,
                 'skills'               => $skills,
-                'ai_summary'           => $summary,
                 'experience'           => $experience,
                 'education'            => $education,
-                'rating_score'         => $ratingScore,
+                'rating_score'         => (int) $ratingScore,
                 'qualification_status' => $qualificationStatus,
             ]);
 
@@ -299,6 +311,7 @@ class ApplyNow extends Component
             $this->reset([
                 'applicantLastName', 'applicantFirstName', 'applicantMiddleName',
                 'applicantSuffixName', 'applicantPhone', 'applicantEmail',
+                'applicantAge', 'applicantGender',
                 'applicantResumeFile', 'selectedRegion', 'selectedProvince',
                 'selectedCity', 'selectedBarangay', 'houseStreet', 'agreedToTerms'
             ]);

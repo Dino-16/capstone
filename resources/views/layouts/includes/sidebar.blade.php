@@ -3,12 +3,10 @@
 
     {{-- Profile Section --}}
     <div @class('profile-section text-center')>
-        {{-- 
         <img src="https://ui-avatars.com/api/?name={{ urlencode(substr(auth()->user()->name, 0, 1)) }}&size=150&background=0d6efd&color=fff"
             alt="Admin Profile" class="profile-img mb-2">
         <h6 @class('fw-semibold mb-1')>{{ auth()->user()->name }}</h6>
         <small @class('text-muted')>{{ auth()->user()->role }}</small>
-         --}}
     </div>
    
     {{-- Navigation Menu --}}
@@ -23,19 +21,19 @@
         <li @class("nav-item")>
             <a href="#recruitmentMenu"
             role="button"
-            aria-expanded="{{ (request()->is('positions') || request()->is('job-postings')) ? 'true' : 'false' }}"
+            aria-expanded="{{ (request()->is('recruitment-requests') || request()->is('job-postings')) ? 'true' : 'false' }}"
             aria-controls="recruitmentMenu"
             data-bs-toggle="collapse"
             @class("nav-link text-dark d-flex justify-content-between align-items-center")>
                 <span><i @class('bi bi-briefcase-fill me-2')></i> Recruitment</span>
                 <i @class('bi bi-chevron-down small')></i>
             </a>
-            <div id="recruitmentMenu" @class('collapse ps-4 ' . ((request()->is('positions') || request()->is('job-postings')) ? 'show' : ''))>
+            <div id="recruitmentMenu" @class('collapse ps-4 ' . ((request()->is('recruitment-requests') || request()->is('job-postings')) ? 'show' : ''))>
                 <ul @class('nav flex-column')>
                     <li @class("nav-item")>
-                        <a href="{{ route('positions') }}"
-                            @class('nav-link text-dark' . (request()->is('positions') ? 'active' : ''))>
-                            <i @class('bi bi-file-earmark-plus me-2')></i> Position Request
+                        <a href="{{ route('recruitment-requests') }}"
+                            @class('nav-link text-dark' . (request()->is('recruitment-requests') ? 'active' : ''))>
+                            <i @class('bi bi-file-earmark-plus me-2')></i> Recruitment Requests
                         </a>
                     </li>
                     <li @class("nav-item")>
@@ -69,34 +67,19 @@
                             <i @class('bi bi-journal-text me-2')></i> Applications
                         </a>
                     </li>
-                </ul>
-            </div>
-        </li>
-
-   {{--
-        <li @class("nav-item")>
-            <a href="#recognitionMenu"
-            role="button"
-            aria-expanded="{{ (request()->is('shout-outs') || request()->is('shoutout-records')) ? 'true' : 'false' }}"
-            aria-controls="recognitionMenu"
-            data-bs-toggle="collapse"
-            @class("nav-link text-dark d-flex justify-content-between align-items-center")>
-                <span><i @class('bi bi-award-fill me-2')></i> Recognition</span>
-                <i @class('bi bi-chevron-down small')></i>
-            </a>
-
-            <div id="recognitionMenu" @class('collapse ps-4 ' . ((request()->is('shout-outs') || request()->is('shoutout-records')) ? 'show' : ''))>
-                <ul @class('nav flex-column')>
                     <li @class("nav-item")>
-                        <a href="{{ route('recognition') }}"
-                        @class('nav-link text-dark'. (request()->is('shout-outs') ? 'active' : ''))>
-                            <i @class('bi bi-megaphone me-2')></i> Give a Shoutout
+                        <a href="{{ route('interviews') }}"
+                        @class('nav-link text-dark' . (request()->is('interviews') ? 'active' : ''))>
+                            <i @class('bi bi-calendar-event me-2')></i> Interviews
                         </a>
                     </li>
                 </ul>
             </div>
         </li>
 
+
+
+   {{--
 
         <li @class("nav-item")>
             <a href="#applicantsMenu"
@@ -135,12 +118,6 @@
                         <a href="{{ route('request-rooms') }}"
                         @class('nav-link text-dark' . (request()->is('request-rooms') ? 'active' : ''))>
                             <i @class('bi bi-door-open me-2')></i> Request Room
-                        </a>
-                    </li>
-                    <li @class("nav-item")>
-                        <a href="{{ route('interviews') }}"
-                        @class('nav-link text-dark' . (request()->is('interviews') ? 'active' : ''))>
-                            <i @class('bi bi-calendar-event me-2')></i> Interviews
                         </a>
                     </li>
                     <li @class("nav-item")>
@@ -215,6 +192,13 @@
                             <i @class('bi bi-clipboard-data-fill me-2')></i> Evaluations
                         </a>
                     </li>
+                    
+                    <li @class("nav-item")>
+                        <a href="{{ route('tracker') }}"
+                            @class('nav-link text-dark' . (request()->is('tracker') ? 'active' : ''))>
+                            <i @class('bi bi-graph-up me-2')></i> Performance Tracker
+                        </a>
+                    </li>
             
                     <li @class("nav-item")>
                         <a href="{{ route('evaluation-records') }}"
@@ -237,16 +221,22 @@
                 <i @class('bi bi-chevron-down small')></i>
             </a>
 
-            <div id="rewardsMenu" @class('collapse ps-4 ' . ((request()->is('rewards') || request()->is('reward-giving')) ? 'show' : ''))">
+            <div id="rewardsMenu" @class('collapse ps-4 ' . ((request()->is('rewards') || request()->is('reward-giving')) ? 'show' : ''))>
                 <ul @class('nav flex-column')>
                     <li @class("nav-item")>
                         <a href="{{ route('rewards') }}"
-                        @class('nav-link text-dark'. (request()->is('rewards') ? 'active' : ''))">
+                        @class('nav-link text-dark'. (request()->is('rewards') ? 'active' : ''))>
                             <i @class('bi bi-gift me-2')></i> Rewards
                         </a>
                     </li>
                     <li @class("nav-item")>
-                        <a href="{{ route('reward-giving') }}" @class('nav-link text-dark'. (request()->is('reward-giving') ? 'active' : ''))">
+                        <a href="{{ route('criteria') }}"
+                        @class('nav-link text-dark'. (request()->is('criteria') ? 'active' : ''))>
+                            <i @class('bi bi-gift me-2')></i> Recognition Criteria
+                        </a>
+                    </li>
+                    <li @class("nav-item")>
+                        <a href="{{ route('reward-giving') }}" @class('nav-link text-dark'. (request()->is('reward-giving') ? 'active' : ''))>
                             <i @class('bi bi-heart-fill me-2')></i> Give Rewards
                         </a>
                     </li>
@@ -262,6 +252,7 @@
 
         <hr>
 
+        <livewire:auth.logout />
     </ul>
 
 </aside>

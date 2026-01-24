@@ -17,10 +17,7 @@ return new class extends Migration
             $table->foreignId('application_id')->constrained()->onDelete('cascade');
             
             // AI Extracted Data
-            $table->integer('age')->nullable();
-            $table->string('gender')->nullable();
             $table->json('skills')->nullable();
-            $table->text('ai_summary')->nullable();
             $table->json('experience')->nullable();
             $table->json('education')->nullable();
             

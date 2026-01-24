@@ -14,7 +14,6 @@
 
     {{-- Livewire styles --}}
     @livewireStyles
-
 </head>
 <body style="background-color: #f8f9fa !important;">
 

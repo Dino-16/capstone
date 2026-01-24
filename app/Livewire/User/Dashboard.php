@@ -5,7 +5,7 @@ namespace App\Livewire\User;
 use Livewire\Component;
 use App\Models\Recruitment\Requisition;
 use App\Models\Recruitment\JobListing;
-//use App\Models\Applicants\Application;
+use App\Models\Applicants\Application;
 use App\Models\Onboarding\DocumentChecklist;
 use App\Models\Onboarding\Orientation;
 use App\Models\Performance\Evaluation;
@@ -22,7 +22,7 @@ class Dashboard extends Component
         $statusCounts = [
             'requisitions'  => Requisition::where('status', 'Pending')->count(),
             'jobs'          => JobListing::where('status', 'Active')->count(),
-            //'applications'  => Application::count(),
+            'applications'  => Application::count(),
             'employees'     => count(Http::get('http://hr4.jetlougetravels-ph.com/api/employees')->json()),
         ];
 
@@ -73,12 +73,16 @@ class Dashboard extends Component
     private function getMonthlyData()
     {
         $months = [];
+        $applications = [];
         $evaluations = [];
         $rewards = [];
 
         for ($i = 5; $i >= 0; $i--) {
             $month = Carbon::now()->subMonths($i);
             $months[] = $month->format('M');
+            
+            $applications[] = Application::whereMonth('created_at', $month->month)
+                ->whereYear('created_at', $month->year)->count();
             
             $evaluations[] = Evaluation::whereMonth('created_at', $month->month)
                 ->whereYear('created_at', $month->year)->count();
@@ -89,6 +93,7 @@ class Dashboard extends Component
 
         return [
             'months' => $months,
+            'applications' => $applications,
             'evaluations' => $evaluations,
             'rewards' => $rewards,
         ];
@@ -112,7 +117,7 @@ class Dashboard extends Component
     private function getRecentActivities()
     {
         return [
-            //'recent_applications' => Application::latest()->take(3)->get(),
+            'recent_applications' => Application::latest()->take(3)->get(),
             'recent_evaluations' => Evaluation::latest()->take(3)->get(),
             'recent_rewards' => GiveReward::with('reward')->latest()->take(3)->get(),
         ];

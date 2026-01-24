@@ -22,12 +22,12 @@
 
                 <div @class('ps-2')>
                     {{-- Count --}}
-                    <div @class='fw-semi fs-4'>
+                    <div @class('fw-semi fs-4')>
                         {{ $count }}
                     </div>
 
                     {{-- Label --}}
-                    <div @class='text-muted small'>
+                    <div @class('text-muted small')>
                         {{ $status }} rewards
                     </div>
                 </div>

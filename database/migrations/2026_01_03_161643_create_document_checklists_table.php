@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::create('document_checklists', function (Blueprint $table) {
             $table->id();
-            $table->string('employee_name')->unique();
-            $table->string('email')->nullable();
-            $table->json('documents')->nullable(); // Store all documents as JSON
-            $table->text('notes')->nullable();
+            $table->string('employee_name');
+            $table->string('email');
+            $table->json('documents')->nullable(); 
+            $table->enum('status', ['active', 'draft'])->default('active');
             $table->timestamps();
         });
     }

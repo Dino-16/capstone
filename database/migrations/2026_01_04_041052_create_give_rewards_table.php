@@ -16,11 +16,11 @@ return new class extends Migration
             $table->foreignId('reward_id')->constrained('rewards')->onDelete('cascade');
             $table->string('employee_name');
             $table->string('employee_email');
-            $table->string('employee_position')->nullable();
-            $table->string('employee_department')->nullable();
+            $table->string('employee_position');
+            $table->string('employee_department');
             $table->date('given_date');
-            $table->string('given_by'); // who gave the reward
-            $table->string('status')->default('pending'); // pending, approved, rejected
+            $table->string('given_by'); 
+            $table->string('status')->default('pending'); 
             $table->text('notes')->nullable();
             $table->timestamps();
         });

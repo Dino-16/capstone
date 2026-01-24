@@ -35,7 +35,6 @@
                 </div>
             </div>
         </div>
-        {{-- 
         <div class="col-md-3">
             <div class="card bg-white text-dark shadow-sm h-100 border">
                 <div class="card-body">
@@ -51,7 +50,6 @@
                 </div>
             </div>
         </div>
-        --}}
         <div class="col-md-3">
             <div class="card bg-white text-dark shadow-sm h-100 border">
                 <div class="card-body">
@@ -159,7 +157,6 @@
 
     <!-- Recent Activities -->
     <div class="row g-3">
-        {{--
         <div class="col-md-4">
             <div class="card shadow-sm">
                 <div class="card-header bg-white">
@@ -180,7 +177,6 @@
                 </div>
             </div>
         </div>
-        --}}
         <div class="col-md-4">
             <div class="card shadow-sm">
                 <div class="card-header bg-white">
@@ -234,6 +230,12 @@
         data: {
             labels: @json($monthlyData['months']),
             datasets: [{
+                label: 'Applications',
+                data: @json($monthlyData['applications']),
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }, {
                 label: 'Evaluations',
                 data: @json($monthlyData['evaluations']),
                 borderColor: 'rgb(54, 162, 235)',

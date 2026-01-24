@@ -19,10 +19,11 @@ return new class extends Migration
 
             // Personal Info
             $table->string('first_name');
-            $table->string('middle_name')->nullable();
+            $table->string('middle_name');
             $table->string('last_name');
             $table->string('suffix_name')->nullable();
-            
+            $table->integer('age');
+            $table->enum('gender', ['male', 'female']);
             // Contact & Address
             $table->string('email');
             $table->string('phone');

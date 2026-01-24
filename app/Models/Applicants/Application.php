@@ -18,6 +18,8 @@ class Application extends Model
         'middle_name',
         'last_name',
         'suffix_name',
+        'age',
+        'gender',
 
         // Contact & Address
         'email',

@@ -1,6 +1,61 @@
 <div @class(['p-5', 'bg-light'])>
+    {{-- Google reCAPTCHA Script --}}
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    
+    {{-- reCAPTCHA Modal --}}
+    @if($showRecaptchaModal)
+        <div class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" style="z-index: 9999; background-color: rgba(0,0,0,0.5);">
+            <div class="card border-0 shadow-lg rounded-4" style="min-width: 450px; max-width: 550px;">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <div class="mb-3">
+                            <i class="bi bi-shield-check text-primary" style="font-size: 4rem;"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">Security Verification</h4>
+                        <p class="text-muted">Please verify you're not a robot to continue with the application form.</p>
+                    </div>
+                    
+                    @error('recaptcha')
+                        <div class="alert alert-danger">{{ $message }}</div>
+                    @enderror
+                    
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-center">
+                            <div class="g-recaptcha" data-sitekey="{{ env('RECAPTCHA_SITE_KEY') }}" style="transform: scale(0.9); transform-origin: 0 0;"></div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="button" 
+                                onclick="verifyRecaptchaAndSubmit()" 
+                                class="btn btn-primary btn-lg"
+                                style="background-color: #213A5C; border: none; transition: background-color 0.3s ease;"
+                                onmouseover="this.style.backgroundColor='#1a2d45';"
+                                onmouseout="this.style.backgroundColor='#213A5C';">
+                            <i class="bi bi-check-circle me-2"></i>Verify and Continue
+                        </button>
+                        <a href="{{ route('careers') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Back to Jobs
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            function verifyRecaptchaAndSubmit() {
+                const recaptchaResponse = grecaptcha.getResponse();
+                if (recaptchaResponse) {
+                    @this.verifyRecaptcha(recaptchaResponse);
+                } else {
+                    alert('Please complete the reCAPTCHA verification.');
+                }
+            }
+        </script>
+    @endif
+
     {{-- SUCCESS TOAST --}}
-    @if($showSuccessToast)
+    @if($showSuccessToast && !$showRecaptchaModal)
         <div class="position-fixed top-0 end-0 p-3" style="z-index: 9999;">
             <div class="card border-0 shadow-lg bg-success text-white rounded-4 animate__animated animate__fadeInRight" 
                  style="min-width: 320px;"
@@ -17,6 +72,8 @@
         </div>
     @endif
 
+    {{-- Main Content - Only show after reCAPTCHA verification --}}
+    @if(!$showRecaptchaModal)
     <a @class(['nav-link', 'text-secondary', 'mb-4']) href="{{ route('careers') }}">
         <i class="bi bi-arrow-left-circle me-2"></i>Back to Jobs
     </a>
@@ -63,16 +120,33 @@
                     <x-text-input wire:model="applicantSuffixName" type="text" id="suffix-name" class="form-control-lg" placeholder="Jr." />
                 </div>
 
-                <div class="col-md-6">
-                    <x-input-label for="applicant-email" :value="__('Email Address')" />
-                    <x-text-input wire:model="applicantEmail" type="email" id="applicant-email" class="form-control-lg" />
-                    <x-input-error field="applicantEmail" />
+                <div class="col-md-2">
+                    <x-input-label for="applicant-age" :value="__('Age')" />
+                    <x-text-input wire:model="applicantAge" type="number" id="applicant-age" class="form-control-lg" placeholder="25" />
+                    <x-input-error field="applicantAge" />
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-md-2">
+                    <x-input-label for="applicant-gender" :value="__('Gender')" />
+                    <select wire:model="applicantGender" id="applicant-gender" class="form-select form-select-lg">
+                        @php($genders = [''=>'Select Gender', 'male'=>'Male', 'female'=>'Female'])
+                        @foreach($genders as $value => $label)
+                            <option value="{{ $value }}" {{ $applicantGender == $value ? 'selected' : '' }}>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <x-input-error field="applicantGender" />
+                </div>
+
+                <div class="col-md-8">
                     <x-input-label for="applicant-phone" :value="__('Phone Number')" />
                     <x-text-input wire:model="applicantPhone" type="text" id="applicant-phone" class="form-control-lg" />
                     <x-input-error field="applicantPhone" />
+                </div>
+
+                <div class="col-md-12">
+                    <x-input-label for="applicant-email" :value="__('Email Address')" />
+                    <x-text-input wire:model="applicantEmail" type="email" id="applicant-email" class="form-control-lg" />
+                    <x-input-error field="applicantEmail" />
                 </div>
 
                 {{-- Address Section --}}
@@ -153,6 +227,7 @@
                                 <span class="fw-bold">Click to upload Resume</span>
                             </div>
                         </label>
+                        <span wire:loading wire:target="applicantResumeFile">Uploading...</span>
                     @else
                         <div class="alert alert-info d-flex justify-content-between align-items-center rounded-4">
                             <span><i class="bi bi-file-earmark-check me-2"></i>{{ $applicantResumeFile->getClientOriginalName() }}</span>
@@ -174,19 +249,43 @@
 
                     @if($showTerms)
                         <div class="bg-light p-4 rounded-3 border mb-4 shadow-sm animate__animated animate__fadeInUp">
-                            <h6 class="fw-bold">Privacy Statement</h6>
-                            <p class="small text-muted">Your data is processed for recruitment only...</p>
+                            <h6 class="fw-bold">Jetlouge Travels Privacy Statement</h6>
+                                <p class="small text-muted">
+                                    Jetlouge Travels is committed to protecting the privacy and security of all applicants and employees. 
+                                    Any personal information you provide through this recruitment platform is collected, stored, and processed 
+                                    solely for legitimate employment and recruitment purposes. We strictly adhere to applicable cyber laws, 
+                                    including the Philippine Data Privacy Act of 2012, and international data protection standards such as 
+                                    the General Data Protection Regulation (GDPR).
+                                </p>
+                                <p class="small text-muted">
+                                    Your data will only be accessed by authorized HR personnel and will never be disclosed to third parties 
+                                    without your explicit consent, unless required by law. We implement industry-standard safeguards, including 
+                                    encryption, secure servers, and controlled access, to ensure that your information remains confidential 
+                                    and protected against unauthorized use, loss, or alteration.
+                                </p>
+                                <p class="small text-muted">
+                                    By submitting your application, you acknowledge and agree that Jetlouge Travels may retain your information 
+                                    for the duration of the recruitment process and, if successful, for the period of your employment. If your 
+                                    application is not successful, your data will be securely deleted or anonymized after a reasonable retention 
+                                    period, in compliance with legal and regulatory requirements.
+                                </p>
+                                <p class="small text-muted">
+                                    You have the right to access, correct, or request deletion of your personal data at any time. For concerns 
+                                    or inquiries regarding your information, please contact our Data Protection Officer. Jetlouge Travels 
+                                    respects your rights as a data subject and ensures that all processing activities are transparent, fair, 
+                                    and lawful under applicable cyber laws.
+                                </p>
                         </div>
                     @endif
 
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                         <button type="submit" class="btn btn-primary btn-lg px-5 shadow-sm" style="background-color: #213A5C; border: none;">
-                            <span wire:loading.remove wire:target="submitApplication">Submit Application</span>
-                            <span wire:loading wire:target="submitApplication">Processing...</span>
+                            <span wire:target="submitApplication">Submit Application</span>
                         </button>
                     </div>
                 </div>
             </div>
         </form>
     </div>
+    @endif
 </div>

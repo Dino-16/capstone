@@ -9,10 +9,7 @@ class FilteredResume extends Model
 {
     protected $fillable = [
         'application_id',
-        'age',
-        'gender',
         'skills',
-        'ai_summary',
         'experience',
         'education',
         'rating_score',
