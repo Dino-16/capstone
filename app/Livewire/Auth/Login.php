@@ -5,6 +5,7 @@ namespace App\Livewire\Auth;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
 use App\Models\User;
 
@@ -15,13 +16,56 @@ class Login extends Component
 
     public function login()
     {
-        $credentials = [
-            'email' => $this->email,
-            'password' => $this->password,
-        ];
+        // Validate input
+        $this->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
 
-        if(Auth::attempt($credentials)) {
-            return redirect()->route('dashboard');
+        try {
+            // Call HR API to get system accounts
+            $response = Http::get('http://hr4.jetlougetravels-ph.com/api/accounts');
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $systemAccounts = $data['system_accounts'] ?? [];
+                
+                // Find matching account by email and password
+                $authenticatedAccount = null;
+                foreach ($systemAccounts as $account) {
+                    if ($account['employee']['email'] === $this->email && 
+                        $account['password'] === $this->password && 
+                        !$account['blocked']) {
+                        $authenticatedAccount = $account;
+                        break;
+                    }
+                }
+                
+                if ($authenticatedAccount) {
+                    // Store user data in session for API-based authentication
+                    session([
+                        'user' => [
+                            'email' => $this->email,
+                            'first_name' => $authenticatedAccount['employee']['first_name'],
+                            'last_name' => $authenticatedAccount['employee']['last_name'],
+                            'full_name' => $authenticatedAccount['employee']['first_name'] . ' ' . $authenticatedAccount['employee']['last_name'],
+                            'position' => $authenticatedAccount['employee']['position'],
+                            'department' => $authenticatedAccount['employee']['department']['name'],
+                            'employee_id' => $authenticatedAccount['employee']['id'],
+                            'account_id' => $authenticatedAccount['id'],
+                            'authenticated' => true,
+                        ]
+                    ]);
+                    
+                    return redirect()->route('dashboard');
+                } else {
+                    $this->addError('email', 'Invalid credentials or account blocked.');
+                }
+            } else {
+                $this->addError('email', 'Unable to connect to authentication system.');
+            }
+        } catch (\Exception $e) {
+            $this->addError('email', 'Login failed: ' . $e->getMessage());
         }
 
         /* 

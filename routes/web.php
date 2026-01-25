@@ -39,22 +39,24 @@ Route::middleware('guest')->group(function() {
     Route::get('/register', Register::class)->name('register');
 });
 
-Route::get('/dashboard', Dashboard::class)->name('dashboard');
+Route::middleware('session.auth')->group(function() {
+    Route::get('/dashboard', Dashboard::class)->name('dashboard');
 
-Route::get('/recruitment-requests', Requisitions::class)->name('recruitment-requests');
-Route::get('/job-postings', JobPostings::class)->name('job-postings');    
-Route::get('/applications', Applications::class)->name('applications');
-Route::get('/interviews', Interviews::class)->name('interviews');
-Route::get('/employees', Employees::class)->name('employees');
-Route::get('/document-checklists', DocumentChecklists::class)->name('document-checklists');
-Route::get('/orientation-schedule', OrientationSchedule::class)->name('orientation-schedule');
-Route::get('/evaluations', Evaluations::class)->name('evaluations');
-Route::get('/tracker', Tracker::class)->name('tracker');
-Route::get('/evaluation-records', EvaluationRecords::class)->name('evaluation-records');
-Route::get('/rewards', Rewards::class)->name('rewards');
-Route::get('/reward-giving', GiveRewards::class)->name('reward-giving');
-Route::get('/recognition-criteria', RecognitionCriteria::class)->name('criteria');
-Route::get('/reports', Reports::class)->name('reports');
+    Route::get('/recruitment-requests', Requisitions::class)->name('recruitment-requests');
+    Route::get('/job-postings', JobPostings::class)->name('job-postings');    
+    Route::get('/applications', Applications::class)->name('applications');
+    Route::get('/interviews', Interviews::class)->name('interviews');
+    Route::get('/employees', Employees::class)->name('employees');
+    Route::get('/document-checklists', DocumentChecklists::class)->name('document-checklists');
+    Route::get('/orientation-schedule', OrientationSchedule::class)->name('orientation-schedule');
+    Route::get('/evaluations', Evaluations::class)->name('evaluations');
+    Route::get('/tracker', Tracker::class)->name('tracker');
+    Route::get('/evaluation-records', EvaluationRecords::class)->name('evaluation-records');
+    Route::get('/rewards', Rewards::class)->name('rewards');
+    Route::get('/reward-giving', GiveRewards::class)->name('reward-giving');
+    Route::get('/recognition-criteria', RecognitionCriteria::class)->name('criteria');
+    Route::get('/reports', Reports::class)->name('reports');
+});
 
 /*
 Route::get('/storage/resumes/{filename}', function ($filename) {

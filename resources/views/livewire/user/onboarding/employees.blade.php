@@ -41,16 +41,16 @@
             <tbody>
                 @forelse ($paginator as $employee)
                     <tr>
-                        <td @class('text-nowrap')>{{ $employee['name'] ?? '—' }}</td>
-                        <td @class('text-truncate')>{{ $employee['role'] ?? '—' }}</td>
-                        <td @class('text-capitalize')>{{ $employee['department'] ?? 'Not Integrated' }}</td>
+                        <td class="text-nowrap">{{ $employee['first_name'] ?? $employee['full_name'] ?? '—' }}</td>
+                        <td class="text-truncate">{{ $employee['position'] ?? '—' }}</td>
+                        <td class="text-capitalize">{{ $employee['department']['name'] ?? 'Not Integrated' }}</td>
                         <td>
-                            <span @class('badge rounded-pill px-3 py-2 bg-secondary')>
-                                    {{ 'Completed' }}
+                            <span class="badge rounded-pill px-3 py-2 bg-secondary">
+                                {{ 'Completed' }}
                             </span>
                         </td>
-                        <td @class('text-capitalize')>{{ 'Not Integrated' }}</td>
-                        <td @class('text-capitalize')>{{ 'Not Integrated' }}</td>
+                        <td class="text-capitalize">{{ 'Not Integrated' }}</td>
+                        <td class="text-capitalize">{{ 'Not Integrated' }}</td>
                     </tr>
                 @empty
                     <tr>

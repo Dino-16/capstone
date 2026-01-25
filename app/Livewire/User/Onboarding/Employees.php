@@ -67,9 +67,9 @@ class Employees extends Component
             if (!empty($this->search)) {
                 $searchTerm = strtolower(trim($this->search));
                 $filteredEmployees = $allEmployees->filter(function ($employee) use ($searchTerm) {
-                    $name = strtolower($employee['name'] ?? '');
-                    $role = strtolower($employee['role'] ?? '');
-                    return str_contains($name, $searchTerm) || str_contains($role, $searchTerm);
+                    $name = strtolower($employee['first_name'] ?? $employee['full_name'] ?? '');
+                    $position = strtolower($employee['position'] ?? '');
+                    return str_contains($name, $searchTerm) || str_contains($position, $searchTerm);
                 });
             } else {
                 $filteredEmployees = $allEmployees;
@@ -78,9 +78,9 @@ class Employees extends Component
             // Transform data for export
             $exportData = $filteredEmployees->map(function ($employee) {
                 return [
-                    'Name' => $employee['name'] ?? '—',
-                    'Position' => $employee['role'] ?? '—',
-                    'Department' => $employee['department'] ?? 'Not Integrated',
+                    'Name' => $employee['first_name'] ?? $employee['full_name'] ?? '—',
+                    'Position' => $employee['position'] ?? '—',
+                    'Department' => $employee['department']['name'] ?? 'Not Integrated',
                     'Contract Signing' => 'Completed',
                     'HR Documents' => 'Not Integrated',
                     'Training Modules' => 'Not Integrated',
@@ -123,9 +123,9 @@ class Employees extends Component
                 if (!empty($this->search)) {
                     $searchTerm = strtolower(trim($this->search));
                     $filtered = $collection->filter(function ($employee) use ($searchTerm) {
-                        $name = strtolower($employee['name'] ?? '');
-                        $role = strtolower($employee['role'] ?? '');
-                        return str_contains($name, $searchTerm) || str_contains($role, $searchTerm);
+                        $name = strtolower($employee['first_name'] ?? $employee['full_name'] ?? '');
+                        $position = strtolower($employee['position'] ?? '');
+                        return str_contains($name, $searchTerm) || str_contains($position, $searchTerm);
                     });
                 } else {
                     $filtered = $collection;
@@ -139,14 +139,9 @@ class Employees extends Component
                     ['path' => request()->url(), 'query' => request()->query()]
                 );
             } else {
-                // Merge API items with full employee details
-                $mergedItems = collect($items)->map(function ($apiItem) {
-                    $match = collect($this->employees)->firstWhere('name', $apiItem['name'] ?? '');
-                    return $match ?? $apiItem;
-                });
-
+                // Use API items directly since they already contain all needed data
                 $employees = new LengthAwarePaginator(
-                    $mergedItems,
+                    $items,
                     $total,
                     $perPage,
                     $currentPage,

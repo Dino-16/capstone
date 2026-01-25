@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\OrientationSchedule;
+use App\Models\Onboarding\Orientation;
 
 class OrientationScheduleController extends Controller
 {
     public function index()
     {
-        return OrientationSchedule::latest()->get();
+        return Orientation::latest()->get();
     }
 
     public function updateStatus(Request $request, $id)
@@ -21,7 +21,7 @@ class OrientationScheduleController extends Controller
         ]);
 
         // 2. Find the record
-        $schedule = OrientationSchedule::findOrFail($id);
+        $schedule = Orientation::findOrFail($id);
 
         // 3. Update ONLY the status
         $schedule->status = $validated['status'];

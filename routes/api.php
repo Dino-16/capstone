@@ -4,7 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\GiveRewardsController;
 use App\Http\Controllers\Api\RequisitionsController;
-use App\Http\Controllers\Api\OrientationSchedule;
+use App\Http\Controllers\Api\OrientationScheduleController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
