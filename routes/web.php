@@ -24,7 +24,6 @@ use App\Livewire\User\Performance\Evaluations;
 use App\Livewire\User\Performance\EvaluationRecords;
 use App\Livewire\User\Recognition\Rewards;
 use App\Livewire\User\Recognition\GiveRewards;
-use App\Livewire\User\Recognition\RecognitionCriteria;
 use App\Livewire\User\Reports;
 
 
@@ -37,10 +36,16 @@ Route::middleware('guest')->group(function() {
     Route::get('/login', Login::class)->name('login');
     Route::get('/otp-verification', OtpVerification::class)->name('otp.verify');
     Route::get('/register', Register::class)->name('register');
+    Route::post('/logout', function() {
+        session()->forget('user');
+        session()->flush();
+        return redirect()->route('login');
+    })->name('logout');
 });
 
 Route::middleware('session.auth')->group(function() {
     Route::get('/dashboard', Dashboard::class)->name('dashboard');
+    Route::get('/profile', \App\Livewire\Setting\Profile::class)->name('profile');
 
     Route::get('/recruitment-requests', Requisitions::class)->name('recruitment-requests');
     Route::get('/job-postings', JobPostings::class)->name('job-postings');    
@@ -54,7 +59,6 @@ Route::middleware('session.auth')->group(function() {
     Route::get('/evaluation-records', EvaluationRecords::class)->name('evaluation-records');
     Route::get('/rewards', Rewards::class)->name('rewards');
     Route::get('/reward-giving', GiveRewards::class)->name('reward-giving');
-    Route::get('/recognition-criteria', RecognitionCriteria::class)->name('criteria');
     Route::get('/reports', Reports::class)->name('reports');
 });
 

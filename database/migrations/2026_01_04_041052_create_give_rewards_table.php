@@ -21,7 +21,6 @@ return new class extends Migration
             $table->date('given_date');
             $table->string('given_by'); 
             $table->string('status')->default('pending'); 
-            $table->text('notes')->nullable();
             $table->timestamps();
         });
     }

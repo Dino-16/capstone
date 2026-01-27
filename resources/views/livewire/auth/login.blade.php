@@ -47,6 +47,15 @@
             <h3 @class('text-center mb-4') style="color: var(--jetlouge-primary); font-weight: 700;">
                 Sign In to Your Account
             </h3>
+
+            <x-input-error @class('text-center') :field="('email')" />
+            
+            @if(session()->has('test'))
+                <div class="alert alert-info">
+                    {{ session('test') }}
+                </div>
+            @endif
+            
             <div>
 
                 <form wire:submit.prevent="login" id="loginForm" >
@@ -58,7 +67,6 @@
                             </span>
                             <input wire:model="email" type="email" @class('form-control') id="email-name" placeholder="Enter your email" required>
                         </div>
-                        <x-input-error :field="('email')" />
                     </div>
 
                     <div @class('mb-3')>
@@ -72,7 +80,6 @@
                                 <i @class('bi bi-eye') id="eyeIcon"></i>
                             </button>
                         </div>
-                        <x-input-error :field="('password')" />
                     </div>
 
                     <div @class('mb-3 form-check d-flex justify-content-between')>

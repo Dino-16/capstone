@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 
 class Logout extends Component
 {
+    public $isDropdown = false;
 
     public function logout()
     {

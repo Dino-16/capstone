@@ -35,13 +35,13 @@
                     <th @class('text-secondary fw-normal') scope="col">Department</th>
                     <th @class('text-secondary fw-normal') scope="col">Contract Signing</th>
                     <th @class('text-secondary fw-normal') scope="col">HR Documents</th>
-                    <th @class('text-secondary fw-normal') scope="col">Training Modules</th>
+                    <th @class('text-secondary fw-normal') scope="col">Employement Status</th>
                 </tr>
             </thead>
             <tbody>
-                @forelse ($paginator as $employee)
+                @forelse ($employees as $employee)
                     <tr>
-                        <td class="text-nowrap">{{ $employee['first_name'] ?? $employee['full_name'] ?? '—' }}</td>
+                        <td class="text-nowrap"><strong>{{ $employee['first_name'] . ' ' . $employee['last_name'] }}</strong></td>
                         <td class="text-truncate">{{ $employee['position'] ?? '—' }}</td>
                         <td class="text-capitalize">{{ $employee['department']['name'] ?? 'Not Integrated' }}</td>
                         <td>
@@ -50,7 +50,7 @@
                             </span>
                         </td>
                         <td class="text-capitalize">{{ 'Not Integrated' }}</td>
-                        <td class="text-capitalize">{{ 'Not Integrated' }}</td>
+                        <td class="text-capitalize">{{ $employee['status'] ?? '---' }}</td>
                     </tr>
                 @empty
                     <tr>
@@ -63,7 +63,7 @@
         </table>
 
         <div class="pb-4">
-            {{ $paginator->links() }}
+            {{ $employees->links() }}
         </div>
     </div>
 

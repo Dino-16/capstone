@@ -16,57 +16,53 @@ class Login extends Component
 
     public function login()
     {
-        // Validate input
         $this->validate([
             'email' => 'required|email',
             'password' => 'required',
         ]);
 
         try {
-            // Call HR API to get system accounts
-            $response = Http::get('http://hr4.jetlougetravels-ph.com/api/accounts');
+            // Use withoutVerifying to avoid SSL certificate issues in local environments
+            $response = Http::withoutVerifying()->get('https://hr4.jetlougetravels-ph.com/api/accounts');
 
             if ($response->successful()) {
                 $data = $response->json();
-                $systemAccounts = $data['system_accounts'] ?? [];
-                
-                // Find matching account by email and password
-                $authenticatedAccount = null;
-                foreach ($systemAccounts as $account) {
-                    if ($account['employee']['email'] === $this->email && 
-                        $account['password'] === $this->password && 
-                        !$account['blocked']) {
-                        $authenticatedAccount = $account;
-                        break;
+                $accounts = $data['data']['system_accounts'] ?? [];
+
+                foreach ($accounts as $account) {
+                    $apiEmail = $account['employee']['email'] ?? '';
+                    $apiPassword = $account['password'] ?? '';
+
+                    // Plain text password comparison as requested
+                    if ($apiEmail === $this->email && $apiPassword === $this->password) {
+                        
+                        // Store user data in session
+                        session([
+                            'user' => [
+                                'id' => $account['id'],
+                                'name' => $account['employee']['first_name'] . ' ' . $account['employee']['last_name'],
+                                'email' => $apiEmail,
+                                'position' => $account['employee']['position'],
+                                'details' => $account['employee'], // Store full employee details
+                                'authenticated' => true
+                            ]
+                        ]);
+
+                        return redirect()->route('dashboard');
                     }
                 }
                 
-                if ($authenticatedAccount) {
-                    // Store user data in session for API-based authentication
-                    session([
-                        'user' => [
-                            'email' => $this->email,
-                            'first_name' => $authenticatedAccount['employee']['first_name'],
-                            'last_name' => $authenticatedAccount['employee']['last_name'],
-                            'full_name' => $authenticatedAccount['employee']['first_name'] . ' ' . $authenticatedAccount['employee']['last_name'],
-                            'position' => $authenticatedAccount['employee']['position'],
-                            'department' => $authenticatedAccount['employee']['department']['name'],
-                            'employee_id' => $authenticatedAccount['employee']['id'],
-                            'account_id' => $authenticatedAccount['id'],
-                            'authenticated' => true,
-                        ]
-                    ]);
-                    
-                    return redirect()->route('dashboard');
-                } else {
-                    $this->addError('email', 'Invalid credentials or account blocked.');
-                }
+                $this->addError('email', 'Invalid credentials.');
             } else {
-                $this->addError('email', 'Unable to connect to authentication system.');
+                 $this->addError('email', 'API Error: ' . $response->status());
             }
+
         } catch (\Exception $e) {
-            $this->addError('email', 'Login failed: ' . $e->getMessage());
+            // Display the specific error message for debugging
+            $this->addError('email', 'Connection failed: ' . $e->getMessage());
         }
+    }
+
 
         /* 
 
@@ -102,8 +98,7 @@ class Login extends Component
             $this->addError('email', 'Invalid credentials.');
 
             */
-    }
-
+    
 
     public function render()
     {

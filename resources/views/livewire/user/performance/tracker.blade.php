@@ -1,242 +1,176 @@
+@section('page-title', 'Performance Tracker')
+@section('page-subtitle', 'Manage performance evaluations')
+@section('breadcrumbs', 'Performance Tracker')
+
 <div>
     <div class="container-fluid">
         <div class="row">
             <div class="col-12">
-                <!-- Header -->
-                <div class="card mb-4">
-                    <div class="card-body">
-                        <h2 class="card-title h2 mb-3">Performance Tracker</h2>
-                        <p class="card-text text-muted">Employee performance tracking and monthly evaluation schedule</p>
-                        
-                        @if(session()->has('error'))
-                            <div class="alert alert-danger">
-                                {{ session()->get('error') }}
-                            </div>
-                        @endif
-                    </div>
+                <!-- Monthly Performance Evaluation Table -->
+                <div @class('p-5 bg-white rounded border rounded-bottom-0 border-bottom-0')>
+                    <h3>Monthly Evaluation Schedule</h3>
+                    <p @class('text-secondary mb-0')>
+                        Employee evaluation overview
+                    </p>
                 </div>
-
-                <!-- Loading State -->
-                @if(isset($loading) && $loading)
-                    <div class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p class="mt-3 text-muted">Loading employee data...</p>
-                    </div>
-                @endif
-
-                <!-- Debug Info -->
-                @if(!$loading && !empty($employees))
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h6 class="card-title mb-0">Debug Info</h6>
-                        </div>
-                        <div class="card-body">
-                            <p><strong>Total Employees Loaded:</strong> {{ count($employees) }}</p>
-                            @if(!empty($employees))
-                                <p><strong>First Employee:</strong> {{ $employees[0]['name'] ?? 'No name' }}</p>
-                                <p><strong>Sample Data:</strong> {{ json_encode(array_slice($employees, 0, 1)) }}</p>
-                            @endif
-                        </div>
-                    </div>
-                @endif
-
-                <!-- Selected Employee Details -->
-                @if($selectedEmployee)
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">Employee Details</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <div class="mb-3">
-                                        <label class="form-label fw-semibold">Name</label>
-                                        <input type="text" class="form-control" wire:model="email" readonly>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="mb-3">
-                                        <label class="form-label fw-semibold">Position</label>
-                                        <input type="text" class="form-control" wire:model="position" readonly>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="mb-3">
-                                        <label class="form-label fw-semibold">Department</label>
-                                        <input type="text" class="form-control" wire:model="department" readonly>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="mb-3">
-                                        <label class="form-label fw-semibold">Hire Date</label>
-                                        <input type="text" class="form-control" wire:model="hireDate" readonly>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                @endif
-
-                <!-- Monthly Evaluations -->
-                @if($selectedEmployee && !empty($monthlyEvaluations))
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                Monthly Evaluation Schedule 
-                                <span class="badge bg-primary ms-2">{{ count($monthlyEvaluations) }} Months</span>
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                @foreach($monthlyEvaluations as $evaluation)
-                                    <div class="col-md-4 mb-3">
-                                        <div class="card border-{{ 
-                                            $evaluation['status'] == 'completed' ? 'success' : 
-                                            ($evaluation['status'] == 'current' ? 'warning' : 
-                                            ($evaluation['status'] == 'pending' ? 'danger' : 'secondary')) 
-                                        }}">
-                                            <div class="card-body text-center">
-                                                <h6 class="card-title">{{ $evaluation['month'] }}</h6>
-                                                <div class="mb-2">
-                                                    <small class="text-muted">{{ $evaluation['evaluation_date'] }}</small>
-                                                </div>
-                                                <div>
-                                                    <span class="badge bg-{{ 
-                                                        $evaluation['status'] == 'completed' ? 'success' : 
-                                                        ($evaluation['status'] == 'current' ? 'warning' : 
-                                                        ($evaluation['status'] == 'pending' ? 'danger' : 'info')) 
-                                                    }} mb-2">
-                                                        {{ ucfirst($evaluation['status']) }}
-                                                    </span>
-                                                </div>
-                                                @if($evaluation['status'] == 'current' || $evaluation['status'] == 'pending')
-                                                    <div class="mt-2">
-                                                        <a href="{{ route('evaluations') }}?employee={{ $selectedEmployee['id'] }}&month={{ $evaluation['evaluation_date'] }}" class="btn btn-sm btn-primary">
-                                                            <i class="bi bi-clipboard-check me-1"></i>
-                                                            Start Evaluation
-                                                        </a>
-                                                    </div>
-                                                @endif
+                <div @class('table-responsive border rounded bg-white px-5 rounded-top-0 border-top-0')>
+                    <table @class('table')>
+                        <thead>
+                            <tr @class('bg-dark')>
+                                <th @class('text-secondary')>Employee</th>
+                                <th @class('text-secondary')>Hire Date</th>
+                                <th @class('text-secondary')>Evaluation Status</th>
+                                <th @class('text-secondary')>Next Evaluation</th>
+                                <th @class('text-secondary')>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($employees as $employee)
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                                {{ substr($employee['name'], 0, 1) }}
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">{{ $employee['name'] }}</div>
+                                                <div class="small text-muted">{{ $employee['position'] }}</div>
                                             </div>
                                         </div>
-                                @endforeach
-                            </div>
+                                    </td>
+                                    <td>{{ $employee['hire_date'] }}</td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            <span class="badge bg-success" title="Completed">
+                                                {{ $employee['completed_evaluations'] }} Completed
+                                            </span>
+                                            <span class="badge bg-danger" title="Pending">
+                                                {{ $employee['pending_evaluations'] }} Pending
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @php
+                                            $nextEval = collect($employee['monthly_evaluations'])
+                                                ->where('status', '!=', 'completed')
+                                                ->first();
+                                        @endphp
+                                        @if($nextEval)
+                                            <span class="badge bg-{{ $nextEval['status'] == 'current' ? 'warning' : 'info' }}">
+                                                {{ $nextEval['month'] }}
+                                            </span>
+                                        @else
+                                            <span class="text-success small">All Caught Up</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <a href="{{ route('evaluations') }}?employee={{ $employee['id'] }}" class="btn btn-sm btn-outline-primary">
+                                            View Schedule
+                                        </a>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">No employees found</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
 
-                            <!-- Evaluation Summary -->
-                            <div class="row mt-4">
-                                <div class="col-md-3">
-                                    <div class="card bg-success text-white">
-                                        <div class="card-body">
-                                            <h6 class="card-title">Completed</h6>
-                                            <h3 class="card-text">{{ collect($monthlyEvaluations)->where('status', 'completed')->count() }}</h3>
+                <!-- Attendance Tracker -->
+                <div @class('mt-4 p-5 bg-white rounded border rounded-bottom-0 border-bottom-0')>
+                    <h3>Daily Attendance Tracker</h3>
+                    <p @class('text-secondary mb-0')>
+                        Attendance records overview
+                    </p>
+                </div>
+                <div @class('table-responsive border rounded bg-white px-5 rounded-top-0 border-top-0')>
+                    <table @class('table')>
+                        <thead>
+                            <tr @class('bg-dark')>
+                                <th @class('text-secondary')>Employee</th>
+                                <th @class('text-secondary')>Date</th>
+                                <th @class('text-secondary')>Time In</th>
+                                <th @class('text-secondary')>Time Out</th>
+                                <th @class('text-secondary')>Total Hours</th>
+                                <th @class('text-secondary')>Status</th>
+                                <th @class('text-secondary')>Location</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($attendanceRecords as $record)
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            @if(isset($record['employee']['profile_picture']))
+                                                <img src="{{ $record['employee']['profile_picture'] }}" 
+                                                     class="rounded-circle me-2" 
+                                                     width="32" height="32"
+                                                     alt="Avatar">
+                                            @else
+                                                <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2" 
+                                                     style="width: 32px; height: 32px;">
+                                                    {{ substr($record['employee']['first_name'] ?? 'U', 0, 1) }}
+                                                </div>
+                                            @endif
+                                            <div>
+                                                <div class="fw-bold">{{ $record['employee']['first_name'] ?? '' }} {{ $record['employee']['last_name'] ?? '' }}</div>
+                                                <div class="small text-muted">{{ $record['employee']['position'] ?? 'Employee' }}</div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="card bg-danger text-white">
-                                        <div class="card-body">
-                                            <h6 class="card-title">Pending</h6>
-                                            <h3 class="card-text">
-                                                {{ collect($monthlyEvaluations)->where('status', 'pending')->count() }}
-                                            </h3>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="card bg-warning text-dark">
-                                        <div class="card-body">
-                                            <h6 class="card-title">Current</h6>
-                                            <h3 class="card-text">
-                                                {{ collect($monthlyEvaluations)->where('status', 'current')->count() }}
-                                            </h3>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="card bg-info text-white">
-                                        <div class="card-body">
-                                            <h6 class="card-title">Upcoming</h6>
-                                            <h3 class="card-text">
-                                                {{ collect($monthlyEvaluations)->where('status', 'upcoming')->count() }}
-                                            </h3>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                @endif
+                                    </td>
+                                    <td>{{ isset($record['date']) ? \Carbon\Carbon::parse($record['date'])->format('M d, Y') : '-' }}</td>
+                                    <td>
+                                        @if(isset($record['clock_in_time']))
+                                            <span class="text-success">
+                                                <i class="bi bi-clock"></i> 
+                                                {{ \Carbon\Carbon::parse($record['clock_in_time'])->format('h:i A') }}
+                                            </span>
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if(isset($record['clock_out_time']))
+                                            <span class="text-muted">
+                                                <i class="bi bi-clock-history"></i> 
+                                                {{ \Carbon\Carbon::parse($record['clock_out_time'])->format('h:i A') }}
+                                            </span>
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold {{ ($record['total_hours'] ?? 0) > 8 ? 'text-success' : '' }}">
+                                            {{ $record['total_hours'] ?? '0.00' }} hrs
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 
+                                            ($record['status'] ?? '') === 'clocked_out' ? 'success' : 
+                                            (($record['status'] ?? '') === 'active' ? 'primary' : 'secondary') 
+                                        }}">
+                                            {{ ucfirst(str_replace('_', ' ', $record['status'] ?? 'unknown')) }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <i class="bi bi-geo-alt text-muted small"></i>
+                                        {{ $record['location'] ?? 'N/A' }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">
+                                        <i class="bi bi-calendar-x display-4 d-block mb-2"></i>
+                                        No attendance records found for today.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
 
-                <!-- Employees List -->
-                @if(!$selectedEmployee)
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                All Employees 
-                                <span class="badge bg-primary ms-2">{{ count($employees) }}</span>
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-hover table-striped">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Name</th>
-                                            <th>Email</th>
-                                            <th>Position</th>
-                                            <th>Department</th>
-                                            <th>Hire Date</th>
-                                            <th>Pending</th>
-                                            <th>Completed</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse($employees as $employee)
-                                            <tr>
-                                                <td>
-                                                    <strong>{{ $employee['name'] }}</strong>
-                                                </td>
-                                                <td>{{ $employee['email'] }}</td>
-                                                <td>{{ $employee['position'] }}</td>
-                                                <td>{{ $employee['department'] }}</td>
-                                                <td>{{ $employee['hire_date'] }}</td>
-                                                <td>
-                                                    <span class="badge bg-danger">
-                                                        {{ collect($employee['monthly_evaluations'])->where('status', 'pending')->count() }}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <span class="badge bg-success">
-                                                        {{ collect($employee['monthly_evaluations'])->where('status', 'completed')->count() }}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    @if(collect($employee['monthly_evaluations'])->where('status', 'pending')->count() > 0)
-                                                        <a href="{{ route('evaluations') }}?employee={{ $employee['id'] }}" class="btn btn-sm btn-primary">
-                                                            <i class="bi bi-clipboard-check me-1"></i>
-                                                            Evaluate
-                                                        </a>
-                                                    @else
-                                                        <span class="badge bg-success">Up to date</span>
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="8" class="text-center text-muted">
-                                                    No employees found
-                                                </td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                @endif
             </div>
         </div>
     </div>

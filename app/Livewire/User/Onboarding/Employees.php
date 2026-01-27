@@ -7,165 +7,107 @@ use Livewire\WithPagination;
 use Livewire\Attributes\Url;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
 use App\Exports\Onboarding\EmployeesExport;
 
 class Employees extends Component
 {
     use WithPagination;
 
-    public $employees = [];
-    
-    #[Url(keep: true)]
+    #[Url]
     public $search = '';
     
     public $perPage = 10;
 
-    public function mount()
-    {
-        $response = Http::get('http://hr4.jetlougetravels-ph.com/api/employees');
-
-        if ($response->successful() && is_array($response->json())) {
-            $this->employees = $response->json();
-        } else {
-            $this->employees = []; 
-        }
-
-        // Debug: log what we got
-        \Log::info('Employees count: ' . count($this->employees));
-        \Log::info('First employee: ' . json_encode($this->employees[0] ?? null));
-    }
-
+    /**
+     * Resets pagination when search is updated.
+     */
     public function updatingSearch()
     {
         $this->resetPage();
+    }
 
-        // Update employees array when search term changes
+    /**
+     * Fetches data from the API and returns a Paginator instance.
+     */
+    protected function getEmployeesPaginator()
+    {
+        $page = $this->getPage(); // Livewire helper for current page
+
         $response = Http::get('http://hr4.jetlougetravels-ph.com/api/employees', [
-            'search' => $this->search,
+            'search'   => $this->search,
+            'page'     => $page,
+            'per_page' => $this->perPage,
         ]);
 
-        if ($response->successful() && is_array($response->json())) {
-            $this->employees = $response->json();
-        } else {
-            $this->employees = [];
+        if (!$response->successful()) {
+            return new LengthAwarePaginator([], 0, $this->perPage, $page);
         }
+
+        $data = $response->json();
+
+        // Check if API supports pagination natively (returns 'data' and 'total' keys)
+        if (isset($data['data'])) {
+            return new LengthAwarePaginator(
+                $data['data'],
+                $data['total'] ?? 0,
+                $data['per_page'] ?? $this->perPage,
+                $data['current_page'] ?? $page,
+                ['path' => request()->url(), 'query' => request()->query()]
+            );
+        }
+
+        // FALLBACK: API returns a simple array (Manual Client-side Pagination)
+        $collection = collect($data);
+
+        if (!empty($this->search)) {
+            $searchTerm = strtolower(trim($this->search));
+            $collection = $collection->filter(function ($emp) use ($searchTerm) {
+                $name = strtolower($emp['first_name'] ?? $emp['full_name'] ?? '');
+                $pos = strtolower($emp['position'] ?? '');
+                return str_contains($name, $searchTerm) || str_contains($pos, $searchTerm);
+            });
+        }
+
+        return new LengthAwarePaginator(
+            $collection->forPage($page, $this->perPage)->values(),
+            $collection->count(),
+            $this->perPage,
+            $page,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
     }
 
     public function export()
     {
-        // Export current filtered employees data to Excel
+        // For export, we usually want everything matching the search, ignoring pagination
         $response = Http::get('http://hr4.jetlougetravels-ph.com/api/employees', [
-            'search' => $this->search,
-            'per_page' => 1000, // Set a high but valid per_page value
-        ]);
-
-        if ($response->successful()) {
-            $allEmployees = collect($response->json());
-
-            // Filter based on current search
-            if (!empty($this->search)) {
-                $searchTerm = strtolower(trim($this->search));
-                $filteredEmployees = $allEmployees->filter(function ($employee) use ($searchTerm) {
-                    $name = strtolower($employee['first_name'] ?? $employee['full_name'] ?? '');
-                    $position = strtolower($employee['position'] ?? '');
-                    return str_contains($name, $searchTerm) || str_contains($position, $searchTerm);
-                });
-            } else {
-                $filteredEmployees = $allEmployees;
-            }
-
-            // Transform data for export
-            $exportData = $filteredEmployees->map(function ($employee) {
-                return [
-                    'Name' => $employee['first_name'] ?? $employee['full_name'] ?? '—',
-                    'Position' => $employee['position'] ?? '—',
-                    'Department' => $employee['department']['name'] ?? 'Not Integrated',
-                    'Contract Signing' => 'Completed',
-                    'HR Documents' => 'Not Integrated',
-                    'Training Modules' => 'Not Integrated',
-                ];
-            });
-
-            $export = new EmployeesExport($exportData->toArray());
-            return $export->export();
-        }
-
-        // Return empty response if API fails
-        return response()->streamDownload(function () {
-            echo "No employee data available to export.";
-        }, 'employees_' . date('Y-m-d') . '.xls', [
-            'Content-Type' => 'application/vnd.ms-excel',
-            'Content-Disposition' => 'attachment; filename=employees_' . date('Y-m-d') . '.xls',
-        ]);
-    }
-
-    public function render()
-    {
-        // Fetch paginated data from API (only name and role for search/pagination)
-        $page = \Illuminate\Pagination\Paginator::resolveCurrentPage('page');
-        $response = Http::get('http://hr4.jetlougetravels-ph.com/api/employees', [
-            'search' => $this->search,
-            'page' => $page,
-            'per_page' => $this->perPage,
+            'search'   => $this->search,
+            'per_page' => 5000, 
         ]);
 
         if ($response->successful()) {
             $data = $response->json();
-            $items = $data['data'] ?? [];
-            $total = $data['total'] ?? 0;
-            $perPage = $data['per_page'] ?? $this->perPage;
-            $currentPage = $data['current_page'] ?? $page;
+            $items = collect($data['data'] ?? $data); // Handle both paginated/unpaginated API response
 
-            // If API returns no items (likely doesn't support pagination), fall back to client-side
-            if (empty($items)) {
-                $collection = collect($this->employees);
-                if (!empty($this->search)) {
-                    $searchTerm = strtolower(trim($this->search));
-                    $filtered = $collection->filter(function ($employee) use ($searchTerm) {
-                        $name = strtolower($employee['first_name'] ?? $employee['full_name'] ?? '');
-                        $position = strtolower($employee['position'] ?? '');
-                        return str_contains($name, $searchTerm) || str_contains($position, $searchTerm);
-                    });
-                } else {
-                    $filtered = $collection;
-                }
-                $paginatedItems = $filtered->forPage($page, $this->perPage)->values();
-                $employees = new LengthAwarePaginator(
-                    $paginatedItems,
-                    $filtered->count(),
-                    $this->perPage,
-                    $page,
-                    ['path' => request()->url(), 'query' => request()->query()]
-                );
-            } else {
-                // Use API items directly since they already contain all needed data
-                $employees = new LengthAwarePaginator(
-                    $items,
-                    $total,
-                    $perPage,
-                    $currentPage,
-                    ['path' => request()->url(), 'query' => request()->query()]
-                );
-            }
-        } else {
-            $employees = new LengthAwarePaginator([], 0, $this->perPage, $page, [
-                'path' => request()->url(),
-                'query' => request()->query(),
+            $exportData = $items->map(fn($emp) => [
+                'Name'             => $emp['first_name'] ?? $emp['full_name'] ?? '—',
+                'Position'         => $emp['position'] ?? '—',
+                'Department'       => $emp['department']['name'] ?? 'Not Integrated',
+                'Contract Signing' => 'Completed',
+                'HR Documents'     => 'Not Integrated',
+                'Training Modules' => 'Not Integrated',
             ]);
+
+            return (new EmployeesExport($exportData->toArray()))->export();
         }
 
-        if (!($employees instanceof LengthAwarePaginator)) {
-            throw new \Exception('employees is not a paginator: ' . get_class($employees));
-        }
+        return response()->streamDownload(fn() => print("Export failed"), "error.xls");
+    }
 
-        // Debug: log paginator details
-        \Log::info('Paginator count: ' . $employees->count());
-        \Log::info('Total: ' . $employees->total());
-        \Log::info('First item: ' . json_encode($employees->items()[0] ?? null));
-
+    public function render()
+    {
         return view('livewire.user.onboarding.employees', [
-            'paginator' => $employees,
+            'employees' => $this->getEmployeesPaginator(),
         ])->layout('layouts.app');
     }
 }

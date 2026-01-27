@@ -13,7 +13,6 @@ class DocumentChecklist extends Model
         'employee_name',
         'email',
         'documents',
-        'notes',
         'status'
     ];
 

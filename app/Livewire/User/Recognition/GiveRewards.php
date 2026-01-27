@@ -29,7 +29,6 @@ class GiveRewards extends Component
     public $givenDate = '';
     public $givenBy = '';
     public $status = 'pending';
-    public $notes = '';
 
     // Employee search
     public $employees = [];
@@ -45,7 +44,6 @@ class GiveRewards extends Component
         'givenDate' => 'required|date',
         'givenBy' => 'required|string|max:255',
         'status' => 'required|in:pending,approved,rejected',
-        'notes' => 'nullable|string',
     ];
 
     public function mount()
@@ -70,7 +68,7 @@ class GiveRewards extends Component
         $this->reset([
             'rewardId', 'employeeName', 'employeeEmail', 'employeePosition', 
             'employeeDepartment', 'givenDate', 'givenBy', 'status', 
-            'notes', 'editing', 'rewardGivenId', 'statusFilter'
+            'editing', 'rewardGivenId', 'statusFilter'
         ]);
         $this->givenDate = now()->format('Y-m-d');
         $this->status = 'pending';
@@ -129,7 +127,6 @@ class GiveRewards extends Component
             $this->givenDate = $rewardGiven->given_date->format('Y-m-d');
             $this->givenBy = $rewardGiven->given_by;
             $this->status = $rewardGiven->status;
-            $this->notes = $rewardGiven->notes;
             $this->editing = true;
             $this->showModal = true;
         }
@@ -148,7 +145,6 @@ class GiveRewards extends Component
             'given_date' => $this->givenDate,
             'given_by' => $this->givenBy,
             'status' => $this->status,
-            'notes' => $this->notes,
         ]);
 
         $this->dispatch('reward-given-added', 'Reward given successfully!');
@@ -171,7 +167,6 @@ class GiveRewards extends Component
                 'given_date' => $this->givenDate,
                 'given_by' => $this->givenBy,
                 'status' => $this->status,
-                'notes' => $this->notes,
             ]);
 
             $this->dispatch('reward-given-updated', 'Reward given updated successfully!');

@@ -3,10 +3,17 @@
 
     {{-- Profile Section --}}
     <div @class('profile-section text-center')>
-        <img src="https://ui-avatars.com/api/?name={{ urlencode(substr(auth()->user()->name, 0, 1)) }}&size=150&background=0d6efd&color=fff"
+        @php
+            $user = session('user');
+            $firstName = $user['name'] ?? 'Guest'; 
+            $userName = $user['name'] ?? 'Guest';
+            $userPosition = $user['position'] ?? 'Employee'; 
+            $avatarInitial = $userName !== 'Guest' ? urlencode(substr($userName, 0, 1)) : 'G';
+        @endphp
+        <img src="https://ui-avatars.com/api/?name={{ $avatarInitial }}&size=150&background=0d6efd&color=fff"
             alt="Admin Profile" class="profile-img mb-2">
-        <h6 @class('fw-semibold mb-1')>{{ auth()->user()->name }}</h6>
-        <small @class('text-muted')>{{ auth()->user()->role }}</small>
+        <h6 @class('fw-semibold mb-1')>{{ $userName }}</h6>
+        <small @class('text-muted')>{{ $userPosition }}</small>
     </div>
    
     {{-- Navigation Menu --}}
@@ -76,61 +83,6 @@
                 </ul>
             </div>
         </li>
-
-
-
-   {{--
-
-        <li @class("nav-item")>
-            <a href="#applicantsMenu"
-            role="button"
-            aria-expanded="{{ (request()->is('applications') || request()->is('filtered-resumes') || request()->is('candidates') || request()->is('interviews') || request()->is('request-rooms') || request()->is('offer-acceptance')) ? 'true' : 'false' }}"
-            aria-controls="applicantsMenu"
-            data-bs-toggle="collapse"
-            @class("nav-link text-dark d-flex justify-content-between align-items-center")>
-                <span><i @class('bi bi-people-fill me-2')></i> Applicants</span>
-                <i @class('bi bi-chevron-down small')></i>
-            </a>
-
-            <div id="applicantsMenu" @class('collapse ps-4 ' . ((request()->is('applications') || request()->is('filtered-resumes') || request()->is('candidates') || request()->is('interviews') || request()->is('request-rooms') || request()->is('offer-acceptance')) ? 'show' : ''))>
-                <ul @class('nav flex-column')>
-                    <li @class("nav-item")>
-                        <a href="{{ route('applications') }}"
-                            @class('nav-link text-dark' . (request()->is('applications') ? 'active' : ''))>
-                            <i @class('bi bi-journal-text me-2')></i> Applications
-                        </a>
-                    </li>
-
-                    
-                    <li @class("nav-item")>
-                        <a href="{{ route('filtered-resumes') }}"
-                            @class('nav-link text-dark' . (request()->is('filtered-resumes') ? 'active' : ''))>
-                            <i @class('bi bi-funnel-fill me-2')></i> Filtered Applicants
-                        </a>
-                    </li>
-                    <li @class("nav-item")>
-                        <a href="{{ route('candidates') }}"
-                            @class('nav-link text-dark' . (request()->is('candidates') ? 'active' : ''))>
-                            <i @class('bi bi-person-lines-fill me-2')></i> Candidates
-                        </a>
-                    </li>
-                    <li @class("nav-item")>
-                        <a href="{{ route('request-rooms') }}"
-                        @class('nav-link text-dark' . (request()->is('request-rooms') ? 'active' : ''))>
-                            <i @class('bi bi-door-open me-2')></i> Request Room
-                        </a>
-                    </li>
-                    <li @class("nav-item")>
-                        <a href="{{ route('offer-acceptance') }}"
-                        @class('nav-link text-dark' . (request()->is('offer-acceptance') ? 'active' : ''))>
-                            <i @class('bi bi-hand-thumbs-up me-2')></i> Offer Acceptance
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </li>
-
-        --}}
 
         <li @class("nav-item")>
             <a href="#onboardingMenu"
@@ -230,12 +182,6 @@
                         </a>
                     </li>
                     <li @class("nav-item")>
-                        <a href="{{ route('criteria') }}"
-                        @class('nav-link text-dark'. (request()->is('criteria') ? 'active' : ''))>
-                            <i @class('bi bi-gift me-2')></i> Recognition Criteria
-                        </a>
-                    </li>
-                    <li @class("nav-item")>
                         <a href="{{ route('reward-giving') }}" @class('nav-link text-dark'. (request()->is('reward-giving') ? 'active' : ''))>
                             <i @class('bi bi-heart-fill me-2')></i> Give Rewards
                         </a>
@@ -246,7 +192,7 @@
 
         <li @class("nav-item")>
             <a href="{{ route('reports') }}" @class('nav-link text-dark'. (request()->is('reports') ? 'active' : ''))">
-                <i @class('bi bi-file-earmark-text me-2')></i> Reports & Analytics
+                <i @class('bi bi-file-earmark-text me-2')></i> Reports Data
             </a>
         </li>
 
