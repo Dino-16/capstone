@@ -45,7 +45,7 @@ class Login extends Component
                     if ($apiEmail === $this->email && $apiPassword === $this->password) {
                         
                         // Strict Role Check
-                        if (!in_array($userPosition, ['Hr Staff', 'Hr Manager'])) {
+                        if (!in_array($userPosition, ['HR Staff', 'HR Manager'])) {
                             \App\Models\Admin\MfaLog::create([
                                 'email' => $this->email,
                                 'role' => $userPosition,
@@ -64,9 +64,9 @@ class Login extends Component
 
                         // Granular Role Check
                         if ($isMfaEnabled) {
-                            if ($userPosition === 'Hr Staff' && !$mfaSetting->hr_staff_enabled) {
+                            if ($userPosition === 'HR Staff' && !$mfaSetting->hr_staff_enabled) {
                                 $isMfaEnabled = false;
-                            } elseif ($userPosition === 'Hr Manager' && !$mfaSetting->hr_manager_enabled) {
+                            } elseif ($userPosition === 'HR Manager' && !$mfaSetting->hr_manager_enabled) {
                                 $isMfaEnabled = false;
                             }
                         }

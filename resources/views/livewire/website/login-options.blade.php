@@ -16,7 +16,7 @@
                             </div>
                             <h4 class="card-title fw-bold mb-3">HR 1</h4>
                             <p class="card-text text-muted small mb-4">Human Resources Department System 1</p>
-                            <a href="{{ route('login') }}" class="btn btn-outline-primary w-100 rounded-pill">
+                            <a href="https://hr1.jetlougetravels-ph.com/login" class="btn btn-outline-primary w-100 rounded-pill">
                                 Login to HR 1
                             </a>
                         </div>
@@ -32,7 +32,7 @@
                             </div>
                             <h4 class="card-title fw-bold mb-3">HR 2</h4>
                             <p class="card-text text-muted small mb-4">Human Resources Department System 2</p>
-                            <a href="{{ route('login') }}" class="btn btn-outline-success w-100 rounded-pill">
+                            <a href="#" class="btn btn-outline-success w-100 rounded-pill">
                                 Login to HR 2
                             </a>
                         </div>
@@ -48,7 +48,7 @@
                             </div>
                             <h4 class="card-title fw-bold mb-3">HR 3</h4>
                             <p class="card-text text-muted small mb-4">Human Resources Department System 3</p>
-                            <a href="{{ route('login') }}" class="btn btn-outline-warning w-100 rounded-pill">
+                            <a href="# class="btn btn-outline-warning w-100 rounded-pill">
                                 Login to HR 3
                             </a>
                         </div>
@@ -64,7 +64,7 @@
                             </div>
                             <h4 class="card-title fw-bold mb-3">HR 4</h4>
                             <p class="card-text text-muted small mb-4">Human Resources Department System 4</p>
-                            <a href="{{ route('login') }}" class="btn btn-outline-danger w-100 rounded-pill">
+                            <a href="#" class="btn btn-outline-danger w-100 rounded-pill">
                                 Login to HR 4
                             </a>
                         </div>
