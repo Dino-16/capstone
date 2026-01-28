@@ -59,6 +59,7 @@
             <div>
 
                 <form wire:submit.prevent="login" id="loginForm" >
+                    <x-honeypot />
                     <div @class('mb-3')>
                         <label for="email-name" @class('form-label fw-semibold')>Email</label>
                         <div @class('input-group')>

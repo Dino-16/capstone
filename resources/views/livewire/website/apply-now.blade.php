@@ -90,11 +90,13 @@
         @enderror
 
         <form wire:submit.prevent="submitApplication">
+            <x-honeypot />
             <div @class(['row', 'g-4'])>
                 
                 {{-- Personal Information --}}
                 <div class="col-12">
-                    <h5 class="text-uppercase tracking-wider text-secondary fw-bold small mb-3">Personal Information</h5>
+                    <h5 class="text-uppercase tracking-wider text-secondary fw-bold small mb-1">Personal Information</h5>
+                    <p class="text-muted small mb-3"><i class="bi bi-info-circle me-1"></i>All fields are required. Only the <strong>Suffix</strong> field is optional.</p>
                 </div>
 
                 <div class="col-md-4">
@@ -165,7 +167,7 @@
                     <x-input-error field="selectedRegion" />
                 </div>
 
-                @if($selectedRegion !== '130000000')
+                @if((string) $selectedRegion !== '1300000000')
                 <div class="col-md-6">
                     <x-input-label for="province" :value="__('Province')" />
                     <select wire:model.live="selectedProvince" id="province" class="form-select form-select-lg" {{ empty($provinces) ? 'disabled' : '' }}>
@@ -178,9 +180,9 @@
                 </div>
                 @endif
 
-                <div class="col-md-{{ $selectedRegion === '130000000' ? '12' : '6' }}">
+                <div class="col-md-{{ (string) $selectedRegion === '1300000000' ? '12' : '6' }}">
                     <x-input-label for="city" :value="__('City / Municipality')" />
-                    @if($selectedRegion === '130000000')
+                    @if((string) $selectedRegion === '1300000000')
                         <small class="text-info d-block mb-2">NCR Cities Available: {{ count($cities) }}</small>
                     @endif
                     <select wire:model.live="selectedCity" id="city" class="form-select form-select-lg" {{ empty($cities) ? 'disabled' : '' }}>

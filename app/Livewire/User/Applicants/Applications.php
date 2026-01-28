@@ -7,7 +7,9 @@ use Livewire\WithPagination;
 use App\Models\Applicants\Application;
 use App\Models\Applicants\FilteredResume;
 use App\Models\Applicants\Candidate;
+use App\Models\Recruitment\JobListing;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class Applications extends Component
 {   
@@ -37,6 +39,15 @@ class Applications extends Component
     public $interview_time = '';
     public $applicantData = [];
 
+    // Draft tool properties
+    public $showDraftModal = false;
+    public $draftingApplicationId = null;
+    public $draftApplicantName = '';
+    public $currentPosition = '';
+    public $suggestedPosition = '';
+    public $draftReason = '';
+    public $availablePositions = [];
+
     // Pagination Page when Filtered
     public function updatedSearch()
     {
@@ -54,6 +65,40 @@ class Applications extends Component
         session()->forget('status');
     }
 
+    // Get AI Rating Description based on score
+    private function getRatingDescription($score)
+    {
+        if ($score === null) return null;
+        
+        if ($score >= 90) {
+            return 'Exceptional - Outstanding qualifications, exceeds all requirements';
+        } elseif ($score >= 80) {
+            return 'Highly Qualified - Strong technical background and experience';
+        } elseif ($score >= 70) {
+            return 'Qualified - Meets requirements with good potential';
+        } elseif ($score >= 60) {
+            return 'Moderately Qualified - Meets basic requirements';
+        } elseif ($score >= 50) {
+            return 'Marginally Qualified - Some gaps in qualifications';
+        } else {
+            return 'Not Qualified - Does not meet minimum requirements';
+        }
+    }
+
+    // Get rating badge color
+    private function getRatingBadgeColor($score)
+    {
+        if ($score === null) return 'secondary';
+        
+        if ($score >= 80) {
+            return 'success';
+        } elseif ($score >= 60) {
+            return 'warning';
+        } else {
+            return 'danger';
+        }
+    }
+
     // View filtered resume
     public function viewFilteredResume($applicationId)
     {
@@ -68,6 +113,13 @@ class Applications extends Component
         
         $resume = FilteredResume::where('application_id', $applicationId)->first();
         $this->filteredResume = $resume ? $resume->toArray() : [];
+        
+        // Add rating description
+        if (isset($this->filteredResume['rating_score'])) {
+            $this->filteredResume['rating_description'] = $this->getRatingDescription($this->filteredResume['rating_score']);
+            $this->filteredResume['rating_badge_color'] = $this->getRatingBadgeColor($this->filteredResume['rating_score']);
+        }
+        
         $this->showFilteredResumeModal = true;
         logger('Modal should be showing: ' . $this->showFilteredResumeModal);
     }
@@ -186,13 +238,23 @@ class Applications extends Component
             'edit_experience.*' => ['nullable', 'string'],
             'edit_education' => ['nullable', 'array'],
             'edit_education.*' => ['nullable', 'string'],
-            'edit_rating_score' => ['nullable', 'numeric'],
+            'edit_rating_score' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'edit_qualification_status' => ['nullable', 'string', 'max:50'],
         ]);
 
         $skills = array_values(array_filter(array_map('trim', $this->edit_skills ?? []), fn ($v) => $v !== ''));
         $experience = array_values(array_filter(array_map('trim', $this->edit_experience ?? []), fn ($v) => $v !== ''));
         $education = array_values(array_filter(array_map('trim', $this->edit_education ?? []), fn ($v) => $v !== ''));
+
+        // Auto-set qualification status based on score
+        $qualificationStatus = $this->edit_qualification_status;
+        if ($this->edit_rating_score !== null) {
+            if ($this->edit_rating_score >= 60) {
+                $qualificationStatus = 'Qualified';
+            } else {
+                $qualificationStatus = 'Not Qualified';
+            }
+        }
 
         FilteredResume::updateOrCreate(
             ['application_id' => $this->editingApplicationId],
@@ -201,11 +263,65 @@ class Applications extends Component
                 'experience' => $experience,
                 'education' => $education,
                 'rating_score' => $this->edit_rating_score,
-                'qualification_status' => $this->edit_qualification_status,
+                'qualification_status' => $qualificationStatus,
             ]
         );
 
+        session()->flash('message', 'Filtered resume updated successfully!');
         $this->closeEditFilteredResumeModal();
+    }
+
+    // Draft tool methods - for pivoting candidates to alternative roles
+    public function openDraftModal($applicationId)
+    {
+        $application = Application::find($applicationId);
+        if (!$application) {
+            return;
+        }
+
+        $this->draftingApplicationId = $applicationId;
+        $this->draftApplicantName = $application->first_name . ' ' . $application->middle_name . ' ' . $application->last_name;
+        $this->currentPosition = $application->applied_position;
+        $this->suggestedPosition = '';
+        $this->draftReason = '';
+
+        // Get available positions (excluding current)
+        $this->availablePositions = JobListing::where('position', '!=', $application->applied_position)
+            ->pluck('position')
+            ->toArray();
+
+        $this->showDraftModal = true;
+    }
+
+    public function closeDraftModal()
+    {
+        $this->showDraftModal = false;
+        $this->draftingApplicationId = null;
+        $this->draftApplicantName = '';
+        $this->currentPosition = '';
+        $this->suggestedPosition = '';
+        $this->draftReason = '';
+        $this->availablePositions = [];
+    }
+
+    public function pivotToNewRole()
+    {
+        $this->validate([
+            'suggestedPosition' => ['required', 'string'],
+            'draftReason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $application = Application::find($this->draftingApplicationId);
+        if (!$application) {
+            return;
+        }
+
+        $oldPosition = $application->applied_position;
+        $application->applied_position = $this->suggestedPosition;
+        $application->save();
+
+        session()->flash('message', "Applicant pivoted from '{$oldPosition}' to '{$this->suggestedPosition}' successfully!");
+        $this->closeDraftModal();
     }
 
     // Schedule interview methods
@@ -216,6 +332,10 @@ class Applications extends Component
             return;
         }
 
+        // Get the filtered resume data for rating info
+        $filteredResume = FilteredResume::where('application_id', $applicationId)->first();
+        $ratingScore = $filteredResume ? $filteredResume->rating_score : null;
+
         $this->schedulingApplicationId = $applicationId;
         $this->applicantData = [
             'name' => $application->first_name . ' ' . $application->middle_name . ' ' . $application->last_name . ' ' . $application->suffix_name,
@@ -223,6 +343,9 @@ class Applications extends Component
             'phone' => $application->phone,
             'position' => $application->applied_position,
             'department' => $application->department,
+            'rating_score' => $ratingScore,
+            'rating_description' => $this->getRatingDescription($ratingScore),
+            'rating_badge_color' => $this->getRatingBadgeColor($ratingScore),
         ];
         $this->showScheduleModal = true;
     }
@@ -255,12 +378,16 @@ class Applications extends Component
         // Combine date and time
         $interviewDateTime = $this->interview_date . ' ' . $this->interview_time;
 
-        // Create candidate record
-        Candidate::create([
+        // Get rating info
+        $ratingScore = $resumeArray['rating_score'] ?? null;
+        $ratingDescription = $ratingScore ? $this->getRatingDescription($ratingScore) : null;
+
+        // Create candidate record with all enhanced fields
+        $candidate = Candidate::create([
             'candidate_name' => $application->first_name . ' ' . $application->middle_name . ' ' . $application->last_name . ' ' . $application->suffix_name,
             'candidate_email' => $application->email,
             'candidate_phone' => $application->phone,
-            'candidate_sex' => $application->sex ?? null,
+            'candidate_sex' => $application->gender ?? null,
             'candidate_birth_date' => $application->birth_date ?? null,
             'candidate_civil_status' => $application->civil_status ?? null,
             'candidate_age' => $application->age ?? null,
@@ -269,19 +396,32 @@ class Applications extends Component
             'candidate_city' => $application->city ?? null,
             'candidate_barangay' => $application->barangay ?? null,
             'candidate_house_street' => $application->house_street ?? null,
+            'applied_position' => $application->applied_position,
+            'department' => $application->department,
+            'rating_score' => $ratingScore,
+            'rating_description' => $ratingDescription,
             'skills' => $resumeArray['skills'] ?? [],
             'experience' => $resumeArray['experience'] ?? [],
             'education' => $resumeArray['education'] ?? [],
             'resume_url' => $application->resume_path ? Storage::url($application->resume_path) : null,
             'status' => 'scheduled',
             'interview_schedule' => $interviewDateTime,
+            'scheduling_token' => Str::random(32),
+            'self_scheduled' => false,
+            'interview_result' => 'pending',
+            'contract_status' => 'pending',
         ]);
+
+        // Delete the filtered resume record
+        if ($filteredResume) {
+            $filteredResume->delete();
+        }
 
         // Delete the application record
         $application->delete();
 
         $this->closeScheduleModal();
-        session()->flash('message', 'Candidate scheduled successfully and application moved to candidates.');
+        session()->flash('message', 'Candidate scheduled successfully and moved to candidates list.');
     }
 
     public function render()
@@ -300,10 +440,13 @@ class Applications extends Component
 
         $applications = $query->paginate(10);
         
-        // Load qualification status for each application
+        // Load qualification status and rating info for each application
         foreach ($applications as $app) {
             $filteredResume = FilteredResume::where('application_id', $app->id)->first();
             $app->qualification_status = $filteredResume ? $filteredResume->qualification_status : null;
+            $app->rating_score = $filteredResume ? $filteredResume->rating_score : null;
+            $app->rating_description = $filteredResume ? $this->getRatingDescription($filteredResume->rating_score) : null;
+            $app->rating_badge_color = $filteredResume ? $this->getRatingBadgeColor($filteredResume->rating_score) : 'secondary';
         }
 
         return view('livewire.user.applicants.applications', [
@@ -311,3 +454,4 @@ class Applications extends Component
         ])->layout('layouts.app');
     }
 }
+

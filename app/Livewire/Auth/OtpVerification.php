@@ -12,46 +12,84 @@ class OtpVerification extends Component
 
     public function verifyOtp()
     {
-        $storedOtp = session('otp');
-        $expiresAt = session('otp_expires');
-        $userId = session('user_id');
+        $sessionData = session('otp_session');
+
+        if (!$sessionData) {
+            return redirect()->route('login');
+        }
+
+        $storedOtp = $sessionData['otp'];
+        $expiresAt = $sessionData['otp_expires'];
+        $userData = $sessionData['user_data'];
 
         $enteredOtp = implode('', $this->otpDigits);
 
-        $this->validate([
-            'otpDigits.*' => 'required|numeric|digits:1',
-        ]);
-
         if ($enteredOtp == $storedOtp && Carbon::now()->lt($expiresAt)) {
-            Auth::loginUsingId($userId);
-            session()->forget(['otp', 'otp_expires', 'user_id', 'user_email']);
-            return redirect()->intended('dashboard');
+            // Login Success
+            session([
+                'user' => array_merge($userData, ['authenticated' => true])
+            ]);
+            
+            session()->forget('otp_session');
+
+            \App\Models\Admin\MfaLog::create([
+                'email' => $userData['email'],
+                'role' => $userData['position'],
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'action' => 'mfa_verified',
+                'status' => 'success',
+            ]);
+
+            return redirect()->route('dashboard');
         } else {
+            \App\Models\Admin\MfaLog::create([
+                'email' => $userData['email'],
+                'role' => $userData['position'],
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'action' => 'mfa_failed',
+                'status' => 'failed',
+            ]);
+
             $this->addError('otp', 'Invalid or expired OTP.');
         }
     }
 
     public function resendOtp()
     {
-        $userId = session('user_id');
-        $user = \App\Models\User::find($userId);
-
-        if ($user) {
+        $sessionData = session('otp_session');
+        
+        if ($sessionData) {
             $otp = rand(100000, 999999);
+            $email = $sessionData['user_data']['email'];
 
             session([
-                'otp' => $otp,
-                'otp_expires' => Carbon::now()->addMinutes(5),
-                'user_id' => $user->id,
-                'user_email' => $user->email, // 👈 store email for display
+                'otp_session' => array_merge($sessionData, [
+                    'otp' => $otp,
+                    'otp_expires' => Carbon::now()->addMinutes(10)
+                ])
             ]);
 
-            Mail::raw("Your new OTP code is: {$otp}", function ($message) use ($user) {
-                $message->to($user->email)
-                        ->subject('Resent Login OTP Verification');
-            });
+            try {
+                Mail::raw("Your new OTP code is: {$otp}", function ($message) use ($email) {
+                    $message->to($email)
+                            ->subject('Resent Login OTP Verification');
+                });
+                session()->flash('status', 'A new OTP has been sent to your email.');
+                
+                \App\Models\Admin\MfaLog::create([
+                    'email' => $email,
+                    'role' => $sessionData['user_data']['position'],
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                    'action' => 'mfa_resent',
+                    'status' => 'success',
+                ]);
 
-            session()->flash('status', 'A new OTP has been sent to your email.');
+            } catch (\Exception $e) {
+                 session()->flash('status', 'Failed to send OTP: ' . $e->getMessage());
+            }
         }
     }
 

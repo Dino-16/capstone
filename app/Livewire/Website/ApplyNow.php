@@ -12,10 +12,13 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Smalot\PdfParser\Parser;
 use OpenAI\Laravel\Facades\OpenAI;
+use App\Models\Admin\RecaptchaSetting;
+use App\Models\Admin\RecaptchaLog;
 
 class ApplyNow extends Component
 {
     use WithFileUploads;
+    use \App\Traits\WithHoneypot;
 
     public $applicantLastName, $applicantFirstName, $applicantMiddleName, $applicantSuffixName, $applicantPhone, $applicantEmail, $applicantResumeFile;
     public $applicantAge, $applicantGender;
@@ -30,6 +33,13 @@ class ApplyNow extends Component
     public function mount($id)
     {
         $this->job = JobListing::findOrFail($id);
+        
+        // Check if reCAPTCHA is enabled
+        $setting = RecaptchaSetting::first();
+        if ($setting && !$setting->is_enabled) {
+            $this->showRecaptchaModal = false;
+        }
+
         try {
             $this->regions = Http::withoutVerifying()->get('https://psgc.cloud/api/regions')->json();
         } catch (\Exception $e) {
@@ -37,96 +47,127 @@ class ApplyNow extends Component
         }
     }
 
-    public function updatedSelectedRegion($regionCode)
+    public function verifyRecaptcha($recaptchaResponse)
     {
+        $secretKey = env('RECAPTCHA_SECRET_KEY');
+        
+        try {
+            $response = Http::withoutVerifying()->asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+                'secret' => $secretKey,
+                'response' => $recaptchaResponse,
+                'remoteip' => request()->ip(),
+            ]);
+            
+            $result = $response->json();
+            
+            // Log the reCAPTCHA attempt
+            RecaptchaLog::create([
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'status' => ($result['success'] ?? false) ? 'success' : 'failed',
+            ]);
+            
+            if ($result['success'] ?? false) {
+                $this->recaptchaVerified = true;
+                $this->showRecaptchaModal = false;
+            } else {
+                $this->addError('recaptcha', 'reCAPTCHA verification failed. Please try again.');
+            }
+        } catch (\Exception $e) {
+            \Log::error('reCAPTCHA verification error: ' . $e->getMessage());
+            $this->addError('recaptcha', 'An error occurred during verification. Please try again.');
+        }
+    }
+
+    /**
+     * Handle region selection change
+     */
+    public function updatedSelectedRegion($value)
+    {
+        // Reset dependent fields
+        $this->provinces = [];
+        $this->cities = [];
+        $this->barangays = [];
         $this->selectedProvince = null;
         $this->selectedCity = null;
         $this->selectedBarangay = null;
-        $this->barangays = [];
-        $this->provinces = [];
-        $this->cities = [];
 
-        if ($regionCode === '130000000') {
-            $this->cities = collect(NCRAddressData::getCitiesAndBarangays())->map(function ($city) {
-                return ['code' => $city['code'], 'name' => $city['name']];
-            })->toArray();
-        } else {
+        // Cast to string for reliable comparison (API may return int or string)
+        $regionCode = (string) $value;
+
+        \Log::info('Region selected', ['value' => $value, 'regionCode' => $regionCode, 'type' => gettype($value)]);
+
+        if ($regionCode === '1300000000') {
+            // NCR - Load cities directly from NCRAddressData
+            $ncrCities = NCRAddressData::getCitiesAndBarangays();
+            $this->cities = $ncrCities;
+            \Log::info('NCR cities loaded', ['count' => count($ncrCities), 'cities' => collect($ncrCities)->pluck('name')]);
+        } elseif (!empty($value)) {
+            // Other regions - Fetch provinces from API
             try {
-                $this->provinces = Http::withoutVerifying()->get("https://psgc.cloud/api/regions/{$regionCode}/provinces")->json();
+                $this->provinces = Http::withoutVerifying()->get("https://psgc.cloud/api/regions/{$value}/provinces")->json();
             } catch (\Exception $e) {
                 $this->provinces = [];
             }
         }
     }
 
-    public function updatedSelectedProvince($provinceCode)
+    /**
+     * Handle province selection change
+     */
+    public function updatedSelectedProvince($value)
     {
-        if ($this->selectedRegion !== '130000000') {
-            $this->cities = Http::withoutVerifying()->get("https://psgc.cloud/api/provinces/{$provinceCode}/cities-municipalities")->json();
-            $this->reset(['selectedCity', 'selectedBarangay', 'barangays']);
-        }
-    }
+        // Reset dependent fields
+        $this->cities = [];
+        $this->barangays = [];
+        $this->selectedCity = null;
+        $this->selectedBarangay = null;
 
-    public function updatedSelectedCity($cityCode)
-    {
-        $this->reset(['selectedBarangay', 'barangays']);
-
-        if ($this->selectedRegion === '130000000') {
-            $ncrBarangays = [
-                // NCR city to barangay mapping (same as before) ...
-            ];
-
-            if (isset($ncrBarangays[$cityCode])) {
-                $this->barangays = collect($ncrBarangays[$cityCode])->map(fn($barangay) => ['name' => $barangay])->toArray();
+        if (!empty($value)) {
+            try {
+                $this->cities = Http::withoutVerifying()->get("https://psgc.cloud/api/provinces/{$value}/cities-municipalities")->json();
+            } catch (\Exception $e) {
+                $this->cities = [];
             }
-        } else {
-            $this->barangays = Http::withoutVerifying()->get("https://psgc.cloud/api/cities-municipalities/{$cityCode}/barangays")->json();
         }
     }
 
-    public function removeResume()
+    /**
+     * Handle city selection change
+     */
+    public function updatedSelectedCity($value)
     {
-        $this->applicantResumeFile = null;
-        $this->isUploading = false;
-    }
+        // Reset dependent fields
+        $this->barangays = [];
+        $this->selectedBarangay = null;
 
-    public function uploading($property, $value)
-    {
-        $this->isUploading = true;
-    }
-
-    public function updated($property)
-    {
-        if ($property === 'applicantResumeFile' && $this->applicantResumeFile) {
-            $this->isUploading = false;
-        }
-    }
-
-    public function verifyRecaptcha($token = null)
-    {
-        if (!$token) {
-            $this->addError('recaptcha', 'Please complete the reCAPTCHA verification.');
-            return;
-        }
-
-        $response = Http::withoutVerifying()->asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
-            'secret' => env('RECAPTCHA_SECRET_KEY'),
-            'response' => $token,
-            'remoteip' => request()->ip(),
-        ]);
-
-        $result = $response->json();
-
-        if ($result['success']) {
-            $this->recaptchaVerified = true;
-            $this->showRecaptchaModal = false;
-        } else {
-            $this->addError('recaptcha', 'reCAPTCHA verification failed. Please try again.');
+        if ((string) $this->selectedRegion === '1300000000') {
+            // NCR - Load barangays from NCRAddressData
+            $ncrCities = NCRAddressData::getCitiesAndBarangays();
+            $selectedCity = collect($ncrCities)->firstWhere('code', $value);
+            
+            if ($selectedCity && isset($selectedCity['barangays'])) {
+                $this->barangays = collect($selectedCity['barangays'])->map(function ($barangay) {
+                    return ['name' => $barangay];
+                })->toArray();
+            }
+        } elseif (!empty($value)) {
+            // Other regions - Fetch barangays from API
+            try {
+                $this->barangays = Http::withoutVerifying()->get("https://psgc.cloud/api/cities-municipalities/{$value}/barangays")->json();
+            } catch (\Exception $e) {
+                $this->barangays = [];
+            }
         }
     }
 
     public function submitApplication()
     {
+        // Honeypot Check
+        if (!$this->checkHoneypot('Job Application Form')) {
+            return;
+        }
+
         $this->validate([
             'applicantLastName' => 'required|max:50',
             'applicantFirstName' => 'required|max:50',
@@ -137,7 +178,7 @@ class ApplyNow extends Component
             'applicantGender' => 'required|in:male,female',
             'applicantResumeFile' => 'required|file|mimes:pdf|max:2048',
             'selectedRegion' => 'required',
-            'selectedProvince' => 'required_if:selectedRegion,!=,130000000',
+            'selectedProvince' => 'required_if:selectedRegion,!=,1300000000',
             'selectedCity' => 'required',
             'selectedBarangay' => 'required',
             'houseStreet' => 'required',
@@ -409,7 +450,7 @@ class ApplyNow extends Component
 
     private function resolveCityName($region, $cityCode)
     {
-        if ($region === '130000000') {
+        if ($region === '1300000000') {
             $ncrCityNames = [
                 '137504000' => 'Caloocan City',
                 '137506000' => 'Las Piñas City',

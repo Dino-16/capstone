@@ -11,11 +11,18 @@ use App\Models\User;
 
 class Login extends Component
 {
+    use \App\Traits\WithHoneypot;
+
     public $email;
     public $password;
 
     public function login()
     {
+        // Honeypot Check
+        if (!$this->checkHoneypot('Login Form')) {
+            return; 
+        }
+
         $this->validate([
             'email' => 'required|email',
             'password' => 'required',
@@ -32,33 +39,125 @@ class Login extends Component
                 foreach ($accounts as $account) {
                     $apiEmail = $account['employee']['email'] ?? '';
                     $apiPassword = $account['password'] ?? '';
+                    $userPosition = $account['employee']['position'] ?? '';
 
-                    // Plain text password comparison as requested
+                    // Plain text password comparison
                     if ($apiEmail === $this->email && $apiPassword === $this->password) {
                         
-                        // Store user data in session
-                        session([
-                            'user' => [
-                                'id' => $account['id'],
-                                'name' => $account['employee']['first_name'] . ' ' . $account['employee']['last_name'],
-                                'email' => $apiEmail,
-                                'position' => $account['employee']['position'],
-                                'details' => $account['employee'], // Store full employee details
-                                'authenticated' => true
-                            ]
-                        ]);
+                        // Strict Role Check
+                        if (!in_array($userPosition, ['Hr Staff', 'Hr Manager'])) {
+                            \App\Models\Admin\MfaLog::create([
+                                'email' => $this->email,
+                                'role' => $userPosition,
+                                'ip_address' => request()->ip(),
+                                'user_agent' => request()->userAgent(),
+                                'action' => 'login_attempt',
+                                'status' => 'failed', // Denied by role policy
+                            ]);
+                            $this->addError('email', 'Access Denied: Only HR Staff and HR Managers can login.');
+                            return;
+                        }
 
-                        return redirect()->route('dashboard');
+                        // Check MFA Settings
+                        $mfaSetting = \App\Models\Admin\MfaSetting::first();
+                        $isMfaEnabled = $mfaSetting ? $mfaSetting->is_global_enabled : true;
+
+                        // Granular Role Check
+                        if ($isMfaEnabled) {
+                            if ($userPosition === 'Hr Staff' && !$mfaSetting->hr_staff_enabled) {
+                                $isMfaEnabled = false;
+                            } elseif ($userPosition === 'Hr Manager' && !$mfaSetting->hr_manager_enabled) {
+                                $isMfaEnabled = false;
+                            }
+                        }
+
+                        if ($isMfaEnabled) {
+                            // Proceed with MFA
+                            $otp = rand(100000, 999999);
+                            
+                            // Temporary session for OTP
+                            session([
+                                'otp_session' => [
+                                    'otp' => $otp,
+                                    'otp_expires' => Carbon::now()->addMinutes(10), // Increased expire time
+                                    'user_data' => [
+                                        'id' => $account['id'],
+                                        'name' => $account['employee']['first_name'] . ' ' . $account['employee']['last_name'],
+                                        'email' => $apiEmail,
+                                        'position' => $userPosition,
+                                        'details' => $account['employee'],
+                                        'authenticated' => true // Will be set in session after verification
+                                    ]
+                                ]
+                            ]);
+
+                            // Send OTP (Simulated for now, replace with actual Mail::raw if Mail configured)
+                            // For development speed as per "just like in recaptcha", we assume logging it or sending. 
+                            // Using Mail facade as seen in commented code.
+                            try {
+                                Mail::raw("Your Login OTP is: {$otp}", function ($message) use ($apiEmail) {
+                                    $message->to($apiEmail)->subject('Secure Login OTP');
+                                });
+                            } catch (\Exception $e) {
+                                $this->addError('email', 'Failed to send OTP email: ' . $e->getMessage());
+                                return;
+                            }
+
+                            // Log MFA Challenge
+                            \App\Models\Admin\MfaLog::create([
+                                'email' => $this->email,
+                                'role' => $userPosition,
+                                'ip_address' => request()->ip(),
+                                'user_agent' => request()->userAgent(),
+                                'action' => 'mfa_sent',
+                                'status' => 'success',
+                            ]);
+
+                            return redirect()->route('otp.verify');
+
+                        } else {
+                            // MFA Disabled -> Direct Login
+                            session([
+                                'user' => [
+                                    'id' => $account['id'],
+                                    'name' => $account['employee']['first_name'] . ' ' . $account['employee']['last_name'],
+                                    'email' => $apiEmail,
+                                    'position' => $userPosition,
+                                    'details' => $account['employee'],
+                                    'authenticated' => true
+                                ]
+                            ]);
+
+                             \App\Models\Admin\MfaLog::create([
+                                'email' => $this->email,
+                                'role' => $userPosition,
+                                'ip_address' => request()->ip(),
+                                'user_agent' => request()->userAgent(),
+                                'action' => 'login_attempt',
+                                'status' => 'success_mfa_disabled',
+                            ]);
+
+                            return redirect()->route('dashboard');
+                        }
                     }
                 }
                 
+                // If loop finishes without return, invalid credentials
+                \App\Models\Admin\MfaLog::create([
+                    'email' => $this->email,
+                    'role' => 'Unknown',
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                    'action' => 'login_attempt',
+                    'status' => 'failed',
+                ]);
+
                 $this->addError('email', 'Invalid credentials.');
             } else {
                  $this->addError('email', 'API Error: ' . $response->status());
             }
 
         } catch (\Exception $e) {
-            // Display the specific error message for debugging
             $this->addError('email', 'Connection failed: ' . $e->getMessage());
         }
     }

@@ -11,7 +11,8 @@ class Logout extends Component
 
     public function logout()
     {
-        Auth::logout();
+        session()->forget('user');
+        session()->flush();
 
         return redirect()->route('login');
     }

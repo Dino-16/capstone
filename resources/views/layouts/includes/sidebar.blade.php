@@ -58,7 +58,7 @@
         <li @class("nav-item")>
             <a href="#applicantsMenu"
             role="button"
-            aria-expanded="{{ (request()->is('applications') || request()->is('filtered-resumes') || request()->is('candidates') || request()->is('interviews') || request()->is('request-rooms') || request()->is('offer-acceptance')) ? 'true' : 'false' }}"
+            aria-expanded="{{ (request()->is('applications') || request()->is('candidates') || request()->is('interviews') || request()->is('offers')) ? 'true' : 'false' }}"
             aria-controls="applicantsMenu"
             data-bs-toggle="collapse"
             @class("nav-link text-dark d-flex justify-content-between align-items-center")>
@@ -66,7 +66,7 @@
                 <i @class('bi bi-chevron-down small')></i>
             </a>
 
-            <div id="applicantsMenu" @class('collapse ps-4 ' . ((request()->is('applications') || request()->is('filtered-resumes') || request()->is('candidates') || request()->is('interviews') || request()->is('request-rooms') || request()->is('offer-acceptance')) ? 'show' : ''))>
+            <div id="applicantsMenu" @class('collapse ps-4 ' . ((request()->is('applications') || request()->is('candidates') || request()->is('interviews') || request()->is('offers')) ? 'show' : ''))>
                 <ul @class('nav flex-column')>
                     <li @class("nav-item")>
                         <a href="{{ route('applications') }}"
@@ -75,9 +75,26 @@
                         </a>
                     </li>
                     <li @class("nav-item")>
+                        <a href="{{ route('facility-request') }}" @class('nav-link text-dark'. (request()->is('facility-request') ? 'active' : ''))>
+                            <i @class('bi bi-building me-2')></i> Facility Request
+                        </a>
+                    </li>
+                    <li @class("nav-item")>
+                        <a href="{{ route('candidates') }}"
+                            @class('nav-link text-dark' . (request()->is('candidates') ? 'active' : ''))>
+                            <i @class('bi bi-person-check me-2')></i> Candidates
+                        </a>
+                    </li>
+                    <li @class("nav-item")>
                         <a href="{{ route('interviews') }}"
                         @class('nav-link text-dark' . (request()->is('interviews') ? 'active' : ''))>
                             <i @class('bi bi-calendar-event me-2')></i> Interviews
+                        </a>
+                    </li>
+                    <li @class("nav-item")>
+                        <a href="{{ route('offers') }}"
+                        @class('nav-link text-dark' . (request()->is('offers') ? 'active' : ''))>
+                            <i @class('bi bi-file-earmark-check me-2')></i> Offers
                         </a>
                     </li>
                 </ul>
@@ -191,9 +208,44 @@
         </li>
 
         <li @class("nav-item")>
-            <a href="{{ route('reports') }}" @class('nav-link text-dark'. (request()->is('reports') ? 'active' : ''))">
+            <a href="{{ route('reports') }}" @class('nav-link text-dark'. (request()->is('reports') ? 'active' : ''))>
                 <i @class('bi bi-file-earmark-text me-2')></i> Reports Data
             </a>
+        </li>
+
+        <li @class("nav-item")>
+            <a href="#securityMenu"
+            role="button"
+            aria-expanded="{{ (request()->is('admin/recaptcha') || request()->is('admin/mfa') || request()->is('admin/honeypots')) ? 'true' : 'false' }}"
+            aria-controls="securityMenu"
+            data-bs-toggle="collapse"
+            @class("nav-link text-dark d-flex justify-content-between align-items-center")>
+                <span><i @class('bi bi-shield-lock me-2')></i> Security</span>
+                <i @class('bi bi-chevron-down small')></i>
+            </a>
+
+            <div id="securityMenu" @class('collapse ps-4 ' . ((request()->is('admin/recaptcha') || request()->is('admin/mfa') || request()->is('admin/honeypots')) ? 'show' : ''))>
+                <ul @class('nav flex-column')>
+                    <li @class("nav-item")>
+                        <a href="{{ route('admin.recaptcha') }}"
+                            @class('nav-link text-dark' . (request()->is('admin/recaptcha') ? 'active' : ''))>
+                            <i @class('bi bi-robot me-2')></i> Recaptcha
+                        </a>
+                    </li>
+                    <li @class("nav-item")>
+                        <a href="{{ route('admin.mfa') }}"
+                            @class('nav-link text-dark' . (request()->is('admin/mfa') ? 'active' : ''))>
+                            <i @class('bi bi-key-fill me-2')></i> MFA Settings
+                        </a>
+                    </li>
+                    <li @class("nav-item")>
+                        <a href="{{ route('admin.honeypots') }}"
+                            @class('nav-link text-dark' . (request()->is('admin/honeypots') ? 'active' : ''))>
+                            <i @class('bi bi-bug-fill me-2')></i> Honeypots
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </li>
 
         <hr>

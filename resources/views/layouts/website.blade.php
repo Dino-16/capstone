@@ -54,6 +54,11 @@
                                     <i class="bi bi-briefcase-fill"></i> Careers
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link d-flex align-items-center gap-1 {{ request()->is('login-options') ? 'text-black' : 'text-white' }}" href="{{ route('login-options') }}">
+                                    <i class="bi bi-box-arrow-in-right"></i> Portals
+                                </a>
+                            </li>
                         </ul>
                     </div>
                 </div>

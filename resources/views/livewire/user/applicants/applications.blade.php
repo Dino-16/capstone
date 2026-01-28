@@ -1,6 +1,7 @@
 @section('page-title', 'Applications')
-@section('page-subtitle', 'Manage job applications')
+@section('page-subtitle', 'AI Review & Draft Hub')
 @section('breadcrumbs', 'Applications')
+
 
 
 
@@ -26,37 +27,67 @@
             </div>
         </div>
     </div>
+
+    {{-- AI RATING LEGEND --}}
+    <div @class('card mb-4 border-0 shadow-sm')>
+        <div @class('card-body py-3')>
+            <div @class('d-flex align-items-center gap-3 flex-wrap')>
+                <span @class('fw-semibold text-muted')><i class="bi bi-robot me-2"></i>AI Rating Scale:</span>
+                <span @class('badge bg-success')>90-100: Exceptional</span>
+                <span @class('badge bg-success')>80-89: Highly Qualified</span>
+                <span @class('badge bg-warning text-dark')>70-79: Qualified</span>
+                <span @class('badge bg-warning text-dark')>60-69: Moderately Qualified</span>
+                <span @class('badge bg-danger')>50-59: Marginally Qualified</span>
+                <span @class('badge bg-danger')>0-49: Not Qualified</span>
+            </div>
+        </div>
+    </div>
+
     {{-- MAIN TABLE --}}
     @if($applications)
         <div @class('p-5 bg-white rounded border rounded-bottom-0 border-bottom-0')>
-            <h3>All Applications</h3>
+            <h3><i class="bi bi-file-earmark-person me-2"></i>All Applications</h3>
             <p @class('text-secondary mb-0')>
-                Overview of job applications
+                AI-reviewed applications with rating scores and qualification status
             </p>
         </div>
         <div @class('table-responsive border rounded bg-white px-5 rounded-top-0 border-top-0')>
-            <table @class('table')>
+            <table @class('table table-hover')>
                 <thead>
                     <tr @class('bg-dark')>
                         <th @class('text-secondary')>Name</th>
                         <th @class('text-secondary')>Email</th>
-                        <th @class('text-secondary')>Phone</th>
                         <th @class('text-secondary')>Position</th>
-                        <th @class('text-secondary')>Department</th>
-                        <th @class('text-secondary')>Qualification Status</th>
-                        <th @class('text-secondary')>Filtered Resumes</th>
+                        <th @class('text-secondary')>AI Rating</th>
+                        <th @class('text-secondary')>Status</th>
+                        <th @class('text-secondary')>Resume</th>
                         <th @class('text-secondary')>Actions</th>
-                        <th @class('text-secondary')>Schedule Interview</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($applications as $app)
                         <tr wire:key="{{ $app->id }}">
-                            <td>{{ $app->first_name }} {{ $app->middle_name }} {{ $app->last_name }} {{ $app->suffix_name }}</td>
+                            <td>
+                                <div class="fw-semibold">{{ $app->first_name }} {{ $app->last_name }}</div>
+                                <small class="text-muted">{{ $app->phone }}</small>
+                            </td>
                             <td>{{ $app->email }}</td>
-                            <td>{{ $app->phone }}</td>
-                            <td>{{ $app->applied_position }}</td>
-                            <td>{{ $app->department }}</td>
+                            <td>
+                                <div class="fw-medium">{{ $app->applied_position }}</div>
+                                <small class="text-muted">{{ $app->department }}</small>
+                            </td>
+                            <td>
+                                @if($app->rating_score)
+                                    <div class="d-flex flex-column">
+                                        <span class="badge bg-{{ $app->rating_badge_color }} mb-1" style="width: fit-content;">
+                                            Score: {{ number_format($app->rating_score, 1) }}
+                                        </span>
+                                        <small class="text-muted" style="font-size: 0.7rem;">{{ $app->rating_description }}</small>
+                                    </div>
+                                @else
+                                    <span class="badge bg-secondary">Pending Review</span>
+                                @endif
+                            </td>
                             <td>
                                 @if($app->qualification_status)
                                     <span class="badge bg-{{ $app->qualification_status == 'Qualified' ? 'success' : ($app->qualification_status == 'Not Qualified' ? 'danger' : 'warning') }}">
@@ -67,39 +98,53 @@
                                 @endif
                             </td>
                             <td>
-                                <button
-                                    type="button"
-                                    @class('btn btn-info btn-sm')
-                                    wire:click="viewFilteredResume({{ $app->id }})"
-                                    title="View Filtered Resume"
-                                >
-                                    <i @class('bi bi-eye-fill')></i> View
-                                </button>
+                                <div class="btn-group btn-group-sm">
+                                    <button
+                                        type="button"
+                                        @class('btn btn-outline-info')
+                                        wire:click="viewFilteredResume({{ $app->id }})"
+                                        title="View AI Analysis"
+                                    >
+                                        <i @class('bi bi-eye-fill')></i>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @class('btn btn-outline-warning')
+                                        wire:click="openEditFilteredResume({{ $app->id }})"
+                                        title="Edit Resume Data"
+                                    >
+                                        <i @class('bi bi-pencil-square')></i>
+                                    </button>
+                                </div>
                             </td>
                             <td>
-                                <button
-                                    type="button"
-                                    @class('btn btn-warning btn-sm')
-                                    wire:click="openEditFilteredResume({{ $app->id }})"
-                                    title="Edit Filtered Resume"
-                                >
-                                    <i @class('bi bi-pencil-square')></i>
-                                </button>
-                            </td>
-                            <td>
-                                <button
-                                    type="button"
-                                    @class('btn btn-success btn-sm')
-                                    wire:click="openScheduleModal({{ $app->id }})"
-                                    title="Schedule Interview"
-                                >
-                                    <i @class('bi bi-calendar-check')></i> Schedule
-                                </button>
+                                <div class="btn-group btn-group-sm">
+                                    {{-- Draft Tool - Pivot to new role --}}
+                                    @if($app->qualification_status == 'Not Qualified' || ($app->rating_score && $app->rating_score < 60))
+                                        <button
+                                            type="button"
+                                            @class('btn btn-outline-secondary')
+                                            wire:click="openDraftModal({{ $app->id }})"
+                                            title="Pivot to Alternative Role"
+                                        >
+                                            <i @class('bi bi-arrow-repeat')></i> Pivot
+                                        </button>
+                                    @endif
+                                    {{-- Schedule Interview --}}
+                                    <button
+                                        type="button"
+                                        @class('btn btn-success')
+                                        wire:click="openScheduleModal({{ $app->id }})"
+                                        title="Promote to Candidate & Schedule"
+                                    >
+                                        <i @class('bi bi-calendar-check')></i> Schedule
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" @class('text-center text-muted py-5')>
+                            <td colspan="7" @class('text-center text-muted py-5')>
                                 <i @class('bi bi-inbox d-block mx-auto fs-1')></i>
                                 <div class="mt-3">No applications found.</div>
                             </td>
@@ -109,79 +154,41 @@
             </table>
             {{ $applications->links() }}
         </div>
-    @elseif($showDrafts)
-            <div @class('p-5 bg-white rounded border rounded-bottom-0 border-bottom-0')>
-            <h3>Drafted Applications</h3>
-            <p @class('text-secondary mb-0')>
-                Only drafted applications
-            </p>
-        </div>
-        <div @class('table-responsive border rounded bg-white px-5 rounded-top-0 border-top-0')>
-            <table @class('table')>
-                <thead>
-                    <tr @class('bg-dark')>
-                        <th @class('text-secondary')>Name</th>
-                        <th @class('text-secondary')>Email</th>
-                        <th @class('text-secondary')>Phone</th>
-                        <th @class('text-secondary')>Position</th>
-                        <th @class('text-secondary')>Department</th>
-                        <th @class('text-secondary')>Status</th>
-                        <th @class('text-secondary')>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($drafts as $draft)
-                        @if($draft->status === 'Drafted')
-                        <tr>
-                            <td>{{ $draft->first_name }} {{ $draft->middle_name }} {{ $draft->last_name }} {{ $draft->suffix_name }}</td>
-                            <td>{{ $draft->email }}</td>
-                            <td>{{ $draft->phone }}</td>
-                            <td>{{ $draft->applied_position }}</td>
-                            <td>{{ $draft->department }}</td>
-                            <td><span @class('badge bg-danger')>{{ $draft->status }}</span></td>
-                            <td>
-                                <button
-                                    @class('btn btn-primary btn-sm')
-                                    wire:click="restore({{ $draft->id }})"
-                                    title="Restore"
-                                >
-                                    <i @class('bi bi-bootstrap-reboot')></i>
-                                </button>
-                            </td>
-                        </tr>
-                        @endif
-                    @empty
-                        <tr>
-                            <td colspan="7" @class('text-center text-muted')>
-                                No drafts found.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-            {{ $drafts->links() }}
-        </div>
     @endif
 
-    {{-- View Filtered Resume Modal --}}
+    {{-- View Filtered Resume Modal (AI Analysis) --}}
     @if($showFilteredResumeModal)
     <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Filtered Resume - {{ $applicantName }}</h5>
-                    <button type="button" class="btn-close" wire:click="closeFilteredResumeModal"></button>
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-robot me-2"></i>AI Analysis - {{ $applicantName }}</h5>
+                    <button type="button" class="btn-close btn-close-white" wire:click="closeFilteredResumeModal"></button>
                 </div>
                 <div class="modal-body">
                     @if($filteredResume)
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <strong>Rating Score:</strong> {{ $filteredResume['rating_score'] ?? 'N/A' }}
+                        {{-- Rating Score Card --}}
+                        <div class="card mb-4 border-0 shadow-sm">
+                            <div class="card-body text-center py-4">
+                                <div class="display-4 fw-bold text-{{ $filteredResume['rating_badge_color'] ?? 'secondary' }}">
+                                    {{ $filteredResume['rating_score'] ?? 'N/A' }}
+                                </div>
+                                <div class="text-muted">AI Rating Score</div>
+                                @if(isset($filteredResume['rating_description']))
+                                    <div class="mt-2">
+                                        <span class="badge bg-{{ $filteredResume['rating_badge_color'] ?? 'secondary' }} fs-6">
+                                            {{ $filteredResume['rating_description'] }}
+                                        </span>
+                                    </div>
+                                @endif
                             </div>
+                        </div>
+
+                        <div class="row">
                             <div class="col-md-6 mb-3">
                                 <strong>Qualification Status:</strong> 
                                 @if($filteredResume['qualification_status'] ?? null)
-                                    <span class="badge bg-{{ ($filteredResume['qualification_status'] ?? null) == 'Qualified' ? 'success' : 'warning' }}">
+                                    <span class="badge bg-{{ ($filteredResume['qualification_status'] ?? null) == 'Qualified' ? 'success' : 'danger' }}">
                                         {{ $filteredResume['qualification_status'] }}
                                     </span>
                                 @else
@@ -190,23 +197,23 @@
                             </div>
                         </div>
                         <div class="mb-3">
-                            <strong>Skills:</strong>
+                            <strong><i class="bi bi-tools me-2"></i>Skills:</strong>
                             @if(!empty($filteredResume['skills']) && is_array($filteredResume['skills']))
-                                <ul class="mt-2">
+                                <div class="mt-2 d-flex flex-wrap gap-2">
                                     @foreach($filteredResume['skills'] as $skill)
-                                        <li>{{ $skill }}</li>
+                                        <span class="badge bg-light text-dark border">{{ $skill }}</span>
                                     @endforeach
-                                </ul>
+                                </div>
                             @else
                                 <p class="text-muted">No skills data available</p>
                             @endif
                         </div>
                         <div class="mb-3">
-                            <strong>Experience:</strong>
+                            <strong><i class="bi bi-briefcase me-2"></i>Experience:</strong>
                             @if(!empty($filteredResume['experience']) && is_array($filteredResume['experience']))
                                 <div class="mt-2">
                                     @foreach($filteredResume['experience'] as $exp)
-                                        <div class="mb-2 p-2 border rounded">
+                                        <div class="mb-2 p-2 border rounded bg-light">
                                             @if(is_array($exp))
                                                 <strong>{{ $exp['title'] ?? 'N/A' }}</strong> at {{ $exp['company'] ?? 'N/A' }}
                                                 <br><small class="text-muted">{{ $exp['period'] ?? 'N/A' }}</small>
@@ -224,11 +231,11 @@
                             @endif
                         </div>
                         <div class="mb-3">
-                            <strong>Education:</strong>
+                            <strong><i class="bi bi-mortarboard me-2"></i>Education:</strong>
                             @if(!empty($filteredResume['education']) && is_array($filteredResume['education']))
                                 <div class="mt-2">
                                     @foreach($filteredResume['education'] as $edu)
-                                        <div class="mb-2 p-2 border rounded">
+                                        <div class="mb-2 p-2 border rounded bg-light">
                                             @if(is_array($edu))
                                                 <strong>{{ $edu['degree'] ?? 'N/A' }}</strong> in {{ $edu['field'] ?? 'N/A' }}
                                                 <br><small class="text-muted">{{ $edu['institution'] ?? 'N/A' }} ({{ $edu['year'] ?? 'N/A' }})</small>
@@ -245,7 +252,7 @@
                     @else
                         <div class="alert alert-warning">
                             <i class="bi bi-exclamation-triangle-fill"></i>
-                            No filtered resume data found for this applicant.
+                            No AI analysis data found for this applicant.
                         </div>
                     @endif
                 </div>
@@ -257,13 +264,13 @@
     </div>
     @endif
 
-    {{-- Edit Filtered Resume Modal --}}
+    {{-- Edit Filtered Resume Modal (Manual Override) --}}
     @if($showEditFilteredResumeModal)
     <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit Filtered Resume - {{ $applicantName }}</h5>
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Manual Override - {{ $applicantName }}</h5>
                     <button type="button" class="btn-close" wire:click="closeEditFilteredResumeModal"></button>
                 </div>
                 <div class="modal-body">
@@ -292,19 +299,24 @@
                         <div class="col-lg-6">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Rating Score</label>
-                                    <input type="number" step="0.01" class="form-control" wire:model.defer="edit_rating_score">
+                                    <label class="form-label fw-semibold">Rating Score (0-100)</label>
+                                    <input type="number" step="0.01" min="0" max="100" class="form-control" wire:model.defer="edit_rating_score" placeholder="Enter score">
                                     @error('edit_rating_score') <div class="text-danger small">{{ $message }}</div> @enderror
+                                    <small class="text-muted">Score will auto-determine qualification status</small>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Qualification Status</label>
-                                    <input type="text" class="form-control" wire:model.defer="edit_qualification_status">
+                                    <label class="form-label fw-semibold">Qualification Status</label>
+                                    <select class="form-select" wire:model.defer="edit_qualification_status">
+                                        <option value="">Auto (based on score)</option>
+                                        <option value="Qualified">Qualified</option>
+                                        <option value="Not Qualified">Not Qualified</option>
+                                    </select>
                                     @error('edit_qualification_status') <div class="text-danger small">{{ $message }}</div> @enderror
                                 </div>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Skills</label>
+                                <label class="form-label fw-semibold">Skills</label>
                                 <div class="scrollable">
                                     @foreach($edit_skills as $i => $skill)
                                         <div class="d-flex gap-2 mb-2">
@@ -319,7 +331,7 @@
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Experience</label>
+                                <label class="form-label fw-semibold">Experience</label>
                                 <div class="scrollable">
                                     @foreach($edit_experience as $i => $exp)
                                         <div class="d-flex gap-2 mb-2">
@@ -334,7 +346,7 @@
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Education</label>
+                                <label class="form-label fw-semibold">Education</label>
                                 <div class="scrollable">
                                     @foreach($edit_education as $i => $edu)
                                         <div class="d-flex gap-2 mb-2">
@@ -353,8 +365,58 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" wire:click="closeEditFilteredResumeModal">Cancel</button>
                     <button type="button" class="btn btn-primary" wire:click="updateFilteredResume" wire:loading.attr="disabled">
-                        <span wire:loading.remove>Save</span>
+                        <span wire:loading.remove>Save Changes</span>
                         <span wire:loading>Saving...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Draft Tool Modal - Pivot to Alternative Role --}}
+    @if($showDraftModal)
+    <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary text-white">
+                    <h5 class="modal-title"><i class="bi bi-arrow-repeat me-2"></i>Pivot to Alternative Role</h5>
+                    <button type="button" class="btn-close btn-close-white" wire:click="closeDraftModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <strong>{{ $draftApplicantName }}</strong> may be a better fit for a different role. 
+                        Use this tool to suggest an alternative position.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Current Position</label>
+                        <input type="text" class="form-control" value="{{ $currentPosition }}" disabled>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Suggested Alternative Position</label>
+                        <select class="form-select" wire:model="suggestedPosition">
+                            <option value="">Select a position...</option>
+                            @foreach($availablePositions as $position)
+                                <option value="{{ $position }}">{{ $position }}</option>
+                            @endforeach
+                        </select>
+                        @error('suggestedPosition') <div class="text-danger small">{{ $message }}</div> @enderror
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Reason for Pivot (Optional)</label>
+                        <textarea class="form-control" wire:model="draftReason" rows="3" placeholder="Why is this applicant better suited for the alternative role?"></textarea>
+                        @error('draftReason') <div class="text-danger small">{{ $message }}</div> @enderror
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" wire:click="closeDraftModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" wire:click="pivotToNewRole" wire:loading.attr="disabled">
+                        <span wire:loading.remove><i class="bi bi-check2 me-1"></i>Confirm Pivot</span>
+                        <span wire:loading>Processing...</span>
                     </button>
                 </div>
             </div>
@@ -365,14 +427,29 @@
     {{-- Schedule Interview Modal --}}
     @if($showScheduleModal)
     <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Schedule Interview - {{ $applicantData['name'] ?? '' }}</h5>
-                    <button type="button" class="btn-close" wire:click="closeScheduleModal"></button>
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="bi bi-calendar-check me-2"></i>Promote to Candidate - {{ $applicantData['name'] ?? '' }}</h5>
+                    <button type="button" class="btn-close btn-close-white" wire:click="closeScheduleModal"></button>
                 </div>
                 <div class="modal-body">
                     @if(!empty($applicantData))
+                        {{-- Rating Summary --}}
+                        @if(isset($applicantData['rating_score']))
+                        <div class="card mb-4 border-0 bg-light">
+                            <div class="card-body d-flex align-items-center gap-3">
+                                <div class="display-6 fw-bold text-{{ $applicantData['rating_badge_color'] ?? 'secondary' }}">
+                                    {{ number_format($applicantData['rating_score'], 1) }}
+                                </div>
+                                <div>
+                                    <div class="fw-semibold">AI Rating Score</div>
+                                    <small class="text-muted">{{ $applicantData['rating_description'] ?? 'N/A' }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <strong>Email:</strong> {{ $applicantData['email'] }}
@@ -395,26 +472,27 @@
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Interview Date</label>
+                            <label class="form-label fw-semibold">Interview Date</label>
                             <input type="date" class="form-control" wire:model="interview_date">
                             @error('interview_date') <div class="text-danger small">{{ $message }}</div> @enderror
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Interview Time</label>
+                            <label class="form-label fw-semibold">Interview Time</label>
                             <input type="time" class="form-control" wire:model="interview_time">
                             @error('interview_time') <div class="text-danger small">{{ $message }}</div> @enderror
                         </div>
                     </div>
                     
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle-fill"></i>
-                        <strong>Note:</strong> When you schedule this interview, the application will be converted to a candidate and moved to the candidates table. The original application record will be deleted.
+                    <div class="alert alert-success">
+                        <i class="bi bi-arrow-right-circle-fill me-2"></i>
+                        <strong>Note:</strong> This will promote the application to <strong>Candidate</strong> status and schedule the interview. 
+                        The candidate will receive a self-scheduling link via email to confirm or reschedule.
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" wire:click="closeScheduleModal">Cancel</button>
                     <button type="button" class="btn btn-success" wire:click="scheduleInterview" wire:loading.attr="disabled">
-                        <span wire:loading.remove>Schedule Interview</span>
+                        <span wire:loading.remove><i class="bi bi-check2 me-1"></i>Promote & Schedule</span>
                         <span wire:loading>Scheduling...</span>
                     </button>
                 </div>
