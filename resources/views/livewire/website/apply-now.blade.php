@@ -21,7 +21,7 @@
                     
                     <div class="mb-4">
                         <div class="d-flex justify-content-center">
-                            <div class="g-recaptcha" data-sitekey="{{ env('RECAPTCHA_SITE_KEY') }}" style="transform: scale(0.9); transform-origin: 0 0;"></div>
+                            <div class="g-recaptcha" data-sitekey="{{ config('recaptcha.site_key') }}" style="transform: scale(0.9); transform-origin: 0 0;"></div>
                         </div>
                     </div>
 

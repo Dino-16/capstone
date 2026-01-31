@@ -49,7 +49,7 @@ class ApplyNow extends Component
 
     public function verifyRecaptcha($recaptchaResponse)
     {
-        $secretKey = env('RECAPTCHA_SECRET_KEY');
+        $secretKey = config('recaptcha.secret_key');
         
         try {
             $response = Http::withoutVerifying()->asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
