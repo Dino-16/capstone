@@ -1,6 +1,6 @@
 <div @class(['p-5', 'bg-light'])>
-    {{-- Google reCAPTCHA Script --}}
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    {{-- Google reCAPTCHA Script with explicit render --}}
+    <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit" async defer></script>
     
     {{-- reCAPTCHA Modal --}}
     @if($showRecaptchaModal)
@@ -21,9 +21,23 @@
                     
                     <div class="mb-4">
                         <div class="d-flex justify-content-center">
-                            <div class="g-recaptcha" data-sitekey="{{ config('recaptcha.site_key') }}" style="transform: scale(0.9); transform-origin: 0 0;"></div>
+                            <div class="g-recaptcha" data-sitekey="{{ env('RECAPTCHA_SITE_KEY') }}" style="transform: scale(0.9); transform-origin: 0 0;"></div>
                         </div>
                     </div>
+                    
+                    <script>
+                        var onRecaptchaLoad = function() {
+                            if (document.getElementById('recaptcha-container') && !document.getElementById('recaptcha-container').hasChildNodes()) {
+                                grecaptcha.render('recaptcha-container', {
+                                    'sitekey': '{{ env('RECAPTCHA_SITE_KEY') }}'
+                                });
+                            }
+                        };
+                        // If grecaptcha is already loaded, render immediately
+                        if (typeof grecaptcha !== 'undefined' && grecaptcha.render) {
+                            onRecaptchaLoad();
+                        }
+                    </script>
 
                     <div class="d-grid gap-2">
                         <button type="button" 
