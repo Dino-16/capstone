@@ -160,7 +160,26 @@
                             </td>
                             <td>
                                 @if($app->qualification_status)
-                                    <span class="badge bg-{{ $app->qualification_status == 'Qualified' ? 'success' : ($app->qualification_status == 'Not Qualified' ? 'danger' : 'warning') }}">
+                                    @php
+                                        $statusColor = 'secondary';
+                                        if (in_array($app->qualification_status, ['Exceptional', 'Highly Qualified'])) {
+                                            $statusColor = 'success';
+                                        } elseif ($app->qualification_status == 'Qualified') {
+                                            $statusColor = 'warning'; // Matches 'Qualified' in legend (70-79) which is yellow/warning in badge logic usually? Wait, legend says 70-79 is yellow.
+                                            // Actually let's map strictly to legend colors:
+                                            // 90-100 (Exceptional): Success
+                                            // 80-89 (Highly): Success
+                                            // 70-79 (Qualified): Warning
+                                            // 60-69 (Moderately): Warning
+                                            // 50-59 (Marginally): Danger
+                                            // 0-49 (Not): Danger
+                                        } elseif (in_array($app->qualification_status, ['Moderately Qualified', 'Qualified'])) {
+                                            $statusColor = 'warning'; 
+                                        } else {
+                                            $statusColor = 'danger';
+                                        }
+                                    @endphp
+                                    <span class="badge bg-{{ $statusColor }}">
                                         {{ $app->qualification_status }}
                                     </span>
                                 @else

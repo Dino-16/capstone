@@ -263,9 +263,19 @@ class Applications extends Component
 
         // Auto-set qualification status based on score
         $qualificationStatus = $this->edit_qualification_status;
-        if ($this->edit_rating_score !== null) {
-            if ($this->edit_rating_score >= 60) {
+        
+        // If user didn't manually select a status, OR if they are editing limits, recalculate based on score
+        if (empty($qualificationStatus) && $this->edit_rating_score !== null) {
+            if ($this->edit_rating_score >= 90) {
+                $qualificationStatus = 'Exceptional';
+            } elseif ($this->edit_rating_score >= 80) {
+                $qualificationStatus = 'Highly Qualified';
+            } elseif ($this->edit_rating_score >= 70) {
                 $qualificationStatus = 'Qualified';
+            } elseif ($this->edit_rating_score >= 60) {
+                $qualificationStatus = 'Moderately Qualified';
+            } elseif ($this->edit_rating_score >= 50) {
+                $qualificationStatus = 'Marginally Qualified';
             } else {
                 $qualificationStatus = 'Not Qualified';
             }

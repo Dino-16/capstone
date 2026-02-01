@@ -77,7 +77,7 @@ Route::middleware('session.auth')->group(function() {
     })->name('logout');
 });
 
-/*
+
 Route::get('/storage/resumes/{filename}', function ($filename) {
     $path = 'resumes/' . $filename;
     if (!Storage::disk('public')->exists($path)) {
@@ -92,4 +92,57 @@ Route::get('/storage/resumes/{filename}', function ($filename) {
         'Content-Disposition' => 'inline; filename="' . $filename . '"'
     ]);
 })->name('resume.view');    
-*/
+Route::get('/server-debug', function() {
+    $logFile = storage_path('logs/laravel.log');
+    $logs = file_exists($logFile) ? file_get_contents($logFile) : 'No log file found.';
+    
+    // Get last 2000 characters of logs to show recent errors
+    $recentLogs = substr($logs, -3000);
+
+    echo "<div style='font-family: monospace; padding: 20px;'>";
+    echo "<h1>Server Environment Debugger</h1>";
+    
+    // 1. Check PHP Extensions
+    echo "<h3>1. PHP Extensions</h3>";
+    echo "cURL: " . (extension_loaded('curl') ? "<span style='color:green'>Installed</span>" : "<span style='color:red'>MISSING</span>") . "<br>";
+    echo "OpenSSL: " . (extension_loaded('openssl') ? "<span style='color:green'>Installed</span>" : "<span style='color:red'>MISSING</span>") . "<br>";
+    
+    // 2. Check Dependencies
+    echo "<h3>2. Dependencies (Vendor)</h3>";
+    echo "PDF Parser (Smalot): " . (class_exists('Smalot\PdfParser\Parser') ? "<span style='color:green'>Found</span>" : "<span style='color:red'>MISSING (Run composer install)</span>") . "<br>";
+    echo "OpenAI PHP: " . (class_exists('OpenAI\Laravel\Facades\OpenAI') ? "<span style='color:green'>Found</span>" : "<span style='color:red'>MISSING</span>") . "<br>";
+
+    // 3. Configuration
+    echo "<h3>3. Configuration (.env)</h3>";
+    $apiKey = config('openai.api_key');
+    $verify = config('openai.verify');
+    
+    echo "OPENAI_API_KEY: " . (!empty($apiKey) ? "<span style='color:green'>Set (starts with " . substr($apiKey, 0, 8) . "...)</span>" : "<span style='color:red'>NOT SET in .env</span>") . "<br>";
+    echo "OPENAI_SSL_VERIFY: " . ($verify ? "TRUE (Strict SSL)" : "FALSE (Insecure/Allow)") . "<br>";
+    
+    // 4. Connectivity Test
+    echo "<h3>4. Connectivity Test</h3>";
+    try {
+        $start = microtime(true);
+        // Attempt a simple model list request
+        $client = OpenAI::client($apiKey);
+        $result = $client->models()->list();
+        $duration = round(microtime(true) - $start, 2);
+        
+        echo "<div style='color:green; padding: 10px; border: 1px solid green;'>";
+        echo "<strong>SUCCESS!</strong> Connection to OpenAI established in {$duration}s.<br>";
+        echo "Found " . count($result->data) . " models.";
+        echo "</div>";
+    } catch (\Exception $e) {
+        echo "<div style='color:red; padding: 10px; border: 1px solid red;'>";
+        echo "<strong>CONNECTION FAILED:</strong> " . $e->getMessage() . "<br>";
+        echo "<small>If error represents a certificate issue, try setting <code>OPENAI_SSL_VERIFY=false</code> in your .env file.</small>";
+        echo "</div>";
+    }
+
+    // 5. Recent Logs
+    echo "<h3>5. Recent System Logs (Last 3000 chars)</h3>";
+    echo "<textarea style='width:100%; height: 300px; font-size: 11px;'>" . htmlspecialchars($recentLogs) . "</textarea>";
+    
+    echo "</div>";
+});
