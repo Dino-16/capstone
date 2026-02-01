@@ -16,16 +16,23 @@ class MailService
             // Temporarily set mail configuration with SSL workaround
             $originalConfig = Config::get('mail.mailers.smtp');
             
+            // Get credentials from config (works with cached config in production)
+            $mailHost = config('mail.mailers.smtp.host', 'smtp.gmail.com');
+            $mailPort = config('mail.mailers.smtp.port', 587);
+            $mailEncryption = config('mail.mailers.smtp.encryption', 'tls');
+            $mailUsername = config('mail.mailers.smtp.username');
+            $mailPassword = config('mail.mailers.smtp.password');
+            
             // Configure SMTP with TLS and disable SSL verification
             Config::set('mail.mailers.smtp', [
                 'transport' => 'smtp',
-                'host' => env('MAIL_HOST', 'smtp.gmail.com'),
-                'port' => env('MAIL_PORT', 587),
-                'encryption' => env('MAIL_ENCRYPTION', 'tls'),
-                'username' => env('MAIL_USERNAME'),
-                'password' => env('MAIL_PASSWORD'),
+                'host' => $mailHost,
+                'port' => $mailPort,
+                'encryption' => $mailEncryption,
+                'username' => $mailUsername,
+                'password' => $mailPassword,
                 'timeout' => null,
-                'local_domain' => env('MAIL_EHLO_DOMAIN'),
+                'local_domain' => config('mail.mailers.smtp.local_domain'),
                 'verify_peer' => false,
                 'verify_peer_name' => false,
             ]);
@@ -76,13 +83,20 @@ class MailService
             // Configure SMTP with SSL workaround
             $originalConfig = Config::get('mail.mailers.smtp');
             
+            // Get credentials from config
+            $mailHost = config('mail.mailers.smtp.host', 'smtp.gmail.com');
+            $mailPort = config('mail.mailers.smtp.port', 587);
+            $mailEncryption = config('mail.mailers.smtp.encryption', 'tls');
+            $mailUsername = config('mail.mailers.smtp.username');
+            $mailPassword = config('mail.mailers.smtp.password');
+            
             Config::set('mail.mailers.smtp', [
                 'transport' => 'smtp',
-                'host' => env('MAIL_HOST', 'smtp.gmail.com'),
-                'port' => env('MAIL_PORT', 587),
-                'encryption' => env('MAIL_ENCRYPTION', 'tls'),
-                'username' => env('MAIL_USERNAME'),
-                'password' => env('MAIL_PASSWORD'),
+                'host' => $mailHost,
+                'port' => $mailPort,
+                'encryption' => $mailEncryption,
+                'username' => $mailUsername,
+                'password' => $mailPassword,
                 'timeout' => null,
                 'verify_peer' => false,
                 'verify_peer_name' => false,

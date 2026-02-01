@@ -27,12 +27,17 @@ MAIL_FROM_NAME="${APP_NAME}"                     # REQUIRED!
 
 ---
 
-## 💻 Commands to Run on Production:
+## 💻 Commands to Run on Production ⚠️ CRITICAL:
 
 ```bash
-php artisan config:clear
+php artisan config:clear  # MUST RUN THIS FIRST!
 php artisan cache:clear
+php artisan route:clear
+php artisan view:clear
 ```
+
+⚠️ **CRITICAL:** Run `config:clear` after updating .env! 
+Otherwise credentials won't be read properly!
 
 ---
 

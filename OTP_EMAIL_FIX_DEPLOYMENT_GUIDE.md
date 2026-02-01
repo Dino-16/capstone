@@ -58,15 +58,25 @@ Upload these files to your production server:
 - **Via Git:** Push and pull on the server
 - **Via cPanel File Manager:** Upload through web interface
 
-### Step 3: Clear Caches on Production
+### Step 3: Clear All Caches on Production ⚠️ CRITICAL
 
-SSH into your production server or use terminal in cPanel and run:
+SSH into your production server or use the terminal in cPanel and run:
 
 ```bash
 cd /path/to/your/project
 php artisan config:clear
 php artisan cache:clear
+php artisan route:clear
+php artisan view:clear
 ```
+
+**⚠️ IMPORTANT:** You MUST run `php artisan config:clear` after updating the `.env` file! Otherwise, Laravel will use old cached credentials and authentication will fail.
+
+**Why this is critical:**
+- Production servers often have config caching enabled
+- Cached config doesn't read new `.env` values
+- `config:clear` forces Laravel to re-read the `.env` file
+- Skip this step = authentication errors!
 
 ### Step 4: Test!
 
