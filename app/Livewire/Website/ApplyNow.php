@@ -305,7 +305,7 @@ class ApplyNow extends Component
                         ]);
                         
                         $response = OpenAI::chat()->create([
-                            'model' => 'gpt-4-turbo',
+                            'model' => 'gpt-4o-mini',
                             'messages' => [
                                 [
                                     'role' => 'user',
