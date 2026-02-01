@@ -253,6 +253,8 @@ class ApplyNow extends Component
                 }
 
                 // Try to parse PDF to text
+                $useVisionAPI = false;
+                
                 try {
                     if (!class_exists('\Smalot\PdfParser\Parser')) {
                         \Log::error("PdfParser class not found - package may not be installed");
@@ -269,45 +271,91 @@ class ApplyNow extends Component
                         'has_text' => !empty(trim($resumeContent)),
                     ]);
                     
-                    // If PDF parser returns empty content, the PDF is likely image-based
+                    // If PDF parser returns empty content, use OpenAI Vision API
                     if (empty(trim($resumeContent))) {
-                        \Log::error("PDF contains no extractable text - likely an image-based/scanned PDF", [
+                        \Log::info("PDF has no text layer, switching to GPT-4 Vision API", [
                             'application_id' => $application->id,
-                            'file_path' => $filePath,
-                            'file_size' => filesize($filePath),
-                            'recommendation' => 'Applicant should upload a text-based PDF resume',
                         ]);
-                        
-                        // Try to extract ANY text using alternative regex patterns
-                        $rawContent = file_get_contents($filePath);
-                        
-                        // Extract anything that looks like readable text from PDF stream
-                        if (preg_match_all('/\[(.*?)\]/s', $rawContent, $matches)) {
-                            $extractedText = implode(' ', $matches[1]);
-                            $cleanText = preg_replace('/[^\x20-\x7E\s]/', '', $extractedText);
-                            
-                            if (strlen(trim($cleanText)) > 50) {
-                                $resumeContent = $cleanText;
-                                \Log::info("Extracted text using regex fallback", [
-                                    'application_id' => $application->id,
-                                    'content_length' => strlen($resumeContent),
-                                ]);
-                            }
-                        }
+                        $useVisionAPI = true;
+                        $resumeContent = null;
                     }
                     
                 } catch (\Exception $e) {
-                    \Log::error("PDF parsing failed for application ID {$application->id}", [
+                    \Log::error("PDF parsing failed, will try Vision API", [
+                        'application_id' => $application->id,
                         'error' => $e->getMessage(),
-                        'error_class' => get_class($e),
-                        'file_path' => $filePath,
                     ]);
+                    $useVisionAPI = true;
                     $resumeContent = null;
                 }
 
-                // Only attempt AI analysis if we have content
-                if (!empty(trim($resumeContent))) {
-                    $prompt = "You are an AI that extracts structured data from resumes for automated screening.\n\nJob position: {$application->applied_position}.\n\nResume content:\n{$resumeContent}\n\nReturn a single valid JSON object with EXACTLY these keys and types:\n- skills: array of strings (each string is a single skill or technology, e.g. 'PHP', 'Laravel', 'Customer Service'). Always return at least 3 skills; if not explicit, infer from context or use generic skills like 'Communication', 'Teamwork'.\n- experience: array of strings (each string is one job or role, e.g. 'Software Developer at Company A (2019-2022)'). Always return at least 1 experience item; if no job is given, use a best-guess like 'Work experience not clearly specified'.\n- education: array of strings (each string is one degree or education item, e.g. 'BS Computer Science - University X (2018)'). Always return at least 1 education item; if missing, use a placeholder like 'Education not clearly specified'.\n- score: number from 0 to 100 (overall suitability rating for the job)\n\nNever leave skills, experience, or education as empty arrays; always infer reasonable values or use an 'not clearly specified' placeholder string.\n\nExample JSON format (do NOT wrap in markdown):\n{\n  \"skills\": [\"PHP\", \"Laravel\", \"Customer Support\"],\n  \"experience\": [\"Software Developer - Company A (2019-2022)\"],\n  \"education\": [\"BS Computer Science - University X (2018)\"],\n  \"score\": 85\n}.\n\nReturn ONLY the JSON object, with no extra text, labels, or explanations before or after.";
+                // Prepare prompt for AI analysis
+                $prompt = "You are an AI that extracts structured data from resumes for automated screening.\n\nJob position: {$application->applied_position}.\n\nReturn a single valid JSON object with EXACTLY these keys and types:\n- skills: array of strings (each string is a single skill or technology, e.g. 'PHP', 'Laravel', 'Customer Service'). Always return at least 3 skills; if not explicit, infer from context.\n- experience: array of strings (each string is one job or role, e.g. 'Software Developer at Company A (2019-2022)'). Always return at least 1 experience item.\n- education: array of strings (each string is one degree or education item, e.g. 'BS Computer Science - University X (2018)'). Always return at least 1 education item.\n- score: number from 0 to 100 (overall suitability rating for the job)\n\nExample JSON format:\n{\n  \"skills\": [\"PHP\", \"Laravel\", \"Customer Support\"],\n  \"experience\": [\"Software Developer - Company A (2019-2022)\"],\n  \"education\": [\"BS Computer Science - University X (2018)\"],\n  \"score\": 85\n}\n\nReturn ONLY the JSON object, no extra text.";
+                
+                // Use Vision API for image-based PDFs
+                if ($useVisionAPI) {
+                    try {
+                        // Convert PDF to base64
+                        $pdfData = file_get_contents($filePath);
+                        $base64Pdf = base64_encode($pdfData);
+                        
+                        \Log::info("Attempting GPT-4 Vision API for image-based PDF", [
+                            'application_id' => $application->id,
+                            'pdf_size' => strlen($pdfData),
+                        ]);
+                        
+                        $response = OpenAI::chat()->create([
+                            'model' => 'gpt-4-turbo',
+                            'messages' => [
+                                [
+                                    'role' => 'user',
+                                    'content' => [
+                                        [
+                                            'type' => 'text',
+                                            'text' => $prompt
+                                        ],
+                                        [
+                                            'type' => 'image_url',
+                                            'image_url' => [
+                                                'url' => 'data:application/pdf;base64,' . $base64Pdf
+                                            ]
+                                        ]
+                                    ]
+                                ]
+                            ],
+                            'max_tokens' => 1000,
+                        ]);
+                        
+                        $text = trim($response['choices'][0]['message']['content'] ?? '{}');
+                        \Log::info("GPT-4 Vision API response received", [
+                            'application_id' => $application->id,
+                            'response_length' => strlen($text),
+                        ]);
+                        
+                        // Parse JSON response
+                        $json = json_decode($text, true);
+                        if (!is_array($json)) {
+                            $start = strpos($text, '{');
+                            $end = strrpos($text, '}');
+                            if ($start !== false && $end !== false) {
+                                $candidate = substr($text, $start, $end - $start + 1);
+                                $json = json_decode($candidate, true);
+                            }
+                        }
+                        
+                        $aiData = is_array($json) ? $json : [];
+                        
+                    } catch (\Exception $e) {
+                        \Log::error("GPT-4 Vision API failed", [
+                            'application_id' => $application->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                        $aiData = [];
+                    }
+                } 
+                // Use regular text-based AI analysis
+                elseif (!empty(trim($resumeContent))) {
+                    $promptWithContent = $prompt . "\n\nResume content:\n{$resumeContent}";
 
                     // Analyze resume with better error handling
                     try {
@@ -320,7 +368,7 @@ class ApplyNow extends Component
                             'model' => 'gpt-3.5-turbo',
                             'messages' => [
                                 ['role' => 'system', 'content' => 'You are a helpful resume analyzer.'],
-                                ['role' => 'user', 'content' => $prompt],
+                                ['role' => 'user', 'content' => $promptWithContent],
                             ],
                             'max_tokens' => 500,
                         ]);
