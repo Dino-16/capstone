@@ -252,7 +252,7 @@ class ApplyNow extends Component
                     ]);
                 }
 
-                // First try to parse PDF to text
+                // First try to parse PDF to text using smalot/pdfparser
                 try {
                     if (!class_exists('\Smalot\PdfParser\Parser')) {
                         \Log::error("PdfParser class not found - package may not be installed");
@@ -264,16 +264,47 @@ class ApplyNow extends Component
                     $resumeContent = $pdf->getText();
                     $pdfParseSuccess = true;
                     
-                    \Log::info("PDF parsed successfully", [
+                    \Log::info("PDF parsed with smalot/pdfparser", [
                         'application_id' => $application->id,
                         'content_length' => strlen($resumeContent),
                     ]);
+                    
+                    // If smalot parser returns empty content, try alternative methods
+                    if (empty(trim($resumeContent))) {
+                        \Log::warning("smalot/pdfparser returned empty content, trying alternatives", [
+                            'application_id' => $application->id,
+                        ]);
+                        
+                        // Try using pdftotext command if available
+                        $outputFile = storage_path('app/temp_pdf_text_' . $application->id . '.txt');
+                        $command = "pdftotext " . escapeshellarg($filePath) . " " . escapeshellarg($outputFile) . " 2>&1";
+                        exec($command, $output, $returnCode);
+                        
+                        if ($returnCode === 0 && file_exists($outputFile)) {
+                            $resumeContent = file_get_contents($outputFile);
+                            @unlink($outputFile);
+                            
+                            \Log::info("PDF extracted using pdftotext command", [
+                                'application_id' => $application->id,
+                                'content_length' => strlen($resumeContent),
+                            ]);
+                        } else {
+                            \Log::error("All PDF extraction methods failed - PDF may be image-based or encrypted", [
+                                'application_id' => $application->id,
+                                'file_path' => $filePath,
+                                'file_size' => filesize($filePath),
+                                'pdftotext_available' => $returnCode === 127 ? 'No' : 'Yes but failed',
+                                'pdftotext_output' => implode("\n", $output),
+                            ]);
+                        }
+                    }
+                    
                 } catch (\Exception $e) {
-                    \Log::warning("PDF parsing failed for application ID {$application->id}: {$e->getMessage()}", [
+                    \Log::warning("PDF parsing exception for application ID {$application->id}: {$e->getMessage()}", [
                         'error_class' => get_class($e),
                         'file_path' => $filePath,
                     ]);
-                    $resumeContent = @file_get_contents($filePath) ?: null;
+                    $resumeContent = null;
                 }
 
                 if (!empty($resumeContent)) {
