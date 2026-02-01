@@ -233,65 +233,125 @@ class ApplyNow extends Component
             // --- Run AI analysis immediately (synchronous) ---
             $aiData = [];
             $resumeContent = null;
+            $pdfParseSuccess = false;
+            
             try {
                 $filePath = storage_path('app/public/' . $path);
+                
+                // Log file existence and permissions
+                if (!file_exists($filePath)) {
+                    \Log::error("Resume file does not exist", [
+                        'application_id' => $application->id,
+                        'file_path' => $filePath,
+                    ]);
+                } elseif (!is_readable($filePath)) {
+                    \Log::error("Resume file is not readable", [
+                        'application_id' => $application->id,
+                        'file_path' => $filePath,
+                        'permissions' => substr(sprintf('%o', fileperms($filePath)), -4),
+                    ]);
+                }
 
                 // First try to parse PDF to text
                 try {
+                    if (!class_exists('\Smalot\PdfParser\Parser')) {
+                        \Log::error("PdfParser class not found - package may not be installed");
+                        throw new \Exception("PdfParser package not available");
+                    }
+                    
                     $parser = new Parser();
                     $pdf = $parser->parseFile($filePath);
                     $resumeContent = $pdf->getText();
+                    $pdfParseSuccess = true;
+                    
+                    \Log::info("PDF parsed successfully", [
+                        'application_id' => $application->id,
+                        'content_length' => strlen($resumeContent),
+                    ]);
                 } catch (\Exception $e) {
-                    \Log::warning("PDF parsing failed for application ID {$application->id}, falling back to raw file content: {$e->getMessage()}");
+                    \Log::warning("PDF parsing failed for application ID {$application->id}: {$e->getMessage()}", [
+                        'error_class' => get_class($e),
+                        'file_path' => $filePath,
+                    ]);
                     $resumeContent = @file_get_contents($filePath) ?: null;
                 }
 
                 if (!empty($resumeContent)) {
-                    $prompt = "You are an AI that extracts structured data from resumes for automated screening.\n\nJob position: {$application->applied_position}.\n\nResume content:\n{$resumeContent}\n\nReturn a single valid JSON object with EXACTLY these keys and types:\n- skills: array of strings (each string is a single skill or technology, e.g. 'PHP', 'Laravel', 'Customer Service'). Always return at least 3 skills; if not explicit, infer from context or use generic skills like 'Communication', 'Teamwork'.\n- experience: array of strings (each string is one job or role, e.g. 'Software Developer at Company A (2019-2022)'). Always return at least 1 experience item; if no job is given, use a best-guess like 'Work experience not clearly specified'.\n- education: array of strings (each string is one degree or education item, e.g. 'BS Computer Science - University X (2018)'). Always return at least 1 education item; if missing, use a placeholder like 'Education not clearly specified'.\n- score: number from 0 to 100 (overall suitability rating for the job)\n- qualification: string, one of 'Exceptional', 'Highly Qualified', 'Qualified', 'Moderately Qualified', 'Marginally Qualified', 'Not Qualified'. Base this strictly on the score: 90-100=Exceptional, 80-89=Highly Qualified, 70-79=Qualified, 60-69=Moderately Qualified, 50-59=Marginally Qualified, 0-49=Not Qualified.\n\nNever leave skills, experience, or education as empty arrays; always infer reasonable values or use an 'not clearly specified' placeholder string.\n\nExample JSON format (do NOT wrap in markdown):\n{\n  \"skills\": [\"PHP\", \"Laravel\", \"Customer Support\"],\n  \"experience\": [\"Software Developer - Company A (2019-2022)\"],\n  \"education\": [\"BS Computer Science - University X (2018)\"],\n  \"score\": 85,\n  \"qualification\": \"Highly Qualified\"\n}.\n\nReturn ONLY the JSON object, with no extra text, labels, or explanations before or after.";
+                    $prompt = "You are an AI that extracts structured data from resumes for automated screening.\n\nJob position: {$application->applied_position}.\n\nResume content:\n{$resumeContent}\n\nReturn a single valid JSON object with EXACTLY these keys and types:\n- skills: array of strings (each string is a single skill or technology, e.g. 'PHP', 'Laravel', 'Customer Service'). Always return at least 3 skills; if not explicit, infer from context or use generic skills like 'Communication', 'Teamwork'.\n- experience: array of strings (each string is one job or role, e.g. 'Software Developer at Company A (2019-2022)'). Always return at least 1 experience item; if no job is given, use a best-guess like 'Work experience not clearly specified'.\n- education: array of strings (each string is one degree or education item, e.g. 'BS Computer Science - University X (2018)'). Always return at least 1 education item; if missing, use a placeholder like 'Education not clearly specified'.\n- score: number from 0 to 100 (overall suitability rating for the job)\n\nNever leave skills, experience, or education as empty arrays; always infer reasonable values or use an 'not clearly specified' placeholder string.\n\nExample JSON format (do NOT wrap in markdown):\n{\n  \"skills\": [\"PHP\", \"Laravel\", \"Customer Support\"],\n  \"experience\": [\"Software Developer - Company A (2019-2022)\"],\n  \"education\": [\"BS Computer Science - University X (2018)\"],\n  \"score\": 85\n}.\n\nReturn ONLY the JSON object, with no extra text, labels, or explanations before or after.";
 
-                    // Analyze resume
-                    $response = OpenAI::chat()->create([
-                        'model' => 'gpt-3.5-turbo',
-                        'messages' => [
-                            ['role' => 'system', 'content' => 'You are a helpful resume analyzer.'],
-                            ['role' => 'user', 'content' => $prompt],
-                        ],
-                        'max_tokens' => 500,
-                    ]);
-
-                    $text = trim($response['choices'][0]['message']['content'] ?? '{}');
-
-                    // Try to decode full response first
-                    $json = json_decode($text, true);
-
-                    // If that fails, try to extract the JSON object from within the text
-                    if (!is_array($json)) {
-                        $start = strpos($text, '{');
-                        $end = strrpos($text, '}');
-
-                        if ($start !== false && $end !== false && $end > $start) {
-                            $candidate = substr($text, $start, $end - $start + 1);
-                            $json = json_decode($candidate, true);
-                        }
-                    }
-
-                    $aiData = is_array($json) ? $json : [];
-
-                    if (empty($aiData)) {
-                        \Log::warning('AI resume analysis returned empty or invalid data', [
+                    // Analyze resume with better error handling
+                    try {
+                        \Log::info("Attempting OpenAI API call", [
                             'application_id' => $application->id,
-                            'raw_text' => $text,
+                            'api_key_set' => !empty(config('openai.api_key')),
                         ]);
+                        
+                        $response = OpenAI::chat()->create([
+                            'model' => 'gpt-3.5-turbo',
+                            'messages' => [
+                                ['role' => 'system', 'content' => 'You are a helpful resume analyzer.'],
+                                ['role' => 'user', 'content' => $prompt],
+                            ],
+                            'max_tokens' => 500,
+                        ]);
+
+                        $text = trim($response['choices'][0]['message']['content'] ?? '{}');
+                        
+                        \Log::info("OpenAI API response received", [
+                            'application_id' => $application->id,
+                            'response_length' => strlen($text),
+                        ]);
+
+                        // Try to decode full response first
+                        $json = json_decode($text, true);
+
+                        // If that fails, try to extract the JSON object from within the text
+                        if (!is_array($json)) {
+                            $start = strpos($text, '{');
+                            $end = strrpos($text, '}');
+
+                            if ($start !== false && $end !== false && $end > $start) {
+                                $candidate = substr($text, $start, $end - $start + 1);
+                                $json = json_decode($candidate, true);
+                            }
+                        }
+
+                        $aiData = is_array($json) ? $json : [];
+
+                        if (empty($aiData)) {
+                            \Log::warning('AI resume analysis returned empty or invalid data', [
+                                'application_id' => $application->id,
+                                'raw_text' => $text,
+                            ]);
+                        } else {
+                            \Log::info('AI resume analysis successful', [
+                                'application_id' => $application->id,
+                                'score' => $aiData['score'] ?? 'missing',
+                            ]);
+                        }
+                    } catch (\Exception $apiException) {
+                        \Log::error("OpenAI API call failed", [
+                            'application_id' => $application->id,
+                            'error' => $apiException->getMessage(),
+                            'error_class' => get_class($apiException),
+                        ]);
+                        throw $apiException;
                     }
                 } else {
                     \Log::warning('Resume content is empty after parsing and fallback', [
                         'application_id' => $application->id,
                         'file_path' => $filePath,
+                        'file_exists' => file_exists($filePath),
+                        'file_size' => file_exists($filePath) ? filesize($filePath) : 0,
                     ]);
                 }
 
             } catch (\Exception $e) {
-                \Log::error("Failed AI resume analysis for application ID {$application->id}: {$e->getMessage()}");
+                \Log::error("Failed AI resume analysis for application ID {$application->id}", [
+                    'error' => $e->getMessage(),
+                    'error_class' => get_class($e),
+                    'trace' => $e->getTraceAsString(),
+                ]);
             }
 
             // Parse resume text sections and age as an additional fallback
@@ -349,7 +409,22 @@ class ApplyNow extends Component
             }
 
             $ratingScore = $aiData['score'] ?? $aiData['Score'] ?? 50;
-            $qualificationStatus = $aiData['qualification'] ?? $aiData['Qualification'] ?? 'Not Qualified';
+            
+            // ALWAYS calculate qualification status from score (don't trust AI-provided qualification)
+            // This ensures alignment between score and status
+            if ($ratingScore >= 90) {
+                $qualificationStatus = 'Exceptional';
+            } elseif ($ratingScore >= 80) {
+                $qualificationStatus = 'Highly Qualified';
+            } elseif ($ratingScore >= 70) {
+                $qualificationStatus = 'Qualified';
+            } elseif ($ratingScore >= 60) {
+                $qualificationStatus = 'Moderately Qualified';
+            } elseif ($ratingScore >= 50) {
+                $qualificationStatus = 'Marginally Qualified';
+            } else {
+                $qualificationStatus = 'Not Qualified';
+            }
 
             // Save filtered resume
             $application->filteredResume()->create([
