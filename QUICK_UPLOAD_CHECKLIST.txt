@@ -15,11 +15,15 @@
 
 ## 🔧 Production .env Changes:
 
-Change these two lines:
+Make sure these are set correctly:
 ```env
-MAIL_PORT=587        # was 465
-MAIL_ENCRYPTION=tls  # was ssl
+MAIL_PORT=587                                    # was 465
+MAIL_ENCRYPTION=tls                              # was ssl
+MAIL_FROM_ADDRESS=olearenzemarkmendoza@gmail.com # REQUIRED!
+MAIL_FROM_NAME="${APP_NAME}"                     # REQUIRED!
 ```
+
+⚠️ IMPORTANT: MAIL_FROM_ADDRESS must be set!
 
 ---
 

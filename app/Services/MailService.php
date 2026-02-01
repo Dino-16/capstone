@@ -35,9 +35,15 @@ class MailService
 
             // Send the email
             Mail::raw("Your Login OTP is: {$otp}", function ($message) use ($email, $subject) {
-                $message->to($email)
-                        ->subject($subject)
-                        ->from(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
+                $message->to($email)->subject($subject);
+                
+                // Only set from if configured
+                $fromAddress = config('mail.from.address') ?: env('MAIL_FROM_ADDRESS');
+                $fromName = config('mail.from.name') ?: env('MAIL_FROM_NAME', 'Laravel');
+                
+                if ($fromAddress) {
+                    $message->from($fromAddress, $fromName);
+                }
             });
 
             // Restore original config
@@ -85,9 +91,15 @@ class MailService
             Mail::purge('smtp');
 
             Mail::raw($content, function ($message) use ($email, $subject) {
-                $message->to($email)
-                        ->subject($subject)
-                        ->from(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'));
+                $message->to($email)->subject($subject);
+                
+                // Only set from if configured
+                $fromAddress = config('mail.from.address') ?: env('MAIL_FROM_ADDRESS');
+                $fromName = config('mail.from.name') ?: env('MAIL_FROM_NAME', 'Laravel');
+                
+                if ($fromAddress) {
+                    $message->from($fromAddress, $fromName);
+                }
             });
 
             Config::set('mail.mailers.smtp', $originalConfig);

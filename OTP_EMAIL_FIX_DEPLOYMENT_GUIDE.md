@@ -26,14 +26,8 @@ Upload these **3 FILES ONLY** to your production server at `hr1.jetlougetravels-
 
 ### Step 1: Update Production .env File
 
-Edit your production `.env` file and change these two lines:
+Edit your production `.env` file and make sure these settings are correct:
 
-```env
-MAIL_PORT=587        # Change from 465
-MAIL_ENCRYPTION=tls  # Change from ssl
-```
-
-**Full MAIL section should look like:**
 ```env
 MAIL_MAILER=smtp
 MAIL_HOST=smtp.gmail.com
@@ -44,6 +38,13 @@ MAIL_ENCRYPTION=tls
 MAIL_FROM_ADDRESS=olearenzemarkmendoza@gmail.com
 MAIL_FROM_NAME="${APP_NAME}"
 ```
+
+**IMPORTANT:** Make sure `MAIL_FROM_ADDRESS` is set! This is required.
+
+**Key Changes:**
+- `MAIL_PORT` must be **587** (not 465)
+- `MAIL_ENCRYPTION` must be **tls** (not ssl)
+- `MAIL_FROM_ADDRESS` must be set (same as MAIL_USERNAME)
 
 ### Step 2: Upload the 3 Files
 
