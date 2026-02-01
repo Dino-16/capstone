@@ -145,12 +145,12 @@
     <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.7);">
         <div class="modal-dialog modal-fullscreen">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
+                <div class="modal-header bg-white border-bottom">
                     <h5 class="modal-title">
                         <i class="bi bi-clipboard-check me-2"></i>
                         Interview Assessment - {{ $selectedCandidate->candidate_name }}
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" wire:click="closeInterviewModal"></button>
+                    <button type="button" class="btn-close" wire:click="closeInterviewModal"></button>
                 </div>
                 <div class="modal-body" style="overflow-y: auto; max-height: calc(100vh - 180px);">
                     <div class="container-fluid">
@@ -315,9 +315,9 @@
     <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.7);">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-dark text-white">
+                <div class="modal-header bg-white border-bottom">
                     <h5 class="modal-title"><i class="bi bi-award me-2"></i>Interview Result</h5>
-                    <button type="button" class="btn-close btn-close-white" wire:click="closeResultModal"></button>
+                    <button type="button" class="btn-close" wire:click="closeResultModal"></button>
                 </div>
                 <div class="modal-body text-center py-5">
                     <h4 class="mb-3">{{ $resultCandidate->candidate_name }}</h4>

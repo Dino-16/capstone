@@ -13,7 +13,7 @@ class OrientationSchedule extends Component
 {
     use WithPagination;
 
-    #[Url(keep: true)]
+    #[Url]
     public $search = '';
 
     public $perPage = 10;
@@ -26,51 +26,50 @@ class OrientationSchedule extends Component
     public $showEmployeeDropdown = false;
 
     // Form Properties
+    // Form Properties
     public $employeeName;
     public $email;
+    public $position; // <--- Added
     public $orientationDate;
     public $location;
     public $facilitator;
     public $notes;
     public $status = 'scheduled';
-    
-    // Message Properties
-    public $messageOrientation;
-    public $messageSubject;
-    public $messageContent;
-
-    public function mount()
-    {
-        $response = Http::get('http://hr4.jetlougetravels-ph.com/api/employees');
-
-        if ($response->successful() && is_array($response->json())) {
-            $this->employees = $response->json();
-            $this->filteredEmployees = $this->employees;
-        } else {
-            $this->employees = [];
-            $this->filteredEmployees = [];
-        }
-    }
 
     public function updatedEmployeeName()
     {
-        if (empty($this->employeeName)) {
-            $this->filteredEmployees = $this->employees;
+        if (strlen($this->employeeName) < 2) {
+            $this->employees = [];
             $this->showEmployeeDropdown = false;
             return;
         }
 
-        $searchTerm = strtolower($this->employeeName);
-        $this->filteredEmployees = collect($this->employees)
-            ->filter(function ($employee) use ($searchTerm) {
-                $name = strtolower($employee['name'] ?? $employee['employee_name'] ?? '');
-                return str_contains($name, $searchTerm);
-            })
-            ->take(10)
-            ->values()
-            ->toArray();
-        
-        $this->showEmployeeDropdown = true;
+        try {
+            $response = Http::get('http://hr4.jetlougetravels-ph.com/api/employees', [
+                'search' => $this->employeeName,
+                'per_page' => 10
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $rawEmployees = $data['data'] ?? $data ?? [];
+                
+                $this->employees = collect($rawEmployees)->map(function($emp) {
+                    // Normalize name for checking in selectEmployee
+                    $name = $emp['full_name'] ?? trim(($emp['first_name'] ?? '') . ' ' . ($emp['last_name'] ?? ''));
+                    $emp['name'] = $name;
+                    $emp['employee_name'] = $name; 
+                    return $emp;
+                })->toArray();
+                
+                $this->filteredEmployees = $this->employees;
+
+                $this->showEmployeeDropdown = count($this->employees) > 0;
+            }
+        } catch (\Exception $e) {
+            $this->employees = [];
+            $this->filteredEmployees = [];
+        }
     }
 
     public function selectEmployee($employeeName)
@@ -84,22 +83,22 @@ class OrientationSchedule extends Component
         });
         
         $this->email = $employee['email'] ?? null;
+        $this->position = $employee['position'] ?? null; // <--- Added
         
         $this->showEmployeeDropdown = false;
         $this->filteredEmployees = $this->employees;
     }
 
-    public function updatingSearch()
-    {
-        $this->resetPage();
-    }
+    // ...
 
     public function openModal()
     {
         $this->resetValidation();
-        $this->reset(['employeeName', 'email', 'orientationDate', 'location', 'facilitator', 'notes', 'status']);
+        $this->reset(['employeeName', 'email', 'position', 'orientationDate', 'location', 'facilitator', 'notes', 'status']);
         $this->showModal = true;
     }
+
+    // ...
 
     public function editOrientation($orientationId)
     {
@@ -107,6 +106,7 @@ class OrientationSchedule extends Component
         $this->editingOrientationId = $orientationId;
         $this->employeeName = $orientation->employee_name;
         $this->email = $orientation->email;
+        $this->position = $orientation->position; // <--- Added
         $this->orientationDate = $orientation->orientation_date->format('Y-m-d\TH:i');
         $this->location = $orientation->location;
         $this->facilitator = $orientation->facilitator;
@@ -118,31 +118,23 @@ class OrientationSchedule extends Component
     public function addOrientation()
     {
         try {
-            // Debug: Log incoming data
-            logger('Add Orientation Data:', [
-                'employeeName' => $this->employeeName,
-                'email' => $this->email,
-                'orientationDate' => $this->orientationDate,
-                'location' => $this->location,
-                'facilitator' => $this->facilitator,
-                'status' => $this->status,
-                'notes' => $this->notes
-            ]);
-
+            // ...
             $this->validate([
                 'employeeName' => 'required|string|max:255|unique:orientations,employee_name',
                 'email' => 'nullable|email|max:255',
+                'position' => 'nullable|string|max:255', // <--- Added
                 'orientationDate' => 'required|date',
                 'location' => 'required|string|max:255',
                 'facilitator' => 'required|string|max:255',
                 'status' => 'required|in:scheduled,completed,cancelled',
             ]);
 
-            logger('Validation passed, creating orientation...');
+            // ...
 
             Orientation::create([
                 'employee_name' => $this->employeeName,
                 'email' => $this->email,
+                'position' => $this->position, // <--- Added
                 'orientation_date' => $this->orientationDate,
                 'location' => $this->location,
                 'facilitator' => $this->facilitator,
@@ -150,20 +142,11 @@ class OrientationSchedule extends Component
                 'status' => $this->status,
             ]);
 
-            logger('Orientation created successfully');
-
-            // Send email notification if email is provided
-            if ($this->email) {
-                $this->sendOrientationEmail($this->email, $this->employeeName, $this->orientationDate, $this->location, $this->facilitator);
-            }
-
-            session()->flash('status', 'Orientation scheduled successfully for ' . $this->employeeName);
-            $this->showModal = false;
-            $this->reset(['employeeName', 'email', 'orientationDate', 'location', 'facilitator', 'notes', 'status']);
+            // ...
+            $this->reset(['employeeName', 'email', 'position', 'orientationDate', 'location', 'facilitator', 'notes', 'status']);
             
         } catch (\Exception $e) {
-            logger('Add Orientation Error: ' . $e->getMessage());
-            session()->flash('error', 'Error scheduling orientation: ' . $e->getMessage());
+            // ...
         }
     }
 
@@ -171,6 +154,7 @@ class OrientationSchedule extends Component
     {
         try {
             $this->validate([
+                'position' => 'nullable|string|max:255', // <--- Added
                 'orientationDate' => 'required|date',
                 'location' => 'required|string|max:255',
                 'facilitator' => 'required|string|max:255',
@@ -186,19 +170,14 @@ class OrientationSchedule extends Component
                 'notes' => $this->notes,
                 'status' => $this->status,
                 'email' => $this->email,
+                'position' => $this->position, // <--- Added
             ]);
 
-            // Send email notification if status changed to scheduled and email is provided
-            if ($this->status === 'scheduled' && $this->email) {
-                $this->sendOrientationEmail($this->email, $this->employeeName, $this->orientationDate, $this->location, $this->facilitator);
-            }
-
-            session()->flash('status', 'Orientation updated successfully.');
-            $this->showEditModal = false;
-            $this->reset(['employeeName', 'email', 'orientationDate', 'location', 'facilitator', 'notes', 'status', 'editingOrientationId']);
+            // ...
+            $this->reset(['employeeName', 'email', 'position', 'orientationDate', 'location', 'facilitator', 'notes', 'status', 'editingOrientationId']);
             
         } catch (\Exception $e) {
-            session()->flash('error', 'Error updating orientation: ' . $e->getMessage());
+            // ...
         }
     }
 

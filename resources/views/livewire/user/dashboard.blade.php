@@ -166,8 +166,8 @@
                     @forelse($recentActivities['recent_applications'] as $application)
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <div>
-                                <strong>{{ $application->name }}</strong>
-                                <br><small class="text-muted">{{ $application->position ?? 'N/A' }}</small>
+                                <strong>{{ $application->first_name }} {{ $application->last_name }}</strong>
+                                <br><small class="text-muted">{{ $application->applied_position ?? 'N/A' }}</small>
                             </div>
                             <small class="text-muted">{{ $application->created_at->diffForHumans() }}</small>
                         </div>

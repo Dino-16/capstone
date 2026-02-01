@@ -98,6 +98,18 @@
             <div class="alert alert-danger">{{ $message }}</div>
         @enderror
 
+        {{-- Show All Validation Errors --}}
+        @if ($errors->any())
+            <div class="alert alert-danger">
+                <strong><i class="bi bi-exclamation-triangle me-2"></i>Please fix the following errors:</strong>
+                <ul class="mb-0 mt-2">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <form wire:submit.prevent="submitApplication">
             <x-honeypot />
             <div @class(['row', 'g-4'])>
@@ -110,36 +122,36 @@
 
                 <div class="col-md-4">
                     <x-input-label for="first-name" :value="__('First Name')" />
-                    <x-text-input wire:model="applicantFirstName" type="text" id="first-name" class="form-control-lg" />
+                    <x-text-input wire:model.blur="applicantFirstName" type="text" id="first-name" class="form-control-lg" />
                     <x-input-error field="applicantFirstName" />
                 </div>
 
                 <div class="col-md-3">
                     <x-input-label for="middle-name" :value="__('Middle Name')" />
-                    <x-text-input wire:model="applicantMiddleName" type="text" id="middle-name" class="form-control-lg" />
+                    <x-text-input wire:model.blur="applicantMiddleName" type="text" id="middle-name" class="form-control-lg" />
                     <x-input-error field="applicantMiddleName" />
                 </div>
 
                 <div class="col-md-3">
                     <x-input-label for="last-name" :value="__('Last Name')" />
-                    <x-text-input wire:model="applicantLastName" type="text" id="last-name" class="form-control-lg" />
+                    <x-text-input wire:model.blur="applicantLastName" type="text" id="last-name" class="form-control-lg" />
                     <x-input-error field="applicantLastName" />
                 </div>
 
                 <div class="col-md-2">
-                    <x-input-label for="suffix-name" :value="__('Suffix')" />
-                    <x-text-input wire:model="applicantSuffixName" type="text" id="suffix-name" class="form-control-lg" placeholder="Jr." />
+                    <x-input-label for="suffix-name" :value="__('Suffix (Optional)')" />
+                    <x-text-input wire:model.blur="applicantSuffixName" type="text" id="suffix-name" class="form-control-lg" placeholder="Jr." />
                 </div>
 
                 <div class="col-md-2">
                     <x-input-label for="applicant-age" :value="__('Age')" />
-                    <x-text-input wire:model="applicantAge" type="number" id="applicant-age" class="form-control-lg" placeholder="25" />
+                    <x-text-input wire:model.blur="applicantAge" type="number" id="applicant-age" class="form-control-lg" placeholder="25" />
                     <x-input-error field="applicantAge" />
                 </div>
 
                 <div class="col-md-2">
                     <x-input-label for="applicant-gender" :value="__('Gender')" />
-                    <select wire:model="applicantGender" id="applicant-gender" class="form-select form-select-lg">
+                    <select wire:model.live="applicantGender" id="applicant-gender" class="form-select form-select-lg">
                         @php($genders = [''=>'Select Gender', 'male'=>'Male', 'female'=>'Female'])
                         @foreach($genders as $value => $label)
                             <option value="{{ $value }}" {{ $applicantGender == $value ? 'selected' : '' }}>{{ $label }}</option>
@@ -148,15 +160,21 @@
                     <x-input-error field="applicantGender" />
                 </div>
 
-                <div class="col-md-8">
+                <div class="col-md-3">
+                    <x-input-label for="applicant-dob" :value="__('Date of Birth')" />
+                    <x-text-input wire:model.blur="applicantDateOfBirth" type="date" id="applicant-dob" class="form-control-lg" />
+                    <x-input-error field="applicantDateOfBirth" />
+                </div>
+
+                <div class="col-md-5">
                     <x-input-label for="applicant-phone" :value="__('Phone Number')" />
-                    <x-text-input wire:model="applicantPhone" type="text" id="applicant-phone" class="form-control-lg" />
+                    <x-text-input wire:model.blur="applicantPhone" type="text" id="applicant-phone" class="form-control-lg" />
                     <x-input-error field="applicantPhone" />
                 </div>
 
                 <div class="col-md-12">
                     <x-input-label for="applicant-email" :value="__('Email Address')" />
-                    <x-text-input wire:model="applicantEmail" type="email" id="applicant-email" class="form-control-lg" />
+                    <x-text-input wire:model.blur="applicantEmail" type="email" id="applicant-email" class="form-control-lg" />
                     <x-input-error field="applicantEmail" />
                 </div>
 
@@ -216,29 +234,34 @@
 
                 <div class="col-12">
                     <x-input-label for="house-street" :value="__('House No. / Street')" />
-                    <x-text-input wire:model="houseStreet" type="text" id="house-street" class="form-control-lg" />
+                    <x-text-input wire:model.blur="houseStreet" type="text" id="house-street" class="form-control-lg" />
                     <x-input-error field="houseStreet" />
                 </div>
 
                 {{-- File Upload --}}
                 <div class="col-12 mt-5">
                     <h5 class="text-uppercase tracking-wider text-secondary fw-bold small mb-3">Professional Documents</h5>
-                    @if ($isUploading)
-                        <div class="upload-box d-flex flex-column justify-content-center align-items-center p-4 border border-2 border-dashed rounded-4 bg-light text-center" style="min-height: 150px;">
-                            <div class="spinner-border text-primary mb-2" role="status">
+                    
+                    {{-- Full-screen backdrop loader for file upload --}}
+                    <div wire:loading wire:target="applicantResumeFile" class="upload-backdrop">
+                        <div class="upload-loader-content">
+                            <div class="spinner-border text-light mb-3" style="width: 3rem; height: 3rem;" role="status">
                                 <span class="visually-hidden">Loading...</span>
                             </div>
-                            <span class="fw-bold text-muted">Uploading file...</span>
+                            <h5 class="text-white fw-semibold mb-1">Uploading Resume</h5>
+                            <p class="text-white-50 small mb-0">Please wait...</p>
                         </div>
-                    @elseif (!$applicantResumeFile)
+                    </div>
+
+                    @if (!$applicantResumeFile)
                         <label for="resume" class="w-100">
-                            <input wire:model="applicantResumeFile" type="file" id="resume" class="d-none" />
+                            <input wire:model="applicantResumeFile" type="file" id="resume" class="d-none" accept=".pdf" />
                             <div class="upload-box d-flex flex-column justify-content-center align-items-center p-4 border border-2 border-dashed rounded-4 bg-light text-center" style="cursor: pointer; min-height: 150px;">
                                 <i class="bi bi-file-earmark-pdf fs-1 text-primary mb-2"></i>
                                 <span class="fw-bold">Click to upload Resume</span>
+                                <small class="text-muted mt-2"><i class="bi bi-info-circle me-1"></i>Only PDF files are accepted (Max: 2MB)</small>
                             </div>
                         </label>
-                        <span wire:loading wire:target="applicantResumeFile">Uploading...</span>
                     @else
                         <div class="alert alert-info d-flex justify-content-between align-items-center rounded-4">
                             <span><i class="bi bi-file-earmark-check me-2"></i>{{ $applicantResumeFile->getClientOriginalName() }}</span>
@@ -248,10 +271,39 @@
                     <x-input-error field="applicantResumeFile" />
                 </div>
 
+                <style>
+                    .upload-backdrop {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        width: 100vw;
+                        height: 100vh;
+                        background-color: rgba(0, 0, 0, 0.7);
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        z-index: 9999;
+                        backdrop-filter: blur(4px);
+                    }
+                    .upload-loader-content {
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        text-align: center;
+                        padding: 2.5rem 3rem;
+                        border-radius: 1rem;
+                        background: rgba(33, 58, 92, 0.95);
+                        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+                    }
+                </style>
+
                 {{-- Submission --}}
                 <div class="col-12 mt-5 border-top pt-4">
                     <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" id="agreed-to-terms" wire:model="agreedToTerms">
+                        <input class="form-check-input" type="checkbox" id="agreed-to-terms" wire:model.live="agreedToTerms">
                         <label class="form-check-label ms-2" for="agreed-to-terms">
                             I agree to the <a href="javascript:void(0)" wire:click="$toggle('showTerms')" class="fw-bold text-primary">terms and conditions</a>.
                         </label>
@@ -290,8 +342,12 @@
                     @endif
 
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <button type="submit" class="btn btn-primary btn-lg px-5 shadow-sm" style="background-color: #213A5C; border: none;">
-                            <span wire:target="submitApplication">Submit Application</span>
+                        <button type="submit" class="btn btn-primary btn-lg px-5 shadow-sm" style="background-color: #213A5C; border: none;" wire:loading.attr="disabled">
+                            <span wire:loading.remove wire:target="submitApplication">Submit Application</span>
+                            <span wire:loading wire:target="submitApplication">
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                Submitting...
+                            </span>
                         </button>
                     </div>
                 </div>

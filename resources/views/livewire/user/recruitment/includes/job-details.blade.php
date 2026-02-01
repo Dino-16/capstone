@@ -1,78 +1,86 @@
 @if($showModal && $jobDetail)
-<div @class('modal fade show d-block') tabindex="-1" style="background: rgba(15, 35, 85, 0.5); backdrop-filter: blur(4px);">
+<div @class('modal fade show d-block') tabindex="-1" style="background: rgba(0, 0, 0, 0.5);">
     <div @class('modal-dialog modal-lg modal-dialog-centered')>
-        <div @class('modal-content border-0 shadow-lg rounded-3')>
-            <div @class('modal-header border-0 px-4 pt-4 pb-0')>
-                <h4 @class('fw-bold text-dark m-0') style="letter-spacing: -0.01em;">
-                    {{ $jobDetail->position }}
-                </h4>
-                <button type="button" @class('btn-close small shadow-none') wire:click="closeModal"></button>
+        <div @class('modal-content border-0 shadow')>
+            <div class="modal-header bg-white border-bottom">
+                <h5 class="modal-title d-flex align-items-center gap-2">
+                    <i class="bi bi-briefcase"></i>
+                    {{ $jobDetail->status === 'Active' ? 'Edit Job' : 'Activate Job' }}: {{ $jobDetail->position }}
+                </h5>
+                <button type="button" class="btn-close" wire:click="closeModal"></button>
             </div>
-            <div @class('modal-body px-4 py-4')>
-                <div @class('row g-4 mb-5')>
+            <div @class('modal-body p-4')>
+                {{-- Job Info --}}
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small">Department</label>
+                        <p class="fw-semibold">{{ $jobDetail->department ?? 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small">Location</label>
+                        <p class="fw-semibold">{{ $jobDetail->location ?? 'Ever Gotesco Commonwealth' }}</p>
+                    </div>
+                </div>
+
+                <div @class('row g-4 mb-4')>
                     <div @class('col-md-6')>
-                        <span @class('text-uppercase text-muted fw-bold small ls-1 d-block mb-2')>Description</span>
-                        <p @class('text-secondary small leading-relaxed mb-0')>
-                            {{ $jobDetail->description }}
+                        <label class="form-label text-muted small">Description</label>
+                        <p @class('text-secondary small mb-0') style="max-height: 100px; overflow-y: auto;">
+                            {{ $jobDetail->description ?: 'No description provided.' }}
                         </p>
                     </div>
                     <div @class('col-md-6')>
-                        <span @class('text-uppercase text-muted fw-bold small ls-1 d-block mb-2')>Qualifications</span>
-                        <p @class('text-secondary small leading-relaxed mb-0')>
-                            {{ $jobDetail->qualifications }}
+                        <label class="form-label text-muted small">Qualifications</label>
+                        <p @class('text-secondary small mb-0') style="max-height: 100px; overflow-y: auto;">
+                            {{ $jobDetail->qualifications ?: 'No qualifications specified.' }}
                         </p>
                     </div>
                 </div>
+
+                {{-- Editable Fields --}}
                 <div @class('pt-4 border-top')>
-                    @error('type')
-                        <div @class('alert alert-danger py-2 mb-3')>{{ $message }}</div>
-                    @enderror
-                    @error('arrangement')
-                        <div @class('alert alert-danger py-2 mb-3')>{{ $message }}</div>
-                    @enderror
+                    <h6 class="fw-bold mb-3">Job Settings</h6>
                     @error('expiration_date')
                         <div @class('alert alert-danger py-2 mb-3')>{{ $message }}</div>
                     @enderror
                     <div @class('row g-3')>
                         <div @class('col-md-4')>
-                            <label @class('form-label x-small fw-bold text-dark')>Employment Type</label>
-                            <select @class('form-select border-light-subtle shadow-none') wire:model="type">
-                                <option value="On-Site" {{ ($jobDetail->type ?? 'On-Site') === 'On-Site' ? 'selected' : '' }}>On-Site</option>
-                                <option value="Remote" {{ ($jobDetail->type ?? 'On-Site') === 'Remote' ? 'selected' : '' }}>Remote</option>
-                                <option value="Hybrid" {{ ($jobDetail->type ?? 'On-Site') === 'Hybrid' ? 'selected' : '' }}>Hybrid</option>
+                            <label @class('form-label small fw-bold')>Work Type</label>
+                            <select @class('form-select') wire:model="type">
+                                <option value="On-Site">On-Site</option>
+                                <option value="Remote">Remote</option>
+                                <option value="Hybrid">Hybrid</option>
                             </select>
                         </div>
                         <div @class('col-md-4')>
-                            <label @class('form-label x-small fw-bold text-dark')>Arrangement</label>
-                            <select @class('form-select border-light-subtle shadow-none') wire:model="arrangement">
-                                <option value="Full-Time" {{ ($jobDetail->arrangement ?? 'Full-Time') === 'Full-Time' ? 'selected' : '' }}>Full-Time</option>
-                                <option value="Part-Time" {{ ($jobDetail->arrangement ?? 'Full-Time') === 'Part-Time' ? 'selected' : '' }}>Part-Time</option>
+                            <label @class('form-label small fw-bold')>Arrangement</label>
+                            <select @class('form-select') wire:model="arrangement">
+                                <option value="Full-Time">Full-Time</option>
+                                <option value="Part-Time">Part-Time</option>
                             </select>
                         </div>
-
                         <div @class('col-md-4')>
-                            <label @class('form-label x-small fw-bold text-dark')>Expiration</label>
-                            <input type="date" @class('form-control border-light-subtle shadow-none') wire:model="expiration_date">
+                            <label @class('form-label small fw-bold')>Expiration Date <span class="text-danger">*</span></label>
+                            <input type="date" @class('form-control') wire:model="expiration_date">
                         </div>
                     </div>
                 </div>
             </div>
-            <div @class('modal-footer border-0 px-4 pb-4 pt-2 justify-content-between')>
-                <button type="button" @class('btn btn-link text-muted text-decoration-none small p-0') wire:click="closeModal">
+            <div @class('modal-footer border-top')>
+                <button type="button" class="btn btn-secondary" wire:click="closeModal">
                     Cancel
                 </button>
-                <div @class('d-flex gap-2')>
-                    <button type="button" @class('btn btn-dark px-4 py-2 rounded-2 fw-semibold shadow-sm') wire:click="publishJob" style="background: #213A5C; border: none;">
-                        @if($jobDetail->status === 'Inactive')
-                            <span wire:loading.remove wire:target="publishJob">Activate Post</span>
-                        @else
-                            <span wire:loading.remove wire:target="publishJob">Update Details</span>
-                        @endif
-                        <span wire:loading wire:target="publishJob" @class('small')>
-                            <span @class('spinner-border spinner-border-sm me-2')></span>Processing
-                        </span>
+                @if($jobDetail->status === 'Active')
+                    <button type="button" class="btn btn-success" wire:click="saveJobEdit">
+                        <span wire:loading.remove wire:target="saveJobEdit"><i class="bi bi-check-lg me-1"></i> Save Changes</span>
+                        <span wire:loading wire:target="saveJobEdit" class="spinner-border spinner-border-sm"></span>
                     </button>
-                </div>
+                @else
+                    <button type="button" class="btn btn-success" wire:click="publishJob">
+                        <span wire:loading.remove wire:target="publishJob"><i class="bi bi-check-lg me-1"></i> Activate Post</span>
+                        <span wire:loading wire:target="publishJob" class="spinner-border spinner-border-sm"></span>
+                    </button>
+                @endif
             </div>
         </div>
     </div>

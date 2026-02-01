@@ -5,13 +5,8 @@
 <div @class('pt-2')>
 
     {{-- SUCCESS/ERROR TOAST --}}
-    @if (session()->has('message'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i>
-            {{ session('message') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
+    {{-- SUCCESS/ERROR TOAST --}}
+    <x-toast />
 
     @if (session()->has('error'))
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -75,6 +70,15 @@
         {{-- LEFT SIDE --}}
         <div @class('mb-3 d-flex justify-content-between align-items-center gap-2')>
             
+            {{-- SEARCH BAR --}}
+            <div>
+                <x-text-input
+                    type="search"
+                    wire:model.live="search" 
+                    placeholder="Search..."
+                />
+            </div>
+
             {{-- FILTER DROPDOWN --}}
             <div @class('dropdown')>
                 <button
@@ -117,11 +121,10 @@
             <div @class('d-flex justify-content-between align-items-center gap-2')>
                 
                 <button
-                    @class('btn btn-secondary')
-                    wire:click="fetchReservations"
+                    @class('btn btn-success')
+                    wire:click="exportData"
                 >
-                    <i class="bi bi-arrow-clockwise me-1"></i>
-                    Refresh
+                    <i class="bi bi-download me-2"></i>Export to CSV
                 </button>
 
                 <button
@@ -257,12 +260,12 @@
         <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
             <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content">
-                    <div class="modal-header bg-primary text-white">
+                    <div class="modal-header bg-white border-bottom">
                         <h5 class="modal-title">
                             <i class="bi bi-calendar-plus me-2"></i>
                             New Booking Request
                         </h5>
-                        <button type="button" class="btn-close btn-close-white" wire:click="closeBookingModal"></button>
+                        <button type="button" class="btn-close" wire:click="closeBookingModal"></button>
                     </div>
                     <form wire:submit.prevent="sendBookingRequest">
                         <div class="modal-body">
@@ -319,7 +322,7 @@
                                 <div class="row g-3">
                                     <div class="col-md-4">
                                         <label for="requestedBy" class="form-label">Requested By <span class="text-danger">*</span></label>
-                                        <input type="text" id="requestedBy" wire:model="requestedBy" placeholder="Enter full name" class="form-control">
+                                        <input type="text" id="requestedBy" wire:model="requestedBy" class="form-control">
                                         @error('requestedBy') <small class="text-danger">{{ $message }}</small> @enderror
                                     </div>
 
@@ -425,7 +428,7 @@
         <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
-                    <div class="modal-header">
+                    <div class="modal-header bg-white border-bottom">
                         <h5 class="modal-title">
                             <i class="bi bi-info-circle me-2"></i>
                             Reservation Details

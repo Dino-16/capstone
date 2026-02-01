@@ -8,6 +8,7 @@ use Livewire\Attributes\Url;
 use App\Models\Recruitment\Requisition;
 use App\Models\Recruitment\JobListing;
 use App\Exports\Recruitment\JobPostsExport;
+use Illuminate\Support\Facades\Http;
 
 class JobPostings extends Component
 {
@@ -17,12 +18,16 @@ class JobPostings extends Component
     public $jobDetail;
     public $search;
 
-    #[Url(keep: true)]
+    #[Url]
     public $jobListSort = 'position_asc';
 
     public $type = 'On-Site';
     public $arrangement = 'Full-Time';
-    public $expiration_date; 
+    public $expiration_date;
+    
+    // API data
+    public $apiPositions = [];
+    public $debugApiData = null; 
 
     public function showJobDetails($id)
     {
@@ -121,17 +126,94 @@ class JobPostings extends Component
     public function deactivateJob($jobId)
     {
         $job = JobListing::findOrFail($jobId);
-        $job->update([
-            'status' => 'Inactive',
-            'expiration_date' => null
-        ]);
+        $positionName = $job->position;
+        $job->delete();
         
-        session()->push('status', 'Job deactivated successfully.');
+        session()->push('status', 'Job "' . $positionName . '" has been removed.');
+    }
+
+    public function editJob($jobId)
+    {
+        $this->jobDetail = JobListing::findOrFail($jobId);
+        
+        $this->type = $this->jobDetail->type ?? 'On-Site';
+        $this->arrangement = $this->jobDetail->arrangement ?? 'Full-Time';
+        $this->expiration_date = $this->jobDetail->expiration_date;
+        
+        $this->showModal = true;
+    }
+
+    public function saveJobEdit()
+    {
+        $this->validate([
+            'expiration_date' => 'required|date|after_or_equal:today',
+        ]);
+
+        $this->jobDetail->update([
+            'type'            => $this->type,
+            'arrangement'     => $this->arrangement,
+            'expiration_date' => $this->expiration_date,
+        ]);
+
+        session()->push('status', 'Job "' . $this->jobDetail->position . '" updated successfully.');
+        $this->closeModal();
+    }
+
+    public function activateApiPosition($positionData)
+    {
+        // Check if position already exists
+        $existingJob = JobListing::where('position', $positionData['position_name'])->first();
+        
+        if ($existingJob) {
+            // Update existing job to Active
+            $existingJob->update([
+                'status' => 'Active',
+                'expiration_date' => now()->addDays(30), // Default 30 days
+            ]);
+            session()->push('status', 'Job "' . $positionData['position_name'] . '" is already listed and has been activated.');
+        } else {
+            // Create new job listing from API data
+            JobListing::create([
+                'position' => $positionData['position_name'],
+                'description' => $positionData['description'] ?? '',
+                'qualifications' => $positionData['qualification'] ?? '',
+                'department' => $positionData['department'] ?? 'N/A',
+                'type' => $this->mapWorkArrangement($positionData['work_arrangement'] ?? 'On-site'),
+                'arrangement' => $positionData['employment_type'] ?? 'Full-Time',
+                'location' => 'Ever Gotesco Commonwealth',
+                'status' => 'Active',
+                'expiration_date' => now()->addDays(30), // Default 30 days expiration
+            ]);
+            session()->push('status', 'Job "' . $positionData['position_name'] . '" has been activated successfully!');
+        }
+    }
+
+    private function mapWorkArrangement($workArrangement)
+    {
+        if (str_contains(strtolower($workArrangement), 'remote')) {
+            return 'Remote';
+        } elseif (str_contains(strtolower($workArrangement), 'hybrid')) {
+            return 'Hybrid';
+        }
+        return 'On-Site';
     }
 
     public function render()
     {
         $requisitions = Requisition::where('status', 'Accepted')->get();
+
+        // Fetch positions from HR2 API
+        try {
+            $response = Http::withoutVerifying()->get('https://hr2.jetlougetravels-ph.com/api/positions');
+            
+            if ($response->successful()) {
+                $this->apiPositions = $response->json();
+                $this->debugApiData = $this->apiPositions; // For debugging
+            }
+        } catch (\Exception $e) {
+            $this->apiPositions = [];
+            $this->debugApiData = ['error' => $e->getMessage()];
+        }
 
         // Apply sorting to jobs query
         $query = JobListing::query();
@@ -167,6 +249,8 @@ class JobPostings extends Component
             'requisitions' => $requisitions,
             'jobs'         => $jobs,
             'sidebarJobs'  => $sidebarJobs,
+            'apiPositions' => $this->apiPositions,
+            'debugApiData' => $this->debugApiData,
         ])->layout('layouts.app');
     }
 }

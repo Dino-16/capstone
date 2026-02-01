@@ -61,38 +61,56 @@ class Evaluations extends Component
 
     public function mount()
     {
-        // Fetch employees from API
-        $response = Http::get('http://hr4.jetlougetravels-ph.com/api/employees');
-
-        if ($response->successful() && is_array($response->json())) {
-            $this->employees = $response->json();
-            $this->filteredEmployees = $this->employees;
-        } else {
-            $this->employees = [];
-            $this->filteredEmployees = [];
+        // Initialize empty - employees will be fetched on search
+        $this->employees = [];
+        $this->filteredEmployees = [];
+        
+        // Check for prefilled data from Tracker page
+        if (session()->has('prefill_evaluation')) {
+            $prefill = session()->pull('prefill_evaluation');
+            $this->employeeName = $prefill['employeeName'] ?? '';
+            $this->email = $prefill['email'] ?? '';
+            $this->position = $prefill['position'] ?? '';
+            $this->department = $prefill['department'] ?? '';
         }
     }
 
 
     public function updatedEmployeeName()
     {
-        if (empty($this->employeeName)) {
-            $this->filteredEmployees = $this->employees;
+        if (strlen($this->employeeName) < 2) {
+            $this->employees = [];
+            $this->filteredEmployees = [];
             $this->showEmployeeDropdown = false;
             return;
         }
 
-        $searchTerm = strtolower($this->employeeName);
-        $this->filteredEmployees = collect($this->employees)
-            ->filter(function ($employee) use ($searchTerm) {
-                $name = strtolower($employee['name'] ?? $employee['employee_name'] ?? '');
-                return str_contains($name, $searchTerm);
-            })
-            ->take(10)
-            ->values()
-            ->toArray();
-        
-        $this->showEmployeeDropdown = true;
+        try {
+            $response = Http::get('http://hr4.jetlougetravels-ph.com/api/employees', [
+                'search' => $this->employeeName,
+                'per_page' => 10
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $rawEmployees = $data['data'] ?? $data ?? [];
+                
+                $this->employees = collect($rawEmployees)->map(function($emp) {
+                    // Normalize name for checking in selectEmployee
+                    $name = $emp['full_name'] ?? trim(($emp['first_name'] ?? '') . ' ' . ($emp['last_name'] ?? ''));
+                    $emp['name'] = $name;
+                    $emp['employee_name'] = $name; 
+                    return $emp;
+                })->toArray();
+                
+                $this->filteredEmployees = $this->employees;
+                $this->showEmployeeDropdown = count($this->employees) > 0;
+            }
+        } catch (\Exception $e) {
+            $this->employees = [];
+            $this->filteredEmployees = [];
+            $this->showEmployeeDropdown = false;
+        }
     }
 
     public function selectEmployee($employeeName)
@@ -104,10 +122,25 @@ class Evaluations extends Component
             return $name === $employeeName;
         });
         
+        // Debug: Log the employee data structure
+        logger('=== Employee Data Structure ===');
+        logger(json_encode($employee, JSON_PRETTY_PRINT));
+        
         $this->email = $employee['email'] ?? null;
+        $this->position = $employee['position'] ?? null;
+        
+        // Handle department - could be string or object
+        $department = $employee['department'] ?? null;
+        if (is_array($department)) {
+            $this->department = $department['name'] ?? $department['department_name'] ?? null;
+            logger('Department is array: ' . json_encode($department));
+        } else {
+            $this->department = $department;
+            logger('Department is string: ' . $department);
+        }
         
         $this->showEmployeeDropdown = false;
-        $this->filteredEmployees = $this->employees;
+        $this->filteredEmployees = [];
     }
 
     // Calculate overall score when performance ratings change

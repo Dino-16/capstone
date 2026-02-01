@@ -213,6 +213,8 @@
             </a>
         </li>
 
+        {{-- Security Menu (HR Manager only) --}}
+        @if(session('user.position') === 'HR Manager')
         <li @class("nav-item")>
             <a href="#securityMenu"
             role="button"
@@ -247,6 +249,7 @@
                 </ul>
             </div>
         </li>
+        @endif
 
         <hr>
 

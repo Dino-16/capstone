@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
+use App\Models\Performance\Evaluation;
+use App\Exports\Performance\PerformanceTrackerExport;
+use App\Exports\Performance\AttendanceTrackerExport;
+
 class Tracker extends Component
 {
     public $employees = [];
@@ -18,6 +22,96 @@ class Tracker extends Component
     public $monthlyEvaluations = [];
     public $loading = false;
     public $attendanceRecords = [];
+    
+    // Modal properties
+    public $showScheduleModal = false;
+    public $scheduleEmployee = null;
+    
+    // Search and filter properties
+    public $search = '';
+    public $nextEvaluationFilter = '';
+    
+    // Computed filtered employees
+    public function getFilteredEmployeesProperty()
+    {
+        $filtered = collect($this->employees);
+        
+        // Apply search filter
+        if (!empty($this->search)) {
+            $search = strtolower($this->search);
+            $filtered = $filtered->filter(function ($employee) use ($search) {
+                return str_contains(strtolower($employee['name'] ?? ''), $search)
+                    || str_contains(strtolower($employee['position'] ?? ''), $search)
+                    || str_contains(strtolower($employee['department'] ?? ''), $search)
+                    || str_contains(strtolower($employee['email'] ?? ''), $search);
+            });
+        }
+        
+        // Apply next evaluation filter
+        if (!empty($this->nextEvaluationFilter)) {
+            $filtered = $filtered->filter(function ($employee) {
+                $nextEval = collect($employee['monthly_evaluations'] ?? [])
+                    ->where('status', '!=', 'completed')
+                    ->first();
+                    
+                if (!$nextEval) {
+                    return $this->nextEvaluationFilter === 'caught_up';
+                }
+                
+                return $nextEval['status'] === $this->nextEvaluationFilter;
+            });
+        }
+        
+        return $filtered->values()->toArray();
+    }
+    
+    public function exportData()
+    {
+        $export = new PerformanceTrackerExport($this->filteredEmployees);
+        return $export->export();
+    }
+    
+    // Attendance search and filter properties
+    public $attendanceSearch = '';
+    public $attendanceStatusFilter = '';
+    
+    // Computed filtered attendance records
+    public function getFilteredAttendanceProperty()
+    {
+        $filtered = collect($this->attendanceRecords);
+        
+        // Apply search filter
+        if (!empty($this->attendanceSearch)) {
+            $search = strtolower($this->attendanceSearch);
+            $filtered = $filtered->filter(function ($record) use ($search) {
+                $firstName = strtolower($record['employee']['first_name'] ?? '');
+                $lastName = strtolower($record['employee']['last_name'] ?? '');
+                $position = strtolower($record['employee']['position'] ?? '');
+                $location = strtolower($record['location'] ?? '');
+                
+                return str_contains($firstName, $search)
+                    || str_contains($lastName, $search)
+                    || str_contains($firstName . ' ' . $lastName, $search)
+                    || str_contains($position, $search)
+                    || str_contains($location, $search);
+            });
+        }
+        
+        // Apply status filter
+        if (!empty($this->attendanceStatusFilter)) {
+            $filtered = $filtered->filter(function ($record) {
+                return strtolower($record['status'] ?? '') === strtolower($this->attendanceStatusFilter);
+            });
+        }
+        
+        return $filtered->values()->toArray();
+    }
+    
+    public function exportAttendanceData()
+    {
+        $export = new AttendanceTrackerExport($this->filteredAttendance);
+        return $export->export();
+    }
 
     public function mount()
     {
@@ -156,10 +250,54 @@ class Tracker extends Component
 
     private function isEvaluationCompleted($employeeId, $evaluationDate)
     {
-        // This would check against actual evaluation records
-        // For now, return false to show all past evaluations as pending
-        // TODO: Connect to actual evaluation database
-        return false;
+        // Check against actual evaluation records in database
+        $employeeName = collect($this->employees)->firstWhere('id', $employeeId)['name'] ?? null;
+        if (!$employeeName) {
+            return false;
+        }
+        
+        return Evaluation::where('employee_name', $employeeName)
+            ->whereMonth('evaluation_date', $evaluationDate->month)
+            ->whereYear('evaluation_date', $evaluationDate->year)
+            ->where('status', 'Completed')
+            ->exists();
+    }
+
+    public function openScheduleModal($employeeId)
+    {
+        $this->scheduleEmployee = collect($this->employees)->firstWhere('id', $employeeId);
+        
+        if ($this->scheduleEmployee) {
+            // Get evaluation count from database
+            $this->scheduleEmployee['db_evaluations'] = Evaluation::where('employee_name', $this->scheduleEmployee['name'])->count();
+            $this->scheduleEmployee['completed_db_evaluations'] = Evaluation::where('employee_name', $this->scheduleEmployee['name'])
+                ->where('status', 'Completed')->count();
+        }
+        
+        $this->showScheduleModal = true;
+    }
+
+    public function closeScheduleModal()
+    {
+        $this->showScheduleModal = false;
+        $this->scheduleEmployee = null;
+    }
+
+    public function goToEvaluate($employeeId)
+    {
+        $employee = collect($this->employees)->firstWhere('id', $employeeId);
+        
+        if ($employee) {
+            // Store employee data in session for auto-fill
+            session()->put('prefill_evaluation', [
+                'employeeName' => $employee['name'],
+                'email' => $employee['email'],
+                'position' => $employee['position'],
+                'department' => $employee['department'],
+            ]);
+            
+            return redirect()->route('evaluations');
+        }
     }
 
     

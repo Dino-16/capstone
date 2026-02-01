@@ -22,7 +22,8 @@
     @livewireScripts
 </head>
 <body @class('m-0 p-0 d-flex flex-column min-vh-100')>
-    {{-- Header --}}
+    {{-- Header - Hidden on apply-now page for cleaner application experience --}}
+    @unless(request()->routeIs('apply-now'))
     <div @class('container')>
         <header @class('sticky-top position-absolute container')>
             <nav @class('navbar navbar-expand-lg p-1')>
@@ -35,27 +36,27 @@
 
                         <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                             <li class="nav-item">
-                                <a class="nav-link d-flex align-items-center gap-1 {{ request()->is('careers') ? 'text-black' : 'text-white' }}" href="{{ route('home') }}">
+                                <a class="nav-link d-flex align-items-center gap-1 {{ request()->is('careers') || request()->is('login-options') ? 'text-black' : 'text-white' }}" href="{{ route('home') }}">
                                     <i class="bi bi-house-door-fill"></i> Home
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link d-flex align-items-center gap-1 {{ request()->is('careers') ? 'text-black' : 'text-white' }}" href="{{ route('about') }}">
+                                <a class="nav-link d-flex align-items-center gap-1 {{ request()->is('careers') || request()->is('login-options') ? 'text-black' : 'text-white' }}" href="{{ route('about') }}">
                                     <i class="bi bi-info-circle-fill"></i> About
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link d-flex align-items-center gap-1 {{ request()->is('careers') ? 'text-black' : 'text-white' }}" href="{{ route('contact') }}">
+                                <a class="nav-link d-flex align-items-center gap-1 {{ request()->is('careers') || request()->is('login-options') ? 'text-black' : 'text-white' }}" href="{{ route('contact') }}">
                                     <i class="bi bi-envelope-fill"></i> Contact
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link d-flex align-items-center gap-1 {{ request()->is('careers') ? 'text-black' : 'text-white' }}" href="{{ route('careers') }}">
+                                <a class="nav-link d-flex align-items-center gap-1 {{ request()->is('careers') || request()->is('login-options') ? 'text-black' : 'text-white' }}" href="{{ route('careers') }}">
                                     <i class="bi bi-briefcase-fill"></i> Careers
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link d-flex align-items-center gap-1 {{ request()->is('login-options') ? 'text-black' : 'text-white' }}" href="{{ route('login-options') }}">
+                                <a class="nav-link d-flex align-items-center gap-1 {{ request()->is('careers') || request()->is('login-options') ? 'text-black' : 'text-white' }}" href="{{ route('login-options') }}">
                                     <i class="bi bi-box-arrow-in-right"></i> Portals
                                 </a>
                             </li>
@@ -66,6 +67,7 @@
         </header>
 
     </div>
+    @endunless
     {{-- Main --}}
     <main @class('flex-grow-1')>
         {{ $slot }}

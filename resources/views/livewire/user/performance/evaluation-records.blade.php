@@ -159,6 +159,7 @@
                     <tr @class('bg-dark')>
                         <th @class('text-secondary')>Employee</th>
                         <th @class('text-secondary')>Email</th>
+                        <th @class('text-secondary')>Evaluations</th>
                         <th @class('text-secondary')>Evaluation Date</th>
                         <th @class('text-secondary')>Evaluator</th>
                         <th @class('text-secondary')>Score</th>
@@ -175,6 +176,16 @@
                             </td>
                             <td>
                                 {{ $evaluation->email }}
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-primary" title="Total Evaluations">
+                                        <i class="bi bi-clipboard-data me-1"></i>{{ $evaluation->employee_evaluation_count ?? 0 }}
+                                    </span>
+                                    <span class="badge bg-success" title="Completed">
+                                        <i class="bi bi-check-circle me-1"></i>{{ $evaluation->employee_completed_count ?? 0 }}
+                                    </span>
+                                </div>
                             </td>
                             <td>
                                 {{ $evaluation->evaluation_date->format('M d, Y') }}

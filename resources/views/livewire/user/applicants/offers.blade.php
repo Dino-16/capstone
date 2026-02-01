@@ -8,36 +8,84 @@
     <x-toast />
 
     {{-- STATS CARDS --}}
-    <div class="row mb-4">
+    <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm bg-warning bg-opacity-10">
-                <div class="card-body text-center">
-                    <div class="display-6 fw-bold text-warning">{{ $stats['pending'] ?? 0 }}</div>
-                    <div class="text-muted small">Contract Pending</div>
+            <div class="card p-3 shadow-sm border-0 h-100">
+                {{-- Icon --}}
+                <div class="mb-2">
+                    <i class="bi bi-hourglass-split text-warning fs-3"></i>
+                </div>
+
+                <div class="ps-2">
+                    {{-- Count --}}
+                    <div class="fw-semibold fs-4">
+                        {{ $stats['pending'] ?? 0 }}
+                    </div>
+
+                    {{-- Label --}}
+                    <div class="text-muted small">
+                        Contract Pending
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm bg-info bg-opacity-10">
-                <div class="card-body text-center">
-                    <div class="display-6 fw-bold text-info">{{ $stats['sent'] ?? 0 }}</div>
-                    <div class="text-muted small">Contract Sent</div>
+            <div class="card p-3 shadow-sm border-0 h-100">
+                {{-- Icon --}}
+                <div class="mb-2">
+                    <i class="bi bi-send-fill text-info fs-3"></i>
+                </div>
+
+                <div class="ps-2">
+                    {{-- Count --}}
+                    <div class="fw-semibold fs-4">
+                        {{ $stats['sent'] ?? 0 }}
+                    </div>
+
+                    {{-- Label --}}
+                    <div class="text-muted small">
+                        Contract Sent
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm bg-success bg-opacity-10">
-                <div class="card-body text-center">
-                    <div class="display-6 fw-bold text-success">{{ $stats['signed'] ?? 0 }}</div>
-                    <div class="text-muted small">Contract Signed</div>
+            <div class="card p-3 shadow-sm border-0 h-100">
+                {{-- Icon --}}
+                <div class="mb-2">
+                    <i class="bi bi-check-circle-fill text-success fs-3"></i>
+                </div>
+
+                <div class="ps-2">
+                    {{-- Count --}}
+                    <div class="fw-semibold fs-4">
+                        {{ $stats['signed'] ?? 0 }}
+                    </div>
+
+                    {{-- Label --}}
+                    <div class="text-muted small">
+                        Contract Signed
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm bg-primary bg-opacity-10">
-                <div class="card-body text-center">
-                    <div class="display-6 fw-bold text-primary">{{ $stats['hired'] ?? 0 }}</div>
-                    <div class="text-muted small">Hired</div>
+            <div class="card p-3 shadow-sm border-0 h-100">
+                {{-- Icon --}}
+                <div class="mb-2">
+                    <i class="bi bi-person-check-fill text-primary fs-3"></i>
+                </div>
+
+                <div class="ps-2">
+                    {{-- Count --}}
+                    <div class="fw-semibold fs-4">
+                        {{ $stats['hired'] ?? 0 }}
+                    </div>
+
+                    {{-- Label --}}
+                    <div class="text-muted small">
+                        Hired
+                    </div>
                 </div>
             </div>
         </div>
@@ -243,11 +291,11 @@
     {{-- VIEW CANDIDATE MODAL --}}
     @if($showViewModal && $selectedCandidate)
     <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-info text-white">
+                <div class="modal-header bg-white border-bottom">
                     <h5 class="modal-title"><i class="bi bi-person-badge me-2"></i>Candidate Details</h5>
-                    <button type="button" class="btn-close btn-close-white" wire:click="closeViewModal"></button>
+                    <button type="button" class="btn-close" wire:click="closeViewModal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
@@ -329,11 +377,11 @@
     {{-- CONTRACT STATUS MODAL --}}
     @if($showContractModal)
     <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-secondary text-white">
+                <div class="modal-header bg-white border-bottom">
                     <h5 class="modal-title"><i class="bi bi-file-earmark-text me-2"></i>Update Contract Status</h5>
-                    <button type="button" class="btn-close btn-close-white" wire:click="closeContractModal"></button>
+                    <button type="button" class="btn-close" wire:click="closeContractModal"></button>
                 </div>
                 <div class="modal-body">
                     <p><strong>Candidate:</strong> {{ $contractCandidateName }}</p>
@@ -368,11 +416,11 @@
     {{-- DOCUMENT EMAIL MODAL --}}
     @if($showEmailModal)
     <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
+                <div class="modal-header bg-white border-bottom">
                     <h5 class="modal-title"><i class="bi bi-envelope-fill me-2"></i>Send Document Requirements Email</h5>
-                    <button type="button" class="btn-close btn-close-white" wire:click="closeEmailModal"></button>
+                    <button type="button" class="btn-close" wire:click="closeEmailModal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-success">

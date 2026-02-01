@@ -12,6 +12,7 @@ class Application extends Model
     protected $fillable = [
         'applied_position',
         'department',
+        'status',
 
         // Personal Info
         'first_name',
@@ -19,6 +20,7 @@ class Application extends Model
         'last_name',
         'suffix_name',
         'age',
+        'date_of_birth',
         'gender',
 
         // Contact & Address
@@ -34,7 +36,6 @@ class Application extends Model
         'resume_path',
 
         // Application status
-        'status',
         'agreed_to_terms',
     ];
 

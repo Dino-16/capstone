@@ -1,8 +1,8 @@
 {{-- View Evaluation Modal --}}
 <div wire:modal="showViewModal" class="modal fade" id="viewEvaluationModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header bg-white border-bottom">
                 <h5 class="modal-title">Evaluation Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>

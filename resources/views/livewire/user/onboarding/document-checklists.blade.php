@@ -158,29 +158,33 @@
                                 </small>
                             </td>
                             <td>
-                                <div @class('d-flex gap-2 align-items-center')>
-                                    <button
-                                        @class('btn btn-primary btn-sm')
-                                        wire:click="editEmployee({{ $document->id }})"
-                                        title="Edit"
-                                    >
-                                        <i @class('bi bi-pencil')></i>
-                                    </button>
-                                    <button
-                                        @class('btn btn-info btn-sm')
-                                        wire:click="openMessageModal({{ $document->id }})"
-                                        title="Message"
-                                    >
-                                        <i @class('bi bi-envelope')></i>
-                                    </button>
-                                    <button
-                                        @class('btn btn-danger btn-sm')
-                                        wire:click="draft({{ $document->id }})"
-                                        title="Draft Employee"
-                                    >
-                                        <i @class('bi bi-journal-text')></i>
-                                    </button>
-                                </div>
+                                @if($document->getCompletionPercentage() == 100)
+                                    <span class="text-muted">---</span>
+                                @else
+                                    <div @class('d-flex gap-2 align-items-center')>
+                                        <button
+                                            @class('btn btn-primary btn-sm')
+                                            wire:click="editEmployee({{ $document->id }})"
+                                            title="Edit"
+                                        >
+                                            <i @class('bi bi-pencil')></i>
+                                        </button>
+                                        <button
+                                            @class('btn btn-info btn-sm')
+                                            wire:click="openMessageModal({{ $document->id }})"
+                                            title="Message"
+                                        >
+                                            <i @class('bi bi-envelope')></i>
+                                        </button>
+                                        <button
+                                            @class('btn btn-danger btn-sm')
+                                            wire:click="draft({{ $document->id }})"
+                                            title="Draft Employee"
+                                        >
+                                            <i @class('bi bi-journal-text')></i>
+                                        </button>
+                                    </div>
+                                @endif
                             </td>
                         </tr>
                     @empty

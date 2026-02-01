@@ -25,6 +25,72 @@
                     placeholder="Search..."
                 />
             </div>
+
+            {{-- QUALIFICATION STATUS FILTER --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    id="qualificationFilterDropdown"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-funnel-fill me-2')></i>
+                    @if($qualificationFilter === '')
+                        All Status
+                    @else
+                        {{ $qualificationFilter }}
+                    @endif
+                </button>
+
+                <ul @class('dropdown-menu') aria-labelledby="qualificationFilterDropdown">
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('qualificationFilter', '')">
+                            All Status
+                        </a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('qualificationFilter', 'Qualified')">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>Qualified
+                        </a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('qualificationFilter', 'Not Qualified')">
+                            <i class="bi bi-x-circle-fill text-danger me-2"></i>Not Qualified
+                        </a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('qualificationFilter', 'Pending Review')">
+                            <i class="bi bi-clock-fill text-secondary me-2"></i>Pending Review
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        {{-- RIGHT SIDE --}}
+        <div @class('mb-3 d-flex gap-2')>
+            <button
+                @class('btn btn-success')
+                wire:click="exportData"
+            >
+                <i @class('bi bi-download me-2')></i>Export to CSV
+            </button>
+
+            @if(!$showDrafts)
+                <button
+                    @class('btn btn-danger')
+                    wire:click="openDrafts"
+                >
+                    Open Drafts
+                </button>
+            @else
+                <button
+                    @class('btn btn-secondary') {{-- Corrected from btn-default which might not exist in Bootstrap --}}
+                    wire:click="closeDrafts"
+                >
+                    <i class="bi bi-arrow-left-circle-fill me-1"></i>Back to All
+                </button>
+            @endif
         </div>
     </div>
 
@@ -46,10 +112,13 @@
     {{-- MAIN TABLE --}}
     @if($applications)
         <div @class('p-5 bg-white rounded border rounded-bottom-0 border-bottom-0')>
-            <h3><i class="bi bi-file-earmark-person me-2"></i>All Applications</h3>
-            <p @class('text-secondary mb-0')>
-                AI-reviewed applications with rating scores and qualification status
-            </p>
+            @if($showDrafts)
+                <h3><i class="bi bi-file-earmark-person me-2"></i>Draft Applications</h3>
+                <p @class('text-secondary mb-0')>Only drafted applications</p>
+            @else
+                <h3><i class="bi bi-file-earmark-person me-2"></i>All Applications</h3>
+                <p @class('text-secondary mb-0')>AI-reviewed applications with rating scores and qualification status</p>
+            @endif
         </div>
         <div @class('table-responsive border rounded bg-white px-5 rounded-top-0 border-top-0')>
             <table @class('table table-hover')>
@@ -59,7 +128,7 @@
                         <th @class('text-secondary')>Email</th>
                         <th @class('text-secondary')>Position</th>
                         <th @class('text-secondary')>AI Rating</th>
-                        <th @class('text-secondary')>Status</th>
+                        <th @class('text-secondary')>Qualification Status</th>
                         <th @class('text-secondary')>Resume</th>
                         <th @class('text-secondary')>Actions</th>
                     </tr>
@@ -68,13 +137,14 @@
                     @forelse($applications as $app)
                         <tr wire:key="{{ $app->id }}">
                             <td>
-                                <div class="fw-semibold">{{ $app->first_name }} {{ $app->last_name }}</div>
-                                <small class="text-muted">{{ $app->phone }}</small>
+                                <strong>{{ ucwords($app->first_name) }} {{ ucwords($app->last_name) }}</strong>
+                                @if($app->status === 'drafted')
+                                    <span class="badge bg-secondary ms-1">Draft</span>
+                                @endif
                             </td>
                             <td>{{ $app->email }}</td>
                             <td>
                                 <div class="fw-medium">{{ $app->applied_position }}</div>
-                                <small class="text-muted">{{ $app->department }}</small>
                             </td>
                             <td>
                                 @if($app->rating_score)
@@ -94,14 +164,14 @@
                                         {{ $app->qualification_status }}
                                     </span>
                                 @else
-                                    <span class="text-muted">N/A</span>
+                                    <span class="badge bg-secondary">Pending</span>
                                 @endif
                             </td>
                             <td>
-                                <div class="btn-group btn-group-sm">
+                                <div class="d-flex gap-2">
                                     <button
                                         type="button"
-                                        @class('btn btn-outline-info')
+                                        @class('btn btn-info btn-sm text-white')
                                         wire:click="viewFilteredResume({{ $app->id }})"
                                         title="View AI Analysis"
                                     >
@@ -109,7 +179,7 @@
                                     </button>
                                     <button
                                         type="button"
-                                        @class('btn btn-outline-warning')
+                                        @class('btn btn-warning btn-sm text-white')
                                         wire:click="openEditFilteredResume({{ $app->id }})"
                                         title="Edit Resume Data"
                                     >
@@ -118,27 +188,50 @@
                                 </div>
                             </td>
                             <td>
-                                <div class="btn-group btn-group-sm">
-                                    {{-- Draft Tool - Pivot to new role --}}
-                                    @if($app->qualification_status == 'Not Qualified' || ($app->rating_score && $app->rating_score < 60))
+                                <div class="d-flex gap-2">
+                                    {{-- Status Toggle --}}
+                                    @if($app->status === 'drafted')
                                         <button
                                             type="button"
-                                            @class('btn btn-outline-secondary')
+                                            @class('btn btn-primary btn-sm')
+                                            wire:click="restore({{ $app->id }})"
+                                            title="Restore to Active"
+                                        >
+                                            <i @class('bi bi-bootstrap-reboot')></i> 
+                                        </button>
+                                    @else
+                                        <button
+                                            type="button"
+                                            @class('btn btn-danger btn-sm')
+                                            wire:click="draft({{ $app->id }})"
+                                            title="Move to Drafts"
+                                        >
+                                            <i @class('bi bi-journal-text')></i> 
+                                        </button>
+                                    @endif
+
+                                    {{-- Draft Tool - Pivot to new role --}}
+                                    @if($app->status !== 'drafted' && ($app->qualification_status == 'Not Qualified' || ($app->rating_score && $app->rating_score < 60)))
+                                        <button
+                                            type="button"
+                                            @class('btn btn-outline-secondary btn-sm')
                                             wire:click="openDraftModal({{ $app->id }})"
                                             title="Pivot to Alternative Role"
                                         >
-                                            <i @class('bi bi-arrow-repeat')></i> Pivot
+                                            <i @class('bi bi-arrow-repeat')></i>
                                         </button>
                                     @endif
                                     {{-- Schedule Interview --}}
-                                    <button
-                                        type="button"
-                                        @class('btn btn-success')
-                                        wire:click="openScheduleModal({{ $app->id }})"
-                                        title="Promote to Candidate & Schedule"
-                                    >
-                                        <i @class('bi bi-calendar-check')></i> Schedule
-                                    </button>
+                                    @if($app->status !== 'drafted')
+                                        <button
+                                            type="button"
+                                            @class('btn btn-success btn-sm')
+                                            wire:click="openScheduleModal({{ $app->id }})"
+                                            title="Promote to Candidate & Schedule"
+                                        >
+                                            <i @class('bi bi-calendar-check')></i>
+                                        </button>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -146,7 +239,13 @@
                         <tr>
                             <td colspan="7" @class('text-center text-muted py-5')>
                                 <i @class('bi bi-inbox d-block mx-auto fs-1')></i>
-                                <div class="mt-3">No applications found.</div>
+                                <div class="mt-3">
+                                    @if($showDrafts)
+                                        No draft applications found.
+                                    @else
+                                        No applications found.
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @endforelse
@@ -159,11 +258,11 @@
     {{-- View Filtered Resume Modal (AI Analysis) --}}
     @if($showFilteredResumeModal)
     <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
+                <div class="modal-header bg-white border-bottom">
                     <h5 class="modal-title"><i class="bi bi-robot me-2"></i>AI Analysis - {{ $applicantName }}</h5>
-                    <button type="button" class="btn-close btn-close-white" wire:click="closeFilteredResumeModal"></button>
+                    <button type="button" class="btn-close" wire:click="closeFilteredResumeModal"></button>
                 </div>
                 <div class="modal-body">
                     @if($filteredResume)
@@ -267,9 +366,9 @@
     {{-- Edit Filtered Resume Modal (Manual Override) --}}
     @if($showEditFilteredResumeModal)
     <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-xl">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-warning">
+                <div class="modal-header bg-white border-bottom">
                     <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Manual Override - {{ $applicantName }}</h5>
                     <button type="button" class="btn-close" wire:click="closeEditFilteredResumeModal"></button>
                 </div>
@@ -377,11 +476,11 @@
     {{-- Draft Tool Modal - Pivot to Alternative Role --}}
     @if($showDraftModal)
     <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-secondary text-white">
+                <div class="modal-header bg-white border-bottom">
                     <h5 class="modal-title"><i class="bi bi-arrow-repeat me-2"></i>Pivot to Alternative Role</h5>
-                    <button type="button" class="btn-close btn-close-white" wire:click="closeDraftModal"></button>
+                    <button type="button" class="btn-close" wire:click="closeDraftModal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-info">
@@ -427,11 +526,11 @@
     {{-- Schedule Interview Modal --}}
     @if($showScheduleModal)
     <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-success text-white">
+                <div class="modal-header bg-white border-bottom">
                     <h5 class="modal-title"><i class="bi bi-calendar-check me-2"></i>Promote to Candidate - {{ $applicantData['name'] ?? '' }}</h5>
-                    <button type="button" class="btn-close btn-close-white" wire:click="closeScheduleModal"></button>
+                    <button type="button" class="btn-close" wire:click="closeScheduleModal"></button>
                 </div>
                 <div class="modal-body">
                     @if(!empty($applicantData))
@@ -470,6 +569,22 @@
                     
                     <hr>
                     
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Interview Location / Facility <span class="text-danger">*</span></label>
+                        <select class="form-select @error('selectedFacility') is-invalid @enderror" 
+                                wire:model.live="selectedFacility"
+                                {{ count($approvedFacilities) == 0 ? 'disabled' : '' }}>
+                            <option value="">
+                                {{ count($approvedFacilities) == 0 ? 'No Approved Facility' : '-- Select Approved Facility --' }}
+                            </option>
+                            @foreach($approvedFacilities as $facility)
+                                <option value="{{ $facility['id'] }}">{{ $facility['details'] }}</option>
+                            @endforeach
+                        </select>
+                        @error('selectedFacility') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        <div class="form-text">Select an approved facility reservation to auto-fill Scheduled Date & Time.</div>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">Interview Date</label>

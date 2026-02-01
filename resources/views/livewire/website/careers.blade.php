@@ -8,7 +8,7 @@
                 <i @class('bi bi-search text-muted')></i>
             </span>
             <!-- Live search binding -->
-            <input type="text" wire:model.debounce.500ms="search"
+            <input type="text" wire:model.live.debounce.500ms="search"
                 @class('form-control border-start-0 no-focus no-hover')
                 placeholder="Search jobs here ...">
 
@@ -60,37 +60,86 @@
                         </div>
                     @endforelse
                 </div>
+
+                {{-- Pagination --}}
+                @if($jobs->hasPages())
+                    <div class="d-flex justify-content-center mt-4">
+                        {{ $jobs->onEachSide(1)->links('pagination::simple-bootstrap-5') }}
+                    </div>
+                @endif
             </div>
 
             <!-- Job Details Column -->
             @if($showDetails && $selectedJob)
-                <div @class('col-md-6')>
-                    <div @class('card shadow-sm')>
-                        <div @class('card-body')>
-                            <div @class('d-flex justify-content-between align-items-center')>
-                                <h4 @class('h5 mb-3')>{{ $selectedJob->position }}</h4>
-                                <span wire:click="remove"><i @class('bi bi-x-circle-fill')></i></span>
+                <div class="col-md-6 job-details-panel">
+                    <div class="card border-0 shadow-lg overflow-hidden" style="animation: slideInRight 0.4s ease-out;">
+                        {{-- Header --}}
+                        <div class="card-header bg-white border-bottom py-4">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h4 class="mb-2 fw-bold">{{ $selectedJob->position }}</h4>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <span class="badge bg-success px-3 py-2">
+                                            <i class="bi bi-briefcase me-1"></i>{{ $selectedJob->type }}
+                                        </span>
+                                        <span class="badge bg-primary px-3 py-2">
+                                            <i class="bi bi-geo-alt me-1"></i>{{ $selectedJob->arrangement }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <button wire:click="remove" class="btn btn-link text-secondary p-0 fs-4" style="transition: all 0.2s;">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="card-body p-4">
+                            {{-- Job Description --}}
+                            <div class="mb-4" style="animation: fadeInUp 0.5s ease-out 0.1s both;">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-2">
+                                        <i class="bi bi-file-text text-primary"></i>
+                                    </div>
+                                    <h5 class="mb-0 fw-semibold">Job Description</h5>
+                                </div>
+                                <p class="text-muted ps-4 ms-2 border-start border-2 border-primary">{{ $selectedJob->description }}</p>
                             </div>
 
-                            <div @class('mb-3')>
-                                <span @class('badge bg-success me-1 mb-1')>{{ $selectedJob->type }}</span>
-                                <span @class('badge bg-primary')>{{ $selectedJob->arrangement }}</span>
+                            {{-- Qualifications --}}
+                            <div class="mb-4" style="animation: fadeInUp 0.5s ease-out 0.2s both;">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="rounded-circle bg-warning bg-opacity-10 p-2 me-2">
+                                        <i class="bi bi-check2-circle text-warning"></i>
+                                    </div>
+                                    <h5 class="mb-0 fw-semibold">Qualifications</h5>
+                                </div>
+                                <div class="ps-4 ms-2 border-start border-2 border-warning">
+                                    <p class="text-muted mb-0">{{ $selectedJob->qualifications }}</p>
+                                </div>
                             </div>
 
-                            <div @class('mb-4')>
-                                <h5>Job Description</h5>
-                                <p>{{ $selectedJob->description }}</p>
+                            {{-- Location if available --}}
+                            @if($selectedJob->location)
+                            <div class="mb-4" style="animation: fadeInUp 0.5s ease-out 0.3s both;">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="rounded-circle bg-success bg-opacity-10 p-2 me-2">
+                                        <i class="bi bi-pin-map text-success"></i>
+                                    </div>
+                                    <h5 class="mb-0 fw-semibold">Location</h5>
+                                </div>
+                                <p class="text-muted ps-4 ms-2 border-start border-2 border-success mb-0">{{ $selectedJob->location }}</p>
                             </div>
+                            @endif
 
-                            <div @class('mb-4')>
-                                <h5>Job Qualifications</h5>
-                                <ul @class('list-unstyled')>
-                                    <li @class('mb-2')>{{ $selectedJob->qualifications }}</li>
-                                </ul>
-                            </div>
-
-                            <div @class('mb-4')>
-                                <a @class('btn btn-success') href="{{ route('apply-now', ['id' => $selectedJob->id]) }}">Apply Now</a>
+                            {{-- Apply Button --}}
+                            <div class="mt-4 pt-3 border-top" style="animation: fadeInUp 0.5s ease-out 0.4s both;">
+                                <a href="{{ route('apply-now', ['id' => $selectedJob->id]) }}" 
+                                   class="btn btn-success btn-lg w-100 d-flex align-items-center justify-content-center gap-2"
+                                   style="transition: all 0.3s;">
+                                    <i class="bi bi-send-fill"></i>
+                                    Apply Now
+                                    <i class="bi bi-arrow-right"></i>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -98,4 +147,43 @@
             @endif
         </div>
     </div>
+
+    {{-- Animation Styles --}}
+    <style>
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .job-details-panel .card:hover {
+            box-shadow: 0 1rem 3rem rgba(0,0,0,.175) !important;
+        }
+
+        .job-details-panel .btn-link:hover {
+            color: white !important;
+            transform: rotate(90deg);
+        }
+
+        .job-details-panel .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(25, 135, 84, 0.4);
+        }
+    </style>
 </div>

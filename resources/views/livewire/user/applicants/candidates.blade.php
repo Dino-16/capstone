@@ -188,11 +188,11 @@
     {{-- View Candidate Modal --}}
     @if($showViewModal && $selectedCandidate)
     <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-info text-white">
+                <div class="modal-header bg-white border-bottom">
                     <h5 class="modal-title"><i class="bi bi-person-badge me-2"></i>Candidate Details</h5>
-                    <button type="button" class="btn-close btn-close-white" wire:click="closeViewModal"></button>
+                    <button type="button" class="btn-close" wire:click="closeViewModal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
@@ -271,9 +271,9 @@
     {{-- Reschedule Modal --}}
     @if($showRescheduleModal)
     <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-warning">
+                <div class="modal-header bg-white border-bottom">
                     <h5 class="modal-title"><i class="bi bi-calendar2-plus me-2"></i>Reschedule Interview</h5>
                     <button type="button" class="btn-close" wire:click="closeRescheduleModal"></button>
                 </div>
@@ -306,11 +306,11 @@
     {{-- Send Scheduling Link Modal --}}
     @if($showSendLinkModal)
     <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
+                <div class="modal-header bg-white border-bottom">
                     <h5 class="modal-title"><i class="bi bi-send me-2"></i>Send Self-Scheduling Link</h5>
-                    <button type="button" class="btn-close btn-close-white" wire:click="closeSendLinkModal"></button>
+                    <button type="button" class="btn-close" wire:click="closeSendLinkModal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-info">

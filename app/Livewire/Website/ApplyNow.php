@@ -21,7 +21,7 @@ class ApplyNow extends Component
     use \App\Traits\WithHoneypot;
 
     public $applicantLastName, $applicantFirstName, $applicantMiddleName, $applicantSuffixName, $applicantPhone, $applicantEmail, $applicantResumeFile;
-    public $applicantAge, $applicantGender;
+    public $applicantAge, $applicantGender, $applicantDateOfBirth;
     public $isUploading = false;
     public $lastAnalysisTime = null;
     public $job, $agreedToTerms = false, $showTerms = false, $showSuccessToast = false;
@@ -161,8 +161,19 @@ class ApplyNow extends Component
         }
     }
 
+    /**
+     * Remove the uploaded resume file
+     */
+    public function removeResume()
+    {
+        $this->applicantResumeFile = null;
+    }
+
     public function submitApplication()
     {
+        // Increase execution time limit for AI analysis (2 minutes)
+        set_time_limit(120);
+
         // Honeypot Check
         if (!$this->checkHoneypot('Job Application Form')) {
             return;
@@ -175,10 +186,11 @@ class ApplyNow extends Component
             'applicantEmail' => 'required|email',
             'applicantPhone' => 'required',
             'applicantAge' => 'required|integer|min:18|max:65',
+            'applicantDateOfBirth' => 'required|date|before:today',
             'applicantGender' => 'required|in:male,female',
             'applicantResumeFile' => 'required|file|mimes:pdf|max:2048',
             'selectedRegion' => 'required',
-            'selectedProvince' => 'required_if:selectedRegion,!=,1300000000',
+            'selectedProvince' => 'required_unless:selectedRegion,1300000000',
             'selectedCity' => 'required',
             'selectedBarangay' => 'required',
             'houseStreet' => 'required',
@@ -189,7 +201,7 @@ class ApplyNow extends Component
 
         try {
             $regionName = collect($this->regions)->firstWhere('code', $this->selectedRegion)['name'] ?? $this->selectedRegion;
-            $provinceName = ($this->selectedRegion === '130000000') ? 'NCR' : (collect($this->provinces)->firstWhere('code', $this->selectedProvince)['name'] ?? $this->selectedProvince);
+            $provinceName = ($this->selectedRegion === '1300000000') ? 'NCR' : (collect($this->provinces)->firstWhere('code', $this->selectedProvince)['name'] ?? $this->selectedProvince);
             $cityName = $this->resolveCityName($this->selectedRegion, $this->selectedCity);
 
             $path = $this->applicantResumeFile->store('resumes', 'public');
@@ -203,6 +215,7 @@ class ApplyNow extends Component
                 'last_name'        => $this->applicantLastName,
                 'suffix_name'      => $this->applicantSuffixName,
                 'age'              => $this->applicantAge,
+                'date_of_birth'    => $this->applicantDateOfBirth,
                 'gender'           => $this->applicantGender,
                 'email'            => $this->applicantEmail,
                 'phone'            => $this->applicantPhone,
@@ -234,7 +247,7 @@ class ApplyNow extends Component
                 }
 
                 if (!empty($resumeContent)) {
-                    $prompt = "You are an AI that extracts structured data from resumes for automated screening.\n\nJob position: {$application->applied_position}.\n\nResume content:\n{$resumeContent}\n\nReturn a single valid JSON object with EXACTLY these keys and types:\n- skills: array of strings (each string is a single skill or technology, e.g. 'PHP', 'Laravel', 'Customer Service'). Always return at least 3 skills; if not explicit, infer from context or use generic skills like 'Communication', 'Teamwork'.\n- experience: array of strings (each string is one job or role, e.g. 'Software Developer at Company A (2019-2022)'). Always return at least 1 experience item; if no job is given, use a best-guess like 'Work experience not clearly specified'.\n- education: array of strings (each string is one degree or education item, e.g. 'BS Computer Science - University X (2018)'). Always return at least 1 education item; if missing, use a placeholder like 'Education not clearly specified'.\n- score: number from 0 to 100 (overall suitability rating for the job)\n- qualification: string, either 'Qualified' or 'Not Qualified'.\n\nNever leave skills, experience, or education as empty arrays; always infer reasonable values or use an 'not clearly specified' placeholder string.\n\nExample JSON format (do NOT wrap in markdown):\n{\n  \"skills\": [\"PHP\", \"Laravel\", \"Customer Support\"],\n  \"experience\": [\"Software Developer - Company A (2019-2022)\"],\n  \"education\": [\"BS Computer Science - University X (2018)\"],\n  \"score\": 85,\n  \"qualification\": \"Qualified\"\n}.\n\nReturn ONLY the JSON object, with no extra text, labels, or explanations before or after.";
+                    $prompt = "You are an AI that extracts structured data from resumes for automated screening.\n\nJob position: {$application->applied_position}.\n\nResume content:\n{$resumeContent}\n\nReturn a single valid JSON object with EXACTLY these keys and types:\n- skills: array of strings (each string is a single skill or technology, e.g. 'PHP', 'Laravel', 'Customer Service'). Always return at least 3 skills; if not explicit, infer from context or use generic skills like 'Communication', 'Teamwork'.\n- experience: array of strings (each string is one job or role, e.g. 'Software Developer at Company A (2019-2022)'). Always return at least 1 experience item; if no job is given, use a best-guess like 'Work experience not clearly specified'.\n- education: array of strings (each string is one degree or education item, e.g. 'BS Computer Science - University X (2018)'). Always return at least 1 education item; if missing, use a placeholder like 'Education not clearly specified'.\n- score: number from 0 to 100 (overall suitability rating for the job)\n- qualification: string, one of 'Exceptional', 'Highly Qualified', 'Qualified', 'Moderately Qualified', 'Marginally Qualified', 'Not Qualified'. Base this strictly on the score: 90-100=Exceptional, 80-89=Highly Qualified, 70-79=Qualified, 60-69=Moderately Qualified, 50-59=Marginally Qualified, 0-49=Not Qualified.\n\nNever leave skills, experience, or education as empty arrays; always infer reasonable values or use an 'not clearly specified' placeholder string.\n\nExample JSON format (do NOT wrap in markdown):\n{\n  \"skills\": [\"PHP\", \"Laravel\", \"Customer Support\"],\n  \"experience\": [\"Software Developer - Company A (2019-2022)\"],\n  \"education\": [\"BS Computer Science - University X (2018)\"],\n  \"score\": 85,\n  \"qualification\": \"Highly Qualified\"\n}.\n\nReturn ONLY the JSON object, with no extra text, labels, or explanations before or after.";
 
                     // Analyze resume
                     $response = OpenAI::chat()->create([
@@ -352,7 +365,7 @@ class ApplyNow extends Component
             $this->reset([
                 'applicantLastName', 'applicantFirstName', 'applicantMiddleName',
                 'applicantSuffixName', 'applicantPhone', 'applicantEmail',
-                'applicantAge', 'applicantGender',
+                'applicantAge', 'applicantGender', 'applicantDateOfBirth',
                 'applicantResumeFile', 'selectedRegion', 'selectedProvince',
                 'selectedCity', 'selectedBarangay', 'houseStreet', 'agreedToTerms'
             ]);

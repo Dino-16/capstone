@@ -189,104 +189,74 @@ class Interviews extends Component
         }
     }
 
+    /**
+     * Fetch all assessment data from the HR2 API
+     */
+    private function fetchAssessmentData()
+    {
+        try {
+            $response = Http::get('https://hr2.jetlougetravels-ph.com/api/assessment');
+            
+            if ($response->successful()) {
+                $data = $response->json();
+                
+                // Debug: Log the full API response
+                logger('=== HR2 Assessment API Response ===');
+                logger('Success: ' . ($data['success'] ?? 'N/A'));
+                logger('Total items: ' . (isset($data['data']) ? count($data['data']) : 0));
+                logger('Full Data: ' . json_encode($data, JSON_PRETTY_PRINT));
+                
+                return $data['data'] ?? [];
+            }
+            
+            logger('HR2 Assessment API Error: ' . $response->status());
+            return [];
+        } catch (\Exception $e) {
+            logger('HR2 Assessment API Exception: ' . $e->getMessage());
+            return [];
+        }
+    }
+
     private function getInterviewQuestions($position)
     {
-        $questions = [
-            'Travel Agent' => [
-                'What is your experience in the travel and tourism industry?',
-                'How do you handle difficult customer complaints?',
-                'What are your favorite travel destinations and why?',
-                'How do you stay updated with recent travel regulations and safety protocols?',
-                'Can you describe a time when you planned a complex travel itinerary?'
-            ],
-            'Driver' => [
-                'What type of driving license do you hold and which vehicles can you operate?',
-                'How do you ensure the safety of passengers and yourself while driving?',
-                'Describe your experience with long-distance driving.',
-                'How do you handle traffic violations or accidents?',
-                'What navigation tools or apps do you use for route planning?'
-            ],
-            'Procurement Officer' => [
-                'What is your experience with procurement and supply chain management?',
-                'How do you evaluate and select suppliers for the company?',
-                'Describe your experience with budget management and cost reduction.',
-                'What procurement software or tools do you use for procurement processes?',
-                'How do you ensure compliance with procurement policies and regulations?'
-            ],
-            'Logistics Staff' => [
-                'What is your experience in warehouse operations and inventory management?',
-                'How do you ensure timely and accurate order fulfillment?',
-                'Describe your experience with logistics software and tracking systems.',
-                'How do you handle damaged or lost goods?',
-                'What strategies do you use to optimize delivery routes and schedules?'
-            ],
-            'Financial Staff' => [
-                'What accounting software are you proficient in?',
-                'Describe your experience with financial reporting and analysis.',
-                'How do you ensure the accuracy of financial data entry and calculations?',
-                'What is your experience with budget preparation and monitoring?',
-                'How do you handle confidential financial information?'
-            ],
-            'Admin' => [
-                'What office management software are you familiar with?',
-                'How do you prioritize multiple tasks and deadlines?',
-                'Describe your experience with scheduling and calendar management.',
-                'How do you handle confidential documents and information?',
-                'What is your experience with organizing meetings and events?'
-            ]
-        ];
+        $assessments = $this->fetchAssessmentData();
         
-        return $questions[$position] ?? [];
+        // Filter by role (position) and type 'question'
+        $questions = collect($assessments)
+            ->filter(function ($item) use ($position) {
+                return $item['role'] === $position && $item['type'] === 'question';
+            })
+            ->pluck('content')
+            ->values()
+            ->toArray();
+        
+        // Debug: Log filtered questions
+        logger("=== Interview Questions for Position: {$position} ===");
+        logger('Questions count: ' . count($questions));
+        logger('Questions: ' . json_encode($questions, JSON_PRETTY_PRINT));
+        
+        return $questions;
     }
     
     private function getPracticalExams($position)
     {
-        $exams = [
-            'Travel Agent' => [
-                'Plan a 7-day itinerary for a family of 4 visiting Japan.',
-                'Handle a customer complaint about a cancelled flight.',
-                'Calculate total cost including flights, hotels, and activities for a Europe tour.',
-                'Create a travel package brochure for a beach destination.',
-                'Explain visa requirements for different countries.'
-            ],
-            'Driver' => [
-                'Plan the most efficient route for 5 deliveries in the city.',
-                'List daily vehicle safety checks before starting work.',
-                'Calculate fuel consumption for a 200km trip.',
-                'Describe steps to change a flat tire safely.',
-                'Explain how to handle a vehicle breakdown situation.'
-            ],
-            'Procurement Officer' => [
-                'Create a purchase request form for office supplies.',
-                'Compare 3 supplier quotes and recommend the best option.',
-                'Prepare a simple procurement budget for Q1.',
-                'Draft an email to request proposals from vendors.',
-                'Explain the procurement process from request to delivery.'
-            ],
-            'Logistics Staff' => [
-                'Organize a warehouse layout for maximum efficiency.',
-                'Create an inventory tracking sheet for 50 items.',
-                'Plan delivery schedule for 20 orders in one day.',
-                'Describe how to handle and document damaged goods.',
-                'Calculate storage space needed for different product sizes.'
-            ],
-            'Financial Staff' => [
-                'Create a simple monthly expense report.',
-                'Reconcile a bank statement with 10 transactions.',
-                'Prepare a basic budget spreadsheet for a department.',
-                'Calculate VAT and tax for different expense categories.',
-                'Create an invoice template for client billing.'
-            ],
-            'Admin' => [
-                'Organize a weekly schedule for 5 team members.',
-                'Draft a professional email to announce a company event.',
-                'Create a filing system for different document types.',
-                'Prepare meeting minutes for a team discussion.',
-                'Design a visitor log and sign-in sheet.'
-            ]
-        ];
+        $assessments = $this->fetchAssessmentData();
         
-        return $exams[$position] ?? [];
+        // Filter by role (position) and type 'exam'
+        $exams = collect($assessments)
+            ->filter(function ($item) use ($position) {
+                return $item['role'] === $position && $item['type'] === 'exam';
+            })
+            ->pluck('content')
+            ->values()
+            ->toArray();
+        
+        // Debug: Log filtered exams
+        logger("=== Practical Exams for Position: {$position} ===");
+        logger('Exams count: ' . count($exams));
+        logger('Exams: ' . json_encode($exams, JSON_PRETTY_PRINT));
+        
+        return $exams;
     }
 
     public function render()

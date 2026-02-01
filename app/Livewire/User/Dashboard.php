@@ -19,11 +19,13 @@ class Dashboard extends Component
     public function render()
     {
         // Basic Counts
+        $employeeCount = $this->getEmployeeCount();
+        
         $statusCounts = [
             'requisitions'  => Requisition::where('status', 'Pending')->count(),
             'jobs'          => JobListing::where('status', 'Active')->count(),
             'applications'  => Application::count(),
-            'employees'     => count(Http::get('http://hr4.jetlougetravels-ph.com/api/employees')->json()),
+            'employees'     => $employeeCount,
         ];
 
         // Onboarding Stats
@@ -101,17 +103,48 @@ class Dashboard extends Component
 
     private function getDepartmentData()
     {
-        $employees = Http::get('http://hr4.jetlougetravels-ph.com/api/employees')->json();
-        $departments = [];
-        
-        if (is_array($employees)) {
-            foreach ($employees as $employee) {
-                $dept = $employee['department'] ?? 'Unknown';
-                $departments[$dept] = ($departments[$dept] ?? 0) + 1;
+        try {
+            $response = Http::timeout(10)->get('http://hr4.jetlougetravels-ph.com/api/employees');
+            
+            if (!$response->successful()) {
+                return ['No Data' => 1];
             }
-        }
+            
+            $responseData = $response->json();
+            $departments = [];
+            
+            // The API returns {'success': ..., 'data': [...]} structure
+            $employees = $responseData['data'] ?? $responseData;
+            
+            if (is_array($employees)) {
+                foreach ($employees as $employee) {
+                    // Handle department being either a string or an object with 'name' property
+                    $dept = 'Unknown';
+                    
+                    if (isset($employee['department'])) {
+                        if (is_array($employee['department']) && isset($employee['department']['name'])) {
+                            $dept = $employee['department']['name'];
+                        } elseif (is_string($employee['department']) && !empty($employee['department'])) {
+                            $dept = $employee['department'];
+                        }
+                    }
+                    
+                    // Skip if department is empty or null
+                    if (empty($dept) || $dept === '') {
+                        $dept = 'Unassigned';
+                    }
+                    
+                    $departments[$dept] = ($departments[$dept] ?? 0) + 1;
+                }
+            }
 
-        return $departments;
+            // Sort by count descending
+            arsort($departments);
+            
+            return empty($departments) ? ['No Departments' => 1] : $departments;
+        } catch (\Exception $e) {
+            return ['Error Loading Data' => 1];
+        }
     }
 
     private function getRecentActivities()
@@ -121,5 +154,42 @@ class Dashboard extends Component
             'recent_evaluations' => Evaluation::latest()->take(3)->get(),
             'recent_rewards' => GiveReward::with('reward')->latest()->take(3)->get(),
         ];
+    }
+
+    private function getEmployeeCount()
+    {
+        try {
+            $response = Http::timeout(10)->get('http://hr4.jetlougetravels-ph.com/api/employees');
+            
+            if (!$response->successful()) {
+                return 0;
+            }
+            
+            $data = $response->json();
+            
+            // Check if API returns paginated response with 'total' key
+            if (isset($data['total'])) {
+                return $data['total'];
+            }
+            
+            // Check if it's a paginated response with 'data' array
+            if (isset($data['data']) && is_array($data['data'])) {
+                // If there's a total in the paginated response, use it
+                if (isset($data['total'])) {
+                    return $data['total'];
+                }
+                // Otherwise count the data array (but this might be just one page)
+                return count($data['data']);
+            }
+            
+            // If it's a direct array of employees
+            if (is_array($data)) {
+                return count($data);
+            }
+            
+            return 0;
+        } catch (\Exception $e) {
+            return 0;
+        }
     }
 }

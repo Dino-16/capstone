@@ -56,21 +56,6 @@ class Reports extends Component
         return $query->get();
     }
 
-    public function getReportTypeCountsProperty()
-    {
-        $counts = [];
-        
-        // Count all reports
-        $counts['All'] = Report::count();
-        
-        // Count by each report type
-        foreach ($this->reportTypes as $type => $label) {
-            $counts[$label] = Report::where('report_type', $type)->count();
-        }
-        
-        return $counts;
-    }
-
     public function exportRequisition()
     {
         $export = new RequisitionsExport();
@@ -128,6 +113,24 @@ class Reports extends Component
     {
         $export = new GiveRewardsExport();
         return $export->export();
+    }
+
+    /**
+     * Quick generate/export a report by type
+     */
+    public function quickGenerate($type)
+    {
+        return match ($type) {
+            'requisition' => $this->exportRequisition(),
+            'jobpost' => $this->exportJobPost(),
+            'employee' => $this->exportEmployee(),
+            'documentchecklist' => $this->exportDocumentChecklist(),
+            'orientationschedule' => $this->exportOrientationSchedule(),
+            'evaluationrecords' => $this->exportEvaluationRecords(),
+            'rewards' => $this->exportRewards(),
+            'giverewards' => $this->exportGiveRewards(),
+            default => session()->flash('error', 'Unknown report type.'),
+        };
     }
     
     public function saveReport()

@@ -1,14 +1,14 @@
 <div class="container py-5">
     <div class="row min-vh-50 justify-content-center align-items-center">
         <div class="col-12 text-center mb-5">
-            <h2 class="fw-bold display-5 text-primary">HR Portals</h2>
-            <p class="text-muted">Select your department to login</p>
+            <h2 class="fw-bold display-5 text-primary">Employee & HR Portals</h2>
+            <p class="text-muted">Select your portal to login</p>
         </div>
 
         <div class="col-12">
             <div class="row g-4 justify-content-center">
                 <!-- HR 1 Card -->
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-2">
                     <div class="card h-100 border-0 shadow-sm hover-shadow transition-all">
                         <div class="card-body text-center p-4">
                             <div class="mb-3">
@@ -24,7 +24,7 @@
                 </div>
 
                 <!-- HR 2 Card -->
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-2">
                     <div class="card h-100 border-0 shadow-sm hover-shadow transition-all">
                         <div class="card-body text-center p-4">
                             <div class="mb-3">
@@ -40,7 +40,7 @@
                 </div>
 
                 <!-- HR 3 Card -->
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-2">
                     <div class="card h-100 border-0 shadow-sm hover-shadow transition-all">
                         <div class="card-body text-center p-4">
                             <div class="mb-3">
@@ -48,7 +48,7 @@
                             </div>
                             <h4 class="card-title fw-bold mb-3">HR 3</h4>
                             <p class="card-text text-muted small mb-4">Human Resources Department System 3</p>
-                            <a href="# class="btn btn-outline-warning w-100 rounded-pill">
+                            <a href="#" class="btn btn-outline-warning w-100 rounded-pill">
                                 Login to HR 3
                             </a>
                         </div>
@@ -56,7 +56,7 @@
                 </div>
 
                 <!-- HR 4 Card -->
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-2">
                     <div class="card h-100 border-0 shadow-sm hover-shadow transition-all">
                         <div class="card-body text-center p-4">
                             <div class="mb-3">
@@ -66,6 +66,22 @@
                             <p class="card-text text-muted small mb-4">Human Resources Department System 4</p>
                             <a href="#" class="btn btn-outline-danger w-100 rounded-pill">
                                 Login to HR 4
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ESS Card -->
+                <div class="col-md-6 col-lg-2">
+                    <div class="card h-100 border-0 shadow-sm hover-shadow transition-all">
+                        <div class="card-body text-center p-4">
+                            <div class="mb-3">
+                                <i class="bi bi-person-badge text-info display-4"></i>
+                            </div>
+                            <h4 class="card-title fw-bold mb-3">ESS</h4>
+                            <p class="card-text text-muted small mb-4">Employee Self-Service Portal</p>
+                            <a href="#" class="btn btn-outline-info w-100 rounded-pill">
+                                Login to ESS
                             </a>
                         </div>
                     </div>

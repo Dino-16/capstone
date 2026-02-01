@@ -8,6 +8,7 @@ use Livewire\Attributes\Url;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Exports\Onboarding\EmployeesExport;
+use App\Models\Onboarding\DocumentChecklist;
 
 class Employees extends Component
 {
@@ -17,6 +18,11 @@ class Employees extends Component
     public $search = '';
     
     public $perPage = 10;
+
+    // Modal properties
+    public $showEmployeeModal = false;
+    public $selectedEmployee = null;
+    public $employeeDocuments = [];
 
     /**
      * Resets pagination when search is updated.
@@ -47,8 +53,9 @@ class Employees extends Component
 
         // Check if API supports pagination natively (returns 'data' and 'total' keys)
         if (isset($data['data'])) {
+            $employees = $this->enrichEmployeesWithDocumentStatus($data['data']);
             return new LengthAwarePaginator(
-                $data['data'],
+                $employees,
                 $data['total'] ?? 0,
                 $data['per_page'] ?? $this->perPage,
                 $data['current_page'] ?? $page,
@@ -68,13 +75,82 @@ class Employees extends Component
             });
         }
 
+        $paginatedItems = $collection->forPage($page, $this->perPage)->values()->toArray();
+        $employees = $this->enrichEmployeesWithDocumentStatus($paginatedItems);
+
         return new LengthAwarePaginator(
-            $collection->forPage($page, $this->perPage)->values(),
+            $employees,
             $collection->count(),
             $this->perPage,
             $page,
             ['path' => request()->url(), 'query' => request()->query()]
         );
+    }
+
+    /**
+     * Enriches employees with their document checklist status
+     */
+    protected function enrichEmployeesWithDocumentStatus(array $employees): array
+    {
+        // Get all document checklists for efficient lookup
+        $checklists = DocumentChecklist::where('status', 'active')->get();
+
+        return collect($employees)->map(function ($emp) use ($checklists) {
+            $employeeName = trim(($emp['first_name'] ?? '') . ' ' . ($emp['last_name'] ?? ''));
+            $employeeEmail = $emp['email'] ?? null;
+
+            // Find matching document checklist by name or email
+            $matchingChecklist = $checklists->first(function ($checklist) use ($employeeName, $employeeEmail) {
+                $nameMatch = !empty($employeeName) && 
+                    str_contains(strtolower($checklist->employee_name), strtolower($employeeName));
+                $emailMatch = !empty($employeeEmail) && 
+                    strtolower($checklist->email ?? '') === strtolower($employeeEmail);
+                return $nameMatch || $emailMatch;
+            });
+
+            // Add document status info to employee
+            $emp['has_document_checklist'] = $matchingChecklist !== null;
+            $emp['document_checklist_id'] = $matchingChecklist?->id;
+            $emp['document_completion'] = $matchingChecklist?->getCompletionPercentage() ?? 0;
+            $emp['document_status'] = $matchingChecklist 
+                ? ($matchingChecklist->getCompletionPercentage() == 100 ? 'Complete' : 'In Progress') 
+                : 'Not Integrated';
+
+            return $emp;
+        })->toArray();
+    }
+
+    /**
+     * View employee details modal
+     */
+    public function viewEmployee($index)
+    {
+        $paginator = $this->getEmployeesPaginator();
+        $employees = $paginator->items();
+        
+        if (isset($employees[$index])) {
+            $this->selectedEmployee = $employees[$index];
+            
+            // Get documents if employee has a checklist
+            if ($this->selectedEmployee['has_document_checklist'] ?? false) {
+                $checklist = DocumentChecklist::find($this->selectedEmployee['document_checklist_id']);
+                $this->employeeDocuments = $checklist?->documents ?? [];
+            } else {
+                $this->employeeDocuments = [];
+            }
+            
+            $this->showEmployeeModal = true;
+        }
+    }
+
+    /**
+     * Close modal
+     */
+    public function closeModal()
+    {
+        $this->showEmployeeModal = false;
+        $this->selectedEmployee = null;
+        $this->employeeDocuments = [];
     }
 
     public function export()
@@ -88,14 +164,15 @@ class Employees extends Component
         if ($response->successful()) {
             $data = $response->json();
             $items = collect($data['data'] ?? $data); // Handle both paginated/unpaginated API response
+            $enrichedItems = $this->enrichEmployeesWithDocumentStatus($items->toArray());
 
-            $exportData = $items->map(fn($emp) => [
-                'Name'             => $emp['first_name'] ?? $emp['full_name'] ?? '—',
+            $exportData = collect($enrichedItems)->map(fn($emp) => [
+                'Name'             => ($emp['first_name'] ?? '') . ' ' . ($emp['last_name'] ?? $emp['full_name'] ?? '—'),
                 'Position'         => $emp['position'] ?? '—',
                 'Department'       => $emp['department']['name'] ?? 'Not Integrated',
-                'Contract Signing' => 'Completed',
-                'HR Documents'     => 'Not Integrated',
-                'Training Modules' => 'Not Integrated',
+                'HR Documents'     => $emp['document_status'] ?? 'Not Integrated',
+                'Employment Status' => $emp['employement_status'] ?? '---',
+                'Date Hired'       => $emp['date_hired'] ?? '---',
             ]);
 
             return (new EmployeesExport($exportData->toArray()))->export();

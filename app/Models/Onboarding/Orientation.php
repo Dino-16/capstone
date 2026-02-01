@@ -12,6 +12,7 @@ class Orientation extends Model
     protected $fillable = [
         'employee_name',
         'email',
+        'position',
         'orientation_date',
         'location',
         'facilitator',

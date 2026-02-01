@@ -10,12 +10,14 @@ use App\Models\Applicants\Candidate;
 use App\Models\Recruitment\JobListing;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Http;
 
 class Applications extends Component
 {   
     use WithPagination;
 
     public $search;
+    public $qualificationFilter = '';
     
     // Modal properties for filtered resume
     public $showFilteredResumeModal = false;
@@ -34,9 +36,11 @@ class Applications extends Component
 
     // Interview scheduling properties
     public $showScheduleModal = false;
-    public $schedulingApplicationId = null;
-    public $interview_date = '';
-    public $interview_time = '';
+    public $schedulingApplicationId;
+    public $interview_date;
+    public $interview_time;
+    public $approvedFacilities = [];
+    public $selectedFacility = '';
     public $applicantData = [];
 
     // Draft tool properties
@@ -48,6 +52,12 @@ class Applications extends Component
     public $draftReason = '';
     public $availablePositions = [];
 
+    // Reset pagination on mount to ensure we see data
+    public function mount()
+    {
+        $this->resetPage();
+    }
+
     // Pagination Page when Filtered
     public function updatedSearch()
     {
@@ -55,6 +65,11 @@ class Applications extends Component
     }
     
     public function UpdatedStatusFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedQualificationFilter()
     {
         $this->resetPage();
     }
@@ -85,17 +100,17 @@ class Applications extends Component
         }
     }
 
-    // Get rating badge color
+    // Get rating badge color (aligned with AI Rating Scale legend)
     private function getRatingBadgeColor($score)
     {
         if ($score === null) return 'secondary';
         
         if ($score >= 80) {
-            return 'success';
+            return 'success';  // 90-100: Exceptional, 80-89: Highly Qualified
         } elseif ($score >= 60) {
-            return 'warning';
+            return 'warning';  // 70-79: Qualified, 60-69: Moderately Qualified
         } else {
-            return 'danger';
+            return 'danger';   // 50-59: Marginally Qualified, 0-49: Not Qualified
         }
     }
 
@@ -285,9 +300,36 @@ class Applications extends Component
         $this->suggestedPosition = '';
         $this->draftReason = '';
 
-        // Get available positions (excluding current)
-        $this->availablePositions = JobListing::where('position', '!=', $application->applied_position)
+        // Get available positions from local database (excluding current)
+        $localPositions = JobListing::where('position', '!=', $application->applied_position)
             ->pluck('position')
+            ->toArray();
+
+        // Fetch positions from HR2 API
+        $apiPositions = [];
+        try {
+            $response = Http::withoutVerifying()->get('https://hr2.jetlougetravels-ph.com/api/positions');
+            if ($response->successful()) {
+                $apiData = $response->json();
+                // Extract position names from API response
+                if (is_array($apiData)) {
+                    foreach ($apiData as $position) {
+                        $positionName = $position['position_name'] ?? $position['name'] ?? null;
+                        if ($positionName && $positionName !== $application->applied_position) {
+                            $apiPositions[] = $positionName;
+                        }
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            // Silently handle API errors
+        }
+
+        // Merge and remove duplicates, then sort
+        $this->availablePositions = collect(array_merge($localPositions, $apiPositions))
+            ->unique()
+            ->sort()
+            ->values()
             ->toArray();
 
         $this->showDraftModal = true;
@@ -347,7 +389,52 @@ class Applications extends Component
             'rating_description' => $this->getRatingDescription($ratingScore),
             'rating_badge_color' => $this->getRatingBadgeColor($ratingScore),
         ];
+
+        // Fetch Approved Facilities for Location Dropdown
+        $this->approvedFacilities = [];
+        try {
+            $response = Http::withoutVerifying()->get('https://facilities-admin.jetlougetravels-ph.com/reservation_status_api.php');
+            if ($response->successful()) {
+                $data = $response->json();
+                $reservations = $data['reservations'] ?? [];
+                
+                $this->approvedFacilities = collect($reservations)
+                    ->filter(function($r) {
+                        $name = $r['requested_by'] ?? $r['full_name'] ?? '';
+                        return isset($r['status']) && 
+                               strtolower($r['status']) === 'approved' &&
+                               in_array(strtolower(trim($name)), ['hr staff', 'hr manager']);
+                    })
+                    ->map(function($r) {
+                        return [
+                            'id' => $r['request_id'],
+                            'name' => $r['facility_name'],
+                            'location' => $r['location'],
+                            'date' => $r['booking_date'],
+                            'start_time' => $r['start_time'],
+                            'end_time' => $r['end_time'],
+                            'details' => $r['facility_name'] . ' (' . $r['location'] . ') - ' . $r['booking_date'] . ' ' . $r['start_time']
+                        ];
+                    })
+                    ->values()
+                    ->toArray();
+            }
+        } catch (\Exception $e) {
+            // calculated silently
+        }
+
         $this->showScheduleModal = true;
+    }
+
+    public function updatedSelectedFacility($value)
+    {
+        if ($value) {
+            $facility = collect($this->approvedFacilities)->firstWhere('id', $value);
+            if ($facility) {
+                $this->interview_date = $facility['date'];
+                $this->interview_time = $facility['start_time']; 
+            }
+        }
     }
 
     public function closeScheduleModal()
@@ -362,8 +449,11 @@ class Applications extends Component
     public function scheduleInterview()
     {
         $this->validate([
+            'selectedFacility' => ['required'],
             'interview_date' => ['required', 'date', 'after_or_equal:today'],
             'interview_time' => ['required', 'string'],
+        ], [
+            'selectedFacility.required' => 'Please select an interview location / facility.'
         ]);
 
         $application = Application::find($this->schedulingApplicationId);
@@ -424,9 +514,59 @@ class Applications extends Component
         session()->flash('message', 'Candidate scheduled successfully and moved to candidates list.');
     }
 
+    public function toggleStatus($applicationId)
+    {
+        $application = Application::findOrFail($applicationId);
+        $newStatus = $application->status === 'active' ? 'drafted' : 'active';
+        $application->update(['status' => $newStatus]);
+        
+        session()->flash('status', 'Application marked as ' . ucfirst($newStatus));
+    }
+
+    public $showDrafts = false; // Toggle for draft view
+
+    public function openDrafts()
+    {
+        $this->showDrafts = true;
+        $this->resetPage();
+    }
+
+    public function closeDrafts()
+    {
+        $this->showDrafts = false;
+        $this->resetPage();
+    }
+
+    public function draft($id)
+    {
+        $app = Application::findOrFail($id);
+        $app->update(['status' => 'drafted']);
+        session()->flash('status', 'Application moved to drafts.');
+    }
+    
+    public function restore($id)
+    {
+        $app = Application::findOrFail($id);
+        $app->update(['status' => 'active']);
+        session()->flash('status', 'Application restored to active list.');
+    }
+
+    public function exportData()
+    {
+        $export = new \App\Exports\Applicants\ApplicationsExport();
+        return $export->export();
+    }
+
     public function render()
     {
         $query = Application::query()->latest();
+
+        // Format Filter
+        if ($this->showDrafts) {
+            $query->where('status', 'drafted');
+        } else {
+            $query->where('status', '!=', 'drafted');
+        }
 
         if ($this->search) {
             $query->where(function ($q) {
@@ -447,6 +587,18 @@ class Applications extends Component
             $app->rating_score = $filteredResume ? $filteredResume->rating_score : null;
             $app->rating_description = $filteredResume ? $this->getRatingDescription($filteredResume->rating_score) : null;
             $app->rating_badge_color = $filteredResume ? $this->getRatingBadgeColor($filteredResume->rating_score) : 'secondary';
+        }
+
+        // Apply qualification filter after loading (since it's from related table)
+        if ($this->qualificationFilter) {
+            $applications->setCollection(
+                $applications->getCollection()->filter(function ($app) {
+                    if ($this->qualificationFilter === 'Pending Review') {
+                        return $app->qualification_status === null;
+                    }
+                    return $app->qualification_status === $this->qualificationFilter;
+                })
+            );
         }
 
         return view('livewire.user.applicants.applications', [

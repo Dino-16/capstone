@@ -4,6 +4,7 @@ namespace App\Livewire\User;
 
 use Livewire\Component;
 use Illuminate\Support\Facades\Http;
+use App\Exports\FacilityRequest\FacilityRequestExport;
 
 class FacilityRequest extends Component
 {
@@ -29,6 +30,7 @@ class FacilityRequest extends Component
     public $showDetailsModal = false;
     public $statusFilter = 'All';
     public $availableFacilities = [];
+    public $search = '';
 
     public function mount()
     {
@@ -104,13 +106,46 @@ class FacilityRequest extends Component
 
     public function getFilteredReservationsProperty()
     {
-        if ($this->statusFilter === 'All') {
-            return $this->reservations;
+        $filtered = collect($this->reservations)->filter(function ($reservation) {
+            $name = $reservation['requested_by'] ?? $reservation['full_name'] ?? '';
+            // User requested explicit visibility only if Requested By is HR Staff / HR Manager
+            return in_array(strtolower(trim($name)), ['hr staff', 'hr manager']);
+        });
+
+        // Apply status filter
+        if ($this->statusFilter !== 'All') {
+            $filtered = $filtered->filter(function ($reservation) {
+                return strtolower($reservation['status']) === strtolower($this->statusFilter);
+            });
         }
 
-        return collect($this->reservations)->filter(function ($reservation) {
-            return strtolower($reservation['status']) === strtolower($this->statusFilter);
-        })->values()->toArray();
+        // Apply search filter
+        if (!empty($this->search)) {
+            $search = strtolower($this->search);
+            $filtered = $filtered->filter(function ($reservation) use ($search) {
+                return str_contains(strtolower($reservation['facility_name'] ?? ''), $search)
+                    || str_contains(strtolower($reservation['full_name'] ?? ''), $search)
+                    || str_contains(strtolower($reservation['email'] ?? ''), $search)
+                    || str_contains(strtolower($reservation['purpose'] ?? ''), $search)
+                    || str_contains(strtolower($reservation['location'] ?? ''), $search)
+                    || str_contains(strtolower($reservation['status'] ?? ''), $search);
+            });
+        }
+
+        return $filtered->values()->toArray();
+    }
+
+    public function exportData()
+    {
+        $reservations = $this->filteredReservations;
+
+        if (empty($reservations)) {
+            session()->flash('error', 'No data to export.');
+            return;
+        }
+
+        $export = new FacilityRequestExport($reservations);
+        return $export->export();
     }
 
     public function openBookingModal()
@@ -168,9 +203,9 @@ class FacilityRequest extends Component
         if ($response->successful()) {
             $result = $response->json();
             if (isset($result['success']) && $result['success']) {
-                session()->flash('message', $result['message'] ?? 'Booking request submitted successfully.');
+                session()->flash('status', $result['message'] ?? 'Booking request submitted successfully.');
             } else {
-                session()->flash('message', 'Booking request submitted successfully.');
+                session()->flash('status', 'Booking request submitted successfully.');
             }
             $this->resetForm();
             $this->showBookingModal = false;
@@ -192,6 +227,11 @@ class FacilityRequest extends Component
             'startTime', 'endTime', 'expectedAttendees', 'purpose',
             'specialRequirements', 'priority', 'contactEmail'
         ]);
+    }
+
+    public function clearStatus()
+    {
+        // Used by toast component polling
     }
 
     public function render()

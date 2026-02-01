@@ -13,7 +13,7 @@ class DocumentChecklists extends Component
 {
     use WithPagination;
 
-    #[Url(keep: true)]
+    #[Url]
     public $search = '';
 
     public $perPage = 10;
@@ -53,8 +53,19 @@ class DocumentChecklists extends Component
     {
         $response = Http::get('http://hr4.jetlougetravels-ph.com/api/employees');
 
-        if ($response->successful() && is_array($response->json())) {
-            $this->employees = $response->json();
+        if ($response->successful()) {
+            $json = $response->json();
+            // Extract 'data' array from paginated response, or use raw array if not paginated
+            $rawEmployees = $json['data'] ?? (is_array($json) ? $json : []);
+            
+            // Normalize employee names for consistent searching
+            $this->employees = collect($rawEmployees)->map(function($emp) {
+                $name = $emp['full_name'] ?? trim(($emp['first_name'] ?? '') . ' ' . ($emp['last_name'] ?? ''));
+                $emp['name'] = $name;
+                $emp['employee_name'] = $name;
+                return $emp;
+            })->toArray();
+            
             $this->filteredEmployees = $this->employees;
         } else {
             $this->employees = [];
@@ -110,6 +121,16 @@ class DocumentChecklists extends Component
     {
         $this->resetValidation();
         $this->reset(['employeeName', 'email', 'notes', 'selectedDocuments', 'showEmployeeDropdown']);
+        $this->selectedDocuments = []; // Start with empty selection
+        $this->showModal = true;
+    }
+
+    public function openModalForEmployee($name, $email = null)
+    {
+        $this->resetValidation();
+        $this->reset(['notes', 'selectedDocuments', 'showEmployeeDropdown']);
+        $this->employeeName = $name;
+        $this->email = $email;
         $this->selectedDocuments = []; // Start with empty selection
         $this->showModal = true;
     }

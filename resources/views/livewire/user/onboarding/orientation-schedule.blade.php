@@ -57,6 +57,7 @@
             <thead>
             <tr @class('bg-dark')>
                 <th @class('text-secondary')>Employee</th>
+                <th @class('text-secondary')>Position</th>
                 <th @class('text-secondary')>Date & Time</th>
                 <th @class('text-secondary')>Location</th>
                 <th @class('text-secondary')>Facilitator</th>
@@ -77,8 +78,10 @@
                                     @if($orientation->email)
                                         <br><small @class('text-muted')>{{ $orientation->email }}</small>
                                     @endif
-                                </div>
                             </div>
+                        </td>
+                        <td>
+                            {{ $orientation->position ?? 'N/A' }}
                         </td>
                         <td>
                             <strong>{{ $orientation->orientation_date->format('M j, Y') }}</strong>
@@ -91,7 +94,7 @@
                             <i @class('bi bi-person-badge me-1')></i>{{ $orientation->facilitator }}
                         </td>
                         <td>
-                            <span @class('badge {{ $orientation->status_badge }}')>
+                            <span class="badge {{ $orientation->status_badge }}">
                                 {{ ucfirst($orientation->status) }}
                             </span>
                         </td>

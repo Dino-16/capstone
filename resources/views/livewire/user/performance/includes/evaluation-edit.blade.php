@@ -2,9 +2,9 @@
 <div @class('modal fade show d-block') tabindex="-1" style="background: rgba(15, 35, 85, 0.5); backdrop-filter: blur(4px);">
     <div @class('modal-dialog modal-lg modal-dialog-centered')>
         <div @class('modal-content border-0 shadow-lg rounded-3')>
-            <div @class('modal-header border-0 px-4 pt-4 pb-0')>
-                <h4 @class('fw-bold text-dark m-0') style="letter-spacing: -0.01em;">Edit Evaluation</h4>
-                <button type="button" @class('btn-close small shadow-none') wire:click="$set('showEditModal', false)"></button>
+            <div class="modal-header bg-white border-bottom px-4 py-3">
+                <h4 class="fw-bold text-dark m-0" style="letter-spacing: -0.01em;">Edit Evaluation</h4>
+                <button type="button" class="btn-close small shadow-none" wire:click="$set('showEditModal', false)"></button>
             </div>
 
             <form wire:submit.prevent="updateEvaluation">

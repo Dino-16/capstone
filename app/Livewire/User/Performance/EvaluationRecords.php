@@ -3,6 +3,7 @@
 namespace App\Livewire\User\Performance;
 
 use App\Models\Performance\Evaluation;
+use App\Exports\Performance\EvaluationRecordsExport;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -49,26 +50,8 @@ class EvaluationRecords extends Component
 
     public function exportData()
     {
-        $evaluations = Evaluation::all();
-        
-        $csvContent = "Employee Name,Email,Evaluation Date,Evaluator,Overall Score,Status,Performance Areas,Created At\n";
-        
-        foreach ($evaluations as $evaluation) {
-            $csvContent .= '"' . $evaluation->employee_name . '",';
-            $csvContent .= '"' . $evaluation->email . '",';
-            $csvContent .= '"' . $evaluation->evaluation_date->format('Y-m-d') . '",';
-            $csvContent .= '"' . $evaluation->evaluator_name . '",';
-            $csvContent .= $evaluation->overall_score . ',';
-            $csvContent .= '"' . $evaluation->status . '",';
-            $csvContent .= '"' . str_replace('"', '""', $evaluation->performance_areas) . '",';
-            $csvContent .= '"' . $evaluation->created_at->format('Y-m-d H:i:s') . '"' . "\n";
-        }
-        
-        $filename = "evaluation_records_" . date('Y-m-d_H-i-s') . ".csv";
-        
-        return response()->streamDownload(function () use ($csvContent) {
-            echo $csvContent;
-        }, $filename);
+        $export = new EvaluationRecordsExport();
+        return $export->export();
     }
 
     public function viewEvaluation($id)
@@ -205,6 +188,13 @@ class EvaluationRecords extends Component
 
 
         $evaluations = $query->latest('evaluation_date')->paginate(10);
+
+        // Add evaluation count per employee
+        foreach ($evaluations as $evaluation) {
+            $evaluation->employee_evaluation_count = Evaluation::where('employee_name', $evaluation->employee_name)->count();
+            $evaluation->employee_completed_count = Evaluation::where('employee_name', $evaluation->employee_name)
+                ->where('status', 'Completed')->count();
+        }
 
         // Get statistics
         $stats = [
