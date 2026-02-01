@@ -252,7 +252,7 @@ class ApplyNow extends Component
                     ]);
                 }
 
-                // First try to parse PDF to text using smalot/pdfparser
+                // Try to parse PDF to text
                 try {
                     if (!class_exists('\Smalot\PdfParser\Parser')) {
                         \Log::error("PdfParser class not found - package may not be installed");
@@ -262,52 +262,51 @@ class ApplyNow extends Component
                     $parser = new Parser();
                     $pdf = $parser->parseFile($filePath);
                     $resumeContent = $pdf->getText();
-                    $pdfParseSuccess = true;
                     
                     \Log::info("PDF parsed with smalot/pdfparser", [
                         'application_id' => $application->id,
                         'content_length' => strlen($resumeContent),
+                        'has_text' => !empty(trim($resumeContent)),
                     ]);
                     
-                    // If smalot parser returns empty content, try alternative methods
+                    // If PDF parser returns empty content, the PDF is likely image-based
                     if (empty(trim($resumeContent))) {
-                        \Log::warning("smalot/pdfparser returned empty content, trying alternatives", [
+                        \Log::error("PDF contains no extractable text - likely an image-based/scanned PDF", [
                             'application_id' => $application->id,
+                            'file_path' => $filePath,
+                            'file_size' => filesize($filePath),
+                            'recommendation' => 'Applicant should upload a text-based PDF resume',
                         ]);
                         
-                        // Try using pdftotext command if available
-                        $outputFile = storage_path('app/temp_pdf_text_' . $application->id . '.txt');
-                        $command = "pdftotext " . escapeshellarg($filePath) . " " . escapeshellarg($outputFile) . " 2>&1";
-                        exec($command, $output, $returnCode);
+                        // Try to extract ANY text using alternative regex patterns
+                        $rawContent = file_get_contents($filePath);
                         
-                        if ($returnCode === 0 && file_exists($outputFile)) {
-                            $resumeContent = file_get_contents($outputFile);
-                            @unlink($outputFile);
+                        // Extract anything that looks like readable text from PDF stream
+                        if (preg_match_all('/\[(.*?)\]/s', $rawContent, $matches)) {
+                            $extractedText = implode(' ', $matches[1]);
+                            $cleanText = preg_replace('/[^\x20-\x7E\s]/', '', $extractedText);
                             
-                            \Log::info("PDF extracted using pdftotext command", [
-                                'application_id' => $application->id,
-                                'content_length' => strlen($resumeContent),
-                            ]);
-                        } else {
-                            \Log::error("All PDF extraction methods failed - PDF may be image-based or encrypted", [
-                                'application_id' => $application->id,
-                                'file_path' => $filePath,
-                                'file_size' => filesize($filePath),
-                                'pdftotext_available' => $returnCode === 127 ? 'No' : 'Yes but failed',
-                                'pdftotext_output' => implode("\n", $output),
-                            ]);
+                            if (strlen(trim($cleanText)) > 50) {
+                                $resumeContent = $cleanText;
+                                \Log::info("Extracted text using regex fallback", [
+                                    'application_id' => $application->id,
+                                    'content_length' => strlen($resumeContent),
+                                ]);
+                            }
                         }
                     }
                     
                 } catch (\Exception $e) {
-                    \Log::warning("PDF parsing exception for application ID {$application->id}: {$e->getMessage()}", [
+                    \Log::error("PDF parsing failed for application ID {$application->id}", [
+                        'error' => $e->getMessage(),
                         'error_class' => get_class($e),
                         'file_path' => $filePath,
                     ]);
                     $resumeContent = null;
                 }
 
-                if (!empty($resumeContent)) {
+                // Only attempt AI analysis if we have content
+                if (!empty(trim($resumeContent))) {
                     $prompt = "You are an AI that extracts structured data from resumes for automated screening.\n\nJob position: {$application->applied_position}.\n\nResume content:\n{$resumeContent}\n\nReturn a single valid JSON object with EXACTLY these keys and types:\n- skills: array of strings (each string is a single skill or technology, e.g. 'PHP', 'Laravel', 'Customer Service'). Always return at least 3 skills; if not explicit, infer from context or use generic skills like 'Communication', 'Teamwork'.\n- experience: array of strings (each string is one job or role, e.g. 'Software Developer at Company A (2019-2022)'). Always return at least 1 experience item; if no job is given, use a best-guess like 'Work experience not clearly specified'.\n- education: array of strings (each string is one degree or education item, e.g. 'BS Computer Science - University X (2018)'). Always return at least 1 education item; if missing, use a placeholder like 'Education not clearly specified'.\n- score: number from 0 to 100 (overall suitability rating for the job)\n\nNever leave skills, experience, or education as empty arrays; always infer reasonable values or use an 'not clearly specified' placeholder string.\n\nExample JSON format (do NOT wrap in markdown):\n{\n  \"skills\": [\"PHP\", \"Laravel\", \"Customer Support\"],\n  \"experience\": [\"Software Developer - Company A (2019-2022)\"],\n  \"education\": [\"BS Computer Science - University X (2018)\"],\n  \"score\": 85\n}.\n\nReturn ONLY the JSON object, with no extra text, labels, or explanations before or after.";
 
                     // Analyze resume with better error handling
