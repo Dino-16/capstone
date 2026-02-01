@@ -7,12 +7,8 @@
     </div>
 
     {{-- Alert Messages --}}
-    @if (session()->has('message'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('message') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
+    {{-- Toast --}}
+    <x-toast />
 
     {{-- Settings Card --}}
     <div class="row mb-4">
@@ -80,6 +76,7 @@
                             <th>Payload (Trap Value)</th>
                             <th>User Agent</th>
                             <th>Time</th>
+                            <th class="text-end pe-4">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -96,10 +93,17 @@
                                     </div>
                                 </td>
                                 <td class="small">{{ $log->created_at->format('M d, Y h:i A') }}</td>
+                                <td class="text-end pe-4">
+                                    <button wire:click="deleteLog({{ $log->id }})" 
+                                            wire:confirm="Are you sure you want to delete this log?"
+                                            class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-center py-5 text-muted">
+                                <td colspan="6" class="text-center py-5 text-muted">
                                     <i class="bi bi-bug display-6 d-block mb-3"></i>
                                     No bots caught yet.
                                 </td>

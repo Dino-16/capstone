@@ -36,7 +36,12 @@ class Recaptcha extends Component
             RecaptchaSetting::create(['is_enabled' => $this->isEnabled]);
         }
 
-        session()->flash('message', 'reCAPTCHA setting updated successfully.');
+        session()->flash('status', 'reCAPTCHA setting updated successfully.');
+    }
+
+    public function clearStatus()
+    {
+        session()->forget('status');
     }
 
     public function render()
@@ -52,4 +57,10 @@ class Recaptcha extends Component
             'stats' => $stats
         ])->layout('layouts.app'); // Assuming this uses the main admin layout
     }
+    public function deleteLog($id)
+    {
+        RecaptchaLog::find($id)?->delete();
+        session()->flash('status', 'Log entry deleted successfully.');
+    }
+
 }

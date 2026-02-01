@@ -57,15 +57,20 @@ class Mfa extends Component
             'hr_manager_enabled' => $this->isHrManagerEnabled,
         ]);
         
-        session()->flash('message', 'MFA settings updated successfully.');
+        session()->flash('status', 'MFA settings updated successfully.');
+    }
+
+    public function clearStatus()
+    {
+        session()->forget('status');
     }
 
     public function render()
     {
         $stats = [
             'total_verified' => MfaLog::where('status', 'success')->where('action', 'mfa_verified')->count(),
-            'total_failed' => MfaLog::where('status', 'failed')->where('action', 'mfa_failed')->count(),
-            'login_attempts' => MfaLog::where('action', 'login_attempt')->count(),
+            'total_failed' => MfaLog::where('status', 'failed')->count(),
+            'total_logs' => MfaLog::count(),
         ];
 
         return view('livewire.admin.mfa', [
@@ -73,4 +78,10 @@ class Mfa extends Component
             'stats' => $stats
         ])->layout('layouts.app');
     }
+    public function deleteLog($id)
+    {
+        MfaLog::find($id)?->delete();
+        session()->flash('status', 'Log entry deleted successfully.');
+    }
+
 }

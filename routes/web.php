@@ -143,6 +143,26 @@ Route::get('/server-debug', function() {
     // 5. Recent Logs
     echo "<h3>5. Recent System Logs (Last 3000 chars)</h3>";
     echo "<textarea style='width:100%; height: 300px; font-size: 11px;'>" . htmlspecialchars($recentLogs) . "</textarea>";
+
+    // 6. SMTP Connectivity Test
+    echo "<h3>6. SMTP Connectivity Test</h3>";
+    $host = config('mail.mailers.smtp.host');
+    $port = config('mail.mailers.smtp.port');
+    $encryption = config('mail.mailers.smtp.encryption');
     
+    echo "Current Config: <strong>{$encryption}://{$host}:{$port}</strong><br>";
+    
+    $timeout = 5;
+    // Test basic TCP connection first
+    echo "Testing TCP connection to {$host}:{$port}... ";
+    $fp = @fsockopen($host, $port, $errno, $errstr, $timeout);
+    if ($fp) {
+        echo "<span style='color:green'>SUCCESS (TCP reachable)</span><br>";
+        fclose($fp);
+    } else {
+        echo "<span style='color:red'>FAILED (Network Unreachable/Refused): {$errstr} ({$errno})</span><br>";
+        echo "<strong>Recommendation:</strong> Your server is blocking port {$port}. Try switching to Port 587 (TLS).<br>";
+    }
+
     echo "</div>";
 });

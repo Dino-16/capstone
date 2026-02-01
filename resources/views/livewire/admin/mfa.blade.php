@@ -6,12 +6,8 @@
     </div>
 
     {{-- Alert Messages --}}
-    @if (session()->has('message'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('message') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
+    {{-- Toast --}}
+    <x-toast />
 
     <div class="row g-4 mb-4">
         {{-- Global Setting --}}
@@ -88,11 +84,11 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-uppercase text-muted small fw-bold mb-1">Failed MFA Attempts</p>
+                            <p class="text-uppercase text-muted small fw-bold mb-1">Total Failed Actions</p>
                             <h2 class="fw-bold text-danger mb-0">{{ $stats['total_failed'] }}</h2>
                         </div>
                         <div class="bg-danger bg-opacity-10 p-3 rounded-circle">
-                            <i class="bi bi-shield-x text-danger fs-3"></i>
+                            <i class="bi bi-exclamation-triangle-fill text-danger fs-3"></i>
                         </div>
                     </div>
                 </div>
@@ -104,8 +100,8 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-uppercase text-muted small fw-bold mb-1">Total Login Attempts</p>
-                            <h2 class="fw-bold text-info mb-0">{{ $stats['login_attempts'] }}</h2>
+                            <p class="text-uppercase text-muted small fw-bold mb-1">Total Activity Logs</p>
+                            <h2 class="fw-bold text-info mb-0">{{ $stats['total_logs'] }}</h2>
                         </div>
                         <div class="bg-info bg-opacity-10 p-3 rounded-circle">
                             <i class="bi bi-person-lines-fill text-info fs-3"></i>
@@ -130,6 +126,7 @@
                             <th>User (Email / Role)</th>
                             <th>IP Address</th>
                             <th>Time</th>
+                            <th class="text-end pe-4">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -158,10 +155,17 @@
                                     </small>
                                 </td>
                                 <td class="small">{{ $log->created_at->format('M d, Y h:i:s A') }}</td>
+                                <td class="text-end pe-4">
+                                    <button wire:click="deleteLog({{ $log->id }})" 
+                                            wire:confirm="Are you sure you want to delete this log?"
+                                            class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="text-center py-5 text-muted">
+                                <td colspan="5" class="text-center py-5 text-muted">
                                     <i class="bi bi-shield-lock display-6 d-block mb-3"></i>
                                     No authentication logs found yet.
                                 </td>

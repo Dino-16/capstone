@@ -34,7 +34,7 @@ class Honeypots extends Component
     public function updateFieldName()
     {
         $this->updateSettings();
-        session()->flash('message', 'Honeypot field name updated.');
+        session()->flash('status', 'Honeypot field name updated.');
     }
 
     private function updateSettings()
@@ -44,7 +44,12 @@ class Honeypots extends Component
             'field_name' => $this->fieldName,
         ]);
         
-        session()->flash('message', 'Honeypot settings updated successfully.');
+        session()->flash('status', 'Honeypot settings updated successfully.');
+    }
+
+    public function clearStatus()
+    {
+        session()->forget('status');
     }
 
     public function render()
@@ -59,4 +64,10 @@ class Honeypots extends Component
             'stats' => $stats
         ])->layout('layouts.app');
     }
+    public function deleteLog($id)
+    {
+        HoneypotLog::find($id)?->delete();
+        session()->flash('status', 'Log entry deleted successfully.');
+    }
+
 }
