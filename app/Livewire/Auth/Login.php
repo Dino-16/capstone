@@ -91,13 +91,14 @@ class Login extends Component
                                 ]
                             ]);
 
-                            // Send OTP (Simulated for now, replace with actual Mail::raw if Mail configured)
-                            // For development speed as per "just like in recaptcha", we assume logging it or sending. 
-                            // Using Mail facade as seen in commented code.
+                            // Send OTP using secure mail service
                             try {
-                                Mail::raw("Your Login OTP is: {$otp}", function ($message) use ($apiEmail) {
-                                    $message->to($apiEmail)->subject('Secure Login OTP');
-                                });
+                                $result = \App\Services\MailService::sendOtp($apiEmail, $otp, 'Secure Login OTP');
+                                
+                                if (!$result['success']) {
+                                    $this->addError('email', $result['message']);
+                                    return;
+                                }
                             } catch (\Exception $e) {
                                 $this->addError('email', 'Failed to send OTP email: ' . $e->getMessage());
                                 return;

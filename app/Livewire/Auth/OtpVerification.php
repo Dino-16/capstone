@@ -72,20 +72,22 @@ class OtpVerification extends Component
             ]);
 
             try {
-                Mail::raw("Your new OTP code is: {$otp}", function ($message) use ($email) {
-                    $message->to($email)
-                            ->subject('Resent Login OTP Verification');
-                });
-                session()->flash('status', 'A new OTP has been sent to your email.');
+                $result = \App\Services\MailService::sendOtp($email, $otp, 'Resent Login OTP Verification');
                 
-                \App\Models\Admin\MfaLog::create([
-                    'email' => $email,
-                    'role' => $sessionData['user_data']['position'],
-                    'ip_address' => request()->ip(),
-                    'user_agent' => request()->userAgent(),
-                    'action' => 'mfa_resent',
-                    'status' => 'success',
-                ]);
+                if ($result['success']) {
+                    session()->flash('status', 'A new OTP has been sent to your email.');
+                    
+                    \App\Models\Admin\MfaLog::create([
+                        'email' => $email,
+                        'role' => $sessionData['user_data']['position'],
+                        'ip_address' => request()->ip(),
+                        'user_agent' => request()->userAgent(),
+                        'action' => 'mfa_resent',
+                        'status' => 'success',
+                    ]);
+                } else {
+                    session()->flash('status', $result['message']);
+                }
 
             } catch (\Exception $e) {
                  session()->flash('status', 'Failed to send OTP: ' . $e->getMessage());

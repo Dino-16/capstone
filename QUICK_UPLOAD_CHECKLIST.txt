@@ -1,0 +1,47 @@
+# Quick Upload Checklist for Production
+
+## Files to Upload (5 files):
+
+### 1. app/Services/MailService.php
+✅ NEW FILE - Upload this entire file
+
+### 2. app/Livewire/Auth/Login.php  
+✅ MODIFIED - Replace existing file
+
+### 3. app/Livewire/Auth/OtpVerification.php
+✅ MODIFIED - Replace existing file
+
+### 4. config/mail.php
+✅ MODIFIED - Replace existing file
+
+### 5. app/Providers/CustomMailServiceProvider.php
+✅ NEW FILE - Upload this entire file
+
+### 6. bootstrap/providers.php
+✅ MODIFIED - Replace existing file
+
+---
+
+## Production .env Changes:
+
+Change these two lines:
+```env
+MAIL_PORT=587        # was 465
+MAIL_ENCRYPTION=tls  # was ssl
+```
+
+---
+
+## Commands to Run on Production:
+
+```bash
+php artisan config:clear
+php artisan cache:clear
+php artisan route:clear
+php artisan view:clear
+```
+
+---
+
+## That's it! 
+Your OTP should now work on the production server.
