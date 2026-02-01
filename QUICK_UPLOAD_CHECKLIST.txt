@@ -1,6 +1,6 @@
-# Quick Upload Checklist for Production
+# ✅ Quick Upload Checklist for Production
 
-## Files to Upload (5 files):
+## 📦 Files to Upload (ONLY 3 FILES):
 
 ### 1. app/Services/MailService.php
 ✅ NEW FILE - Upload this entire file
@@ -11,18 +11,9 @@
 ### 3. app/Livewire/Auth/OtpVerification.php
 ✅ MODIFIED - Replace existing file
 
-### 4. config/mail.php
-✅ MODIFIED - Replace existing file
-
-### 5. app/Providers/CustomMailServiceProvider.php
-✅ NEW FILE - Upload this entire file
-
-### 6. bootstrap/providers.php
-✅ MODIFIED - Replace existing file
-
 ---
 
-## Production .env Changes:
+## 🔧 Production .env Changes:
 
 Change these two lines:
 ```env
@@ -32,16 +23,26 @@ MAIL_ENCRYPTION=tls  # was ssl
 
 ---
 
-## Commands to Run on Production:
+## 💻 Commands to Run on Production:
 
 ```bash
 php artisan config:clear
 php artisan cache:clear
-php artisan route:clear
-php artisan view:clear
 ```
 
 ---
 
-## That's it! 
+## 🎯 That's it! 
+
+Just 3 files + 2 .env changes + 2 commands = Working OTP!
+
 Your OTP should now work on the production server.
+
+---
+
+## 🧪 Test:
+
+1. Go to https://hr1.jetlougetravels-ph.com/login
+2. Enter credentials
+3. Check email for OTP
+4. Enter OTP and login ✅
