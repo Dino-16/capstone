@@ -486,7 +486,7 @@ class ApplyNow extends Component
                 $education = ['Education not clearly specified'];
             }
 
-            $ratingScore = $aiData['score'] ?? $aiData['Score'] ?? 50;
+            $ratingScore = $aiData['score'] ?? $aiData['Score'] ?? 0;
             
             // ALWAYS calculate qualification status from score (don't trust AI-provided qualification)
             // This ensures alignment between score and status
@@ -580,32 +580,76 @@ class ApplyNow extends Component
 
             $lower = strtolower($trim);
 
-            // Skills / Technical Skills / Key Skills heading, possibly with inline list
-            if (preg_match('/^(skills|technical skills|key skills|core competencies)\s*[:\-]?(.*)$/i', $trim, $m)) {
+            // Skills parsing - Expanded to catch more variations
+            // Matches: "Skills", "Technical Skills", "Professional Skills", "Tech Stack", "Technologies", "Core Competencies", "My Skills"
+            // Also matches spaced out versions like "S K I L L S" or "S k i l l s"
+            $normalizedHeaderLine = preg_replace('/\s+/', '', $lower); // Remove all spaces for checking spaced headers
+            
+            $isSkillsHeader = 
+                preg_match('/^(?:(?:my|professional|technical|hard|soft|key|core)\s+)?(?:skills|competencies|technologies|tech\s+stack)\s*[:\-]?/i', $trim) ||
+                str_starts_with($normalizedHeaderLine, 'skills') ||
+                str_starts_with($normalizedHeaderLine, 'technicalskills') ||
+                str_starts_with($normalizedHeaderLine, 'coreskills');
+
+            if ($isSkillsHeader) {
                 $current = 'skills';
-                $rest = trim($m[2] ?? '');
+                
+                // Remove the header part to get the content
+                $headerPattern = '/^(?:(?:my|professional|technical|hard|soft|key|core)\s+)?(?:skills|competencies|technologies|tech\s+stack)\s*[:\-]?/i';
+                $rest = preg_replace($headerPattern, '', $trim);
+                
+                // If regex failed (likely because of spaced header), try simply removing the known spaced string or just taking the whole line if it's mixed
+                if ($rest === $trim && str_starts_with($normalizedHeaderLine, 'skills')) {
+                     // For "S K I L L S", usually the rest of the line is empty or on next line, but if not, we can't easily separate. 
+                     // Let's assume if it was spaced 'S K I L L S', the content is likely on next lines.
+                     $rest = ''; 
+                }
+
+                $rest = trim($rest);
                 if ($rest !== '') {
-                    $items = array_filter(array_map('trim', preg_split('/[,;]+/', $rest)));
+                    // Split by typical delimiters OR bullets
+                    $items = array_filter(array_map('trim', preg_split('/[,;\n•\-\*]+/', $rest)));
                     foreach ($items as $it) {
-                        $sections['skills'][] = $it;
+                        if (strlen($it) > 1) { // Ignore single chars like remnant bullets
+                            $sections['skills'][] = $it;
+                        }
                     }
                 }
                 continue;
             }
 
-            if (preg_match('/^(work\s+experience|experience)\b/i', $lower)) {
+            // Experience parsing - Robust like Skills
+            $isExperienceHeader = 
+                preg_match('/^(?:(?:work|professional|employment)\s+)?(?:experience|history|background)\b/i', $trim) ||
+                str_starts_with($normalizedHeaderLine, 'experience') ||
+                str_starts_with($normalizedHeaderLine, 'workexperience') ||
+                str_starts_with($normalizedHeaderLine, 'employmenthistory') ||
+                str_starts_with($normalizedHeaderLine, 'professionalexperience');
+
+            if ($isExperienceHeader) {
                 $current = 'experience';
                 continue;
             }
 
-            if (preg_match('/^education\b/i', $lower)) {
+            // Education parsing - Robust like Skills
+            $isEducationHeader = 
+                preg_match('/^(?:(?:educational|academic)\s+)?(?:education|background|history|records|academics)\b/i', $trim) ||
+                str_starts_with($normalizedHeaderLine, 'education') ||
+                str_starts_with($normalizedHeaderLine, 'educationalbackground') ||
+                str_starts_with($normalizedHeaderLine, 'academichistory');
+                
+            if ($isEducationHeader) {
                 $current = 'education';
                 continue;
             }
 
             if ($current !== null) {
+                // If we are in a section, capture the line
                 $item = preg_replace('/^[\-\*•]+\s*/u', '', $trim);
-                if ($item !== '') {
+                
+                // Heuristic: If line is too short (like just a bullet), ignore
+                // Also ignore common non-content lines
+                if (strlen($item) > 2 && $item !== 'Reference' && $item !== 'References') {
                     $sections[$current][] = $item;
                 }
             }
