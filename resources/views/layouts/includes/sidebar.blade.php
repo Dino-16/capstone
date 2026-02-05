@@ -83,11 +83,6 @@
                         </a>
                     </li>
                     <li @class("nav-item")>
-                        <a href="{{ route('facility-request') }}" @class('nav-link text-dark'. (request()->is('facility-request') ? 'active' : ''))>
-                            <i @class('bi bi-building me-2')></i> Facility Request
-                        </a>
-                    </li>
-                    <li @class("nav-item")>
                         <a href="{{ route('candidates') }}"
                             @class('nav-link text-dark' . (request()->is('candidates') ? 'active' : ''))>
                             <i @class('bi bi-person-check me-2')></i> Candidates
@@ -123,21 +118,19 @@
             <div id="onboardingMenu" @class('collapse ps-4 ' . ((request()->is('employees') || request()->is('document-checklist') || request()->is('orientation-plan')) ? 'show' : ''))>
                 <ul @class('nav flex-column')>
                     <li @class("nav-item")>
-                        <a href="{{ route('employees') }}"
-                            @class('nav-link text-dark' . (request()->is('employees') ? 'active' : ''))>
-                            <i @class('bi bi-person-plus-fill me-2')></i> Employees
-                        </a>
-                    </li>
-
-                     
-                    <li @class("nav-item")>
                         <a href="{{ route('document-checklists') }}"
                             @class('nav-link text-dark' . (request()->is('document-checklists') ? 'active' : ''))>
                             <i @class('bi bi-check2-square me-2')></i> Document Checklist
                         </a>
                     </li>
 
-                 
+                    <li @class("nav-item")>
+                        <a href="{{ route('employees') }}"
+                            @class('nav-link text-dark' . (request()->is('employees') ? 'active' : ''))>
+                            <i @class('bi bi-person-plus-fill me-2')></i> Employees
+                        </a>
+                    </li>
+
                     <li @class("nav-item")>
                         <a href="{{ route('orientation-schedule') }}"
                             @class('nav-link text-dark'. (request()->is('orientation-schedule') ? 'active' : ''))>
@@ -213,6 +206,12 @@
                     </li>
                 </ul>
             </div>
+        </li>
+
+        <li @class("nav-item")>
+            <a href="{{ route('facility-request') }}" @class('nav-link text-dark'. (request()->is('facility-request') ? 'active' : ''))>
+                <i @class('bi bi-building me-2')></i> Facility Request
+            </a>
         </li>
 
         <li @class("nav-item")>
