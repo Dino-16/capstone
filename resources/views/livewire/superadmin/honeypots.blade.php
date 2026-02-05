@@ -1,9 +1,10 @@
+@section('page-title', 'Honeypot Security')
+@section('page-subtitle', 'Manage automated bot traps and security mechanisms')
+@section('breadcrumbs', 'Honeypot')
+
 <div class="container-fluid p-4">
     <div class="row mb-4">
-        <div class="col-12">
-            <h2 class="h3 text-gray-800">Honeypot Security Management</h2>
-            <p class="text-muted">A honeypot is a security mechanism that creates a "trap" for automated bots. It adds a hidden field to your forms that human users won't see, but bots (which usually fill out every field) will incorrectly fill out, allowing the system to block them.</p>
-        </div>
+        {{-- Header is handled by layout now --}}
     </div>
 
     {{-- Alert Messages --}}

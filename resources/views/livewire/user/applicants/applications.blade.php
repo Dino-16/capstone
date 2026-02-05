@@ -19,8 +19,7 @@
             
             {{-- SEARCH BAR --}}
             <div>
-                <x-text-input
-                    type="search"
+                <x-search-input
                     wire:model.live="search" 
                     placeholder="Search..."
                 />
@@ -35,11 +34,7 @@
                     @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
                 >
                     <i @class('bi bi-funnel-fill me-2')></i>
-                    @if($qualificationFilter === '')
-                        All Status
-                    @else
-                        {{ $qualificationFilter }}
-                    @endif
+                    Filter: {{ $qualificationFilter ?: 'All' }}
                 </button>
 
                 <ul @class('dropdown-menu') aria-labelledby="qualificationFilterDropdown">
@@ -48,16 +43,38 @@
                             All Status
                         </a>
                     </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('qualificationFilter', 'Exceptional')">
+                            <i class="bi bi-patch-check-fill text-success me-2"></i>Exceptional (90-100)
+                        </a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('qualificationFilter', 'Highly Qualified')">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>Highly Qualified (80-89)
+                        </a>
+                    </li>
                     <li>
                         <a @class('dropdown-item') wire:click="$set('qualificationFilter', 'Qualified')">
-                            <i class="bi bi-check-circle-fill text-success me-2"></i>Qualified
+                            <i class="bi bi-check-circle-fill text-warning me-2"></i>Qualified (70-79)
+                        </a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('qualificationFilter', 'Moderately Qualified')">
+                            <i class="bi bi-info-circle-fill text-warning me-2"></i>Moderately Qualified (60-69)
+                        </a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('qualificationFilter', 'Marginally Qualified')">
+                            <i class="bi bi-exclamation-circle-fill text-danger me-2"></i>Marginally Qualified (50-59)
                         </a>
                     </li>
                     <li>
                         <a @class('dropdown-item') wire:click="$set('qualificationFilter', 'Not Qualified')">
-                            <i class="bi bi-x-circle-fill text-danger me-2"></i>Not Qualified
+                            <i class="bi bi-x-circle-fill text-danger me-2"></i>Not Qualified (0-49)
                         </a>
                     </li>
+                    <li><hr class="dropdown-divider"></li>
                     <li>
                         <a @class('dropdown-item') wire:click="$set('qualificationFilter', 'Pending Review')">
                             <i class="bi bi-clock-fill text-secondary me-2"></i>Pending Review
@@ -73,7 +90,7 @@
                 @class('btn btn-success')
                 wire:click="exportData"
             >
-                <i @class('bi bi-download me-2')></i>Export to CSV
+                <i @class('bi bi-download me-2')></i>Export
             </button>
 
             @if(!$showDrafts)
@@ -147,7 +164,7 @@
                                 <div class="fw-medium">{{ $app->applied_position }}</div>
                             </td>
                             <td>
-                                @if($app->rating_score)
+                                @if($app->rating_score !== null)
                                     <div class="d-flex flex-column">
                                         <span class="badge bg-{{ $app->rating_badge_color }} mb-1" style="width: fit-content;">
                                             Score: {{ number_format($app->rating_score, 1) }}
@@ -190,81 +207,89 @@
                                 <div class="d-flex gap-2">
                                     <button
                                         type="button"
-                                        @class('btn btn-info btn-sm text-white')
+                                        @class('btn btn-sm btn-outline-primary')
                                         wire:click="viewFilteredResume({{ $app->id }})"
                                         title="View AI Analysis"
                                     >
-                                        <i @class('bi bi-eye-fill')></i>
+                                        <i @class('bi bi-eye')></i>
                                     </button>
                                     <button
                                         type="button"
-                                        @class('btn btn-warning btn-sm text-white')
+                                        @class('btn btn-sm btn-outline-warning')
                                         wire:click="openEditFilteredResume({{ $app->id }})"
                                         title="Edit Resume Data"
                                     >
-                                        <i @class('bi bi-pencil-square')></i>
+                                        <i @class('bi bi-pencil')></i>
                                     </button>
                                 </div>
                             </td>
                             <td>
                                 <div class="d-flex gap-2">
-                                    {{-- Status Toggle --}}
-                                    @if($app->status === 'drafted')
-                                        <button
-                                            type="button"
-                                            @class('btn btn-primary btn-sm')
-                                            wire:click="restore({{ $app->id }})"
-                                            title="Restore to Active"
-                                        >
-                                            <i @class('bi bi-bootstrap-reboot')></i> 
-                                        </button>
-                                    @else
-                                        <button
-                                            type="button"
-                                            @class('btn btn-danger btn-sm')
-                                            wire:click="draft({{ $app->id }})"
-                                            title="Move to Drafts"
-                                        >
-                                            <i @class('bi bi-journal-text')></i> 
-                                        </button>
-                                    @endif
+                                     {{-- Status Toggle --}}
+                                     @if($app->status === 'drafted')
+                                         <button
+                                             type="button"
+                                             @class('btn btn-sm btn-outline-warning')
+                                             wire:click="restore({{ $app->id }})"
+                                             title="Restore to Active"
+                                         >
+                                             <i @class('bi bi-bootstrap-reboot')></i> 
+                                         </button>
+                                     @else
+                                         <button
+                                             type="button"
+                                             @class('btn btn-sm btn-outline-danger')
+                                             wire:click="draft({{ $app->id }})"
+                                             title="Move to Drafts"
+                                         >
+                                             <i @class('bi bi-journal-text')></i> 
+                                         </button>
+                                     @endif
 
-                                    {{-- Draft Tool - Pivot to new role --}}
-                                    @if($app->status !== 'drafted' && ($app->qualification_status == 'Not Qualified' || ($app->rating_score && $app->rating_score < 60)))
-                                        <button
-                                            type="button"
-                                            @class('btn btn-outline-secondary btn-sm')
-                                            wire:click="openDraftModal({{ $app->id }})"
-                                            title="Pivot to Alternative Role"
-                                        >
-                                            <i @class('bi bi-arrow-repeat')></i>
-                                        </button>
-                                    @endif
-                                    {{-- Schedule Interview --}}
-                                    @if($app->status !== 'drafted')
-                                        <button
-                                            type="button"
-                                            @class('btn btn-success btn-sm')
-                                            wire:click="openScheduleModal({{ $app->id }})"
-                                            title="Promote to Candidate & Schedule"
-                                        >
-                                            <i @class('bi bi-calendar-check')></i>
-                                        </button>
-                                    @endif
+                                     {{-- Draft Tool - Pivot to new role --}}
+                                     @if($app->status !== 'drafted' && ($app->qualification_status == 'Not Qualified' || ($app->rating_score && $app->rating_score < 60)))
+                                         <button
+                                             type="button"
+                                             @class('btn btn-sm btn-outline-secondary')
+                                             wire:click="openDraftModal({{ $app->id }})"
+                                             title="Pivot to Alternative Role"
+                                         >
+                                             <i @class('bi bi-arrow-repeat')></i>
+                                         </button>
+                                     @endif
+                                     {{-- Schedule Interview --}}
+                                     @if($app->status !== 'drafted')
+                                         <button
+                                             type="button"
+                                             @class('btn btn-sm btn-success')
+                                             wire:click="openScheduleModal({{ $app->id }})"
+                                             title="Promote to Candidate & Schedule"
+                                         >
+                                             <i @class('bi bi-calendar-check')></i>
+                                         </button>
+                                     @endif
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
                             <td colspan="7" @class('text-center text-muted py-5')>
-                                <i @class('bi bi-inbox d-block mx-auto fs-1')></i>
-                                <div class="mt-3">
-                                    @if($showDrafts)
-                                        No draft applications found.
-                                    @else
-                                        No applications found.
-                                    @endif
-                                </div>
+                                @if($search)
+                                    <i @class('bi bi-search d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No applications found matching "{{ $search }}".</div>
+                                @elseif($qualificationFilter)
+                                    <i @class('bi bi-funnel d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No applications found with qualification "{{ $qualificationFilter }}".</div>
+                                @else
+                                    <i @class('bi bi-inbox d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">
+                                        @if($showDrafts)
+                                            No draft applications found.
+                                        @else
+                                            No applications found.
+                                        @endif
+                                    </div>
+                                @endif
                             </td>
                         </tr>
                     @endforelse

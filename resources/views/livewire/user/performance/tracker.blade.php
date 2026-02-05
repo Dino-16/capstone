@@ -15,8 +15,7 @@
                         
                         {{-- SEARCH BAR --}}
                         <div>
-                            <x-text-input
-                                type="search"
+                            <x-search-input
                                 wire:model.live="search" 
                                 placeholder="Search employees..."
                             />
@@ -24,25 +23,26 @@
 
                         {{-- NEXT EVALUATION FILTER --}}
                         <div @class('dropdown')>
-                            <button
-                                type="button"
-                                id="nextEvalFilterDropdown"
-                                data-bs-toggle="dropdown"
-                                @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
-                            >
-                                <i @class('bi bi-funnel-fill me-2')></i>
-                                @if($nextEvaluationFilter === '')
-                                    All Status
-                                @elseif($nextEvaluationFilter === 'current')
-                                    Due This Month
-                                @elseif($nextEvaluationFilter === 'pending')
-                                    Pending/Overdue
-                                @elseif($nextEvaluationFilter === 'upcoming')
-                                    Upcoming
-                                @elseif($nextEvaluationFilter === 'caught_up')
-                                    All Caught Up
-                                @endif
-                            </button>
+                <button
+                    type="button"
+                    id="nextEvalFilterDropdown"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-funnel-fill me-2')></i>
+                    Filter: 
+                    @if($nextEvaluationFilter === '')
+                        All Status
+                    @elseif($nextEvaluationFilter === 'current')
+                        Due This Month
+                    @elseif($nextEvaluationFilter === 'pending')
+                        Pending/Overdue
+                    @elseif($nextEvaluationFilter === 'upcoming')
+                        Upcoming
+                    @elseif($nextEvaluationFilter === 'caught_up')
+                        All Caught Up
+                    @endif
+                </button>
 
                             <ul @class('dropdown-menu') aria-labelledby="nextEvalFilterDropdown">
                                 <li>
@@ -80,7 +80,7 @@
                             @class('btn btn-success')
                             wire:click="exportData"
                         >
-                            <i @class('bi bi-download me-2')></i>Export to CSV
+                            <i @class('bi bi-download me-2')></i>Export
                         </button>
                     </div>
                 </div>
@@ -146,27 +146,49 @@
                                         @endif
                                     </td>
                                     <td>
-                                        <div class="d-flex gap-2">
-                                            <button 
-                                                class="btn btn-sm btn-outline-primary" 
-                                                wire:click="openScheduleModal({{ $employee['id'] }})"
-                                                title="View Evaluation Schedule"
-                                            >
-                                                <i class="bi bi-calendar3 me-1"></i>View Schedule
-                                            </button>
-                                            <button 
-                                                class="btn btn-sm btn-success" 
-                                                wire:click="goToEvaluate({{ $employee['id'] }})"
-                                                title="Evaluate Employee"
-                                            >
-                                                <i class="bi bi-clipboard-check me-1"></i>Evaluate
-                                            </button>
-                                        </div>
+                                        @if($nextEval)
+                                            <div class="d-flex gap-2">
+                                                <button 
+                                                    class="btn btn-sm btn-outline-primary" 
+                                                    wire:click="openScheduleModal({{ $employee['id'] }})"
+                                                    title="View Evaluation Schedule"
+                                                >
+                                                    <i class="bi bi-calendar3"></i>
+                                                </button>
+                                                <button 
+                                                    class="btn btn-sm btn-primary" 
+                                                    wire:click="goToEvaluate({{ $employee['id'] }})"
+                                                    title="Evaluate Employee"
+                                                >
+                                                    <i class="bi bi-clipboard-check"></i>
+                                                </button>
+                                            </div>
+                                        @else
+                                            <div class="text-muted">---</div>
+                                        @endif
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted">No employees found</td>
+                                    <td colspan="5" @class('text-center text-muted py-5')>
+                                        @if($search)
+                                            <i @class('bi bi-search d-block mx-auto fs-1')></i>
+                                            <div class="mt-3">No employees found matching "{{ $search }}".</div>
+                                        @elseif($nextEvaluationFilter)
+                                            <i @class('bi bi-funnel d-block mx-auto fs-1')></i>
+                                            <div class="mt-3">
+                                                No employees found with status: 
+                                                @if($nextEvaluationFilter === 'current') Due This Month
+                                                @elseif($nextEvaluationFilter === 'pending') Pending/Overdue
+                                                @elseif($nextEvaluationFilter === 'upcoming') Upcoming
+                                                @elseif($nextEvaluationFilter === 'caught_up') All Caught Up
+                                                @endif
+                                            </div>
+                                        @else
+                                            <i @class('bi bi-people d-block mx-auto fs-1')></i>
+                                            <div class="mt-3">No employees found.</div>
+                                        @endif
+                                    </td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -236,7 +258,7 @@
                                 @class('btn btn-success')
                                 wire:click="exportAttendanceData"
                             >
-                                <i @class('bi bi-download me-2')></i>Export to CSV
+                                <i @class('bi bi-download me-2')></i>Export
                             </button>
                         </div>
                     </div>

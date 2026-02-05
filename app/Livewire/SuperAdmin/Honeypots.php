@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Admin;
+namespace App\Livewire\SuperAdmin;
 
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -59,7 +59,7 @@ class Honeypots extends Component
             'recent_traps' => HoneypotLog::where('created_at', '>=', now()->subDays(7))->count(),
         ];
 
-        return view('livewire.admin.honeypots', [
+        return view('livewire.superadmin.honeypots', [
             'logs' => HoneypotLog::latest()->paginate(10),
             'stats' => $stats
         ])->layout('layouts.app');

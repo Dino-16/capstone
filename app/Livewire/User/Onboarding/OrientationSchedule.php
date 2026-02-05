@@ -24,6 +24,8 @@ class OrientationSchedule extends Component
     public $employees = [];
     public $filteredEmployees = [];
     public $showEmployeeDropdown = false;
+    public $approvedFacilities = [];
+    public $selectedFacility = '';
 
     // Form Properties
     // Form Properties
@@ -93,15 +95,65 @@ class OrientationSchedule extends Component
 
     public function openModal()
     {
+        $this->loadApprovedFacilities();
         $this->resetValidation();
-        $this->reset(['employeeName', 'email', 'position', 'orientationDate', 'location', 'facilitator', 'notes', 'status']);
+        $this->reset(['employeeName', 'email', 'position', 'orientationDate', 'location', 'facilitator', 'notes', 'status', 'selectedFacility']);
         $this->showModal = true;
+    }
+
+    public function loadApprovedFacilities()
+    {
+        try {
+            $response = Http::withoutVerifying()->get('https://facilities-admin.jetlougetravels-ph.com/reservation_status_api.php');
+            
+            if ($response->successful()) {
+                $data = $response->json();
+                $allReservations = $data['reservations'] ?? [];
+                
+                // Filter for Approved ones only (following Applications logic)
+                $this->approvedFacilities = collect($allReservations)
+                    ->filter(function($res) {
+                        $name = $res['requested_by'] ?? $res['full_name'] ?? '';
+                        return strtolower($res['status'] ?? '') === 'approved' &&
+                               in_array(strtolower(trim($name)), ['hr staff', 'hr manager']);
+                    })
+                    ->map(function($res) {
+                        return [
+                            'id' => $res['request_id'] ?? $res['id'],
+                            'name' => $res['facility_name'],
+                            'location' => $res['location'],
+                            'date' => $res['booking_date'],
+                            'start_time' => $res['start_time'],
+                            'details' => ($res['facility_name'] ?? 'Facility') . ' (' . ($res['location'] ?? 'N/A') . ')'
+                        ];
+                    })
+                    ->values()
+                    ->toArray();
+            }
+        } catch (\Exception $e) {
+            $this->approvedFacilities = [];
+        }
+    }
+
+    public function updatedSelectedFacility($value)
+    {
+        if ($value) {
+            $facility = collect($this->approvedFacilities)->firstWhere('id', $value);
+            if ($facility) {
+                // Auto-fill location and date/time from the approved reservation
+                $this->location = ($facility['name'] ?? 'Facility') . ' (' . ($facility['location'] ?? 'N/A') . ')';
+                if (!empty($facility['date']) && !empty($facility['start_time'])) {
+                    $this->orientationDate = date('Y-m-d\TH:i', strtotime($facility['date'] . ' ' . $facility['start_time']));
+                }
+            }
+        }
     }
 
     // ...
 
     public function editOrientation($orientationId)
     {
+        $this->loadApprovedFacilities();
         $orientation = Orientation::findOrFail($orientationId);
         $this->editingOrientationId = $orientationId;
         $this->employeeName = $orientation->employee_name;
@@ -183,6 +235,11 @@ class OrientationSchedule extends Component
 
     public function deleteOrientation($orientationId)
     {
+        if (auth()->user()->role !== 'Super Admin') {
+            session()->flash('status', 'Unauthorized action.');
+            return;
+        }
+
         Orientation::findOrFail($orientationId)->delete();
         session()->flash('status', 'Orientation deleted successfully.');
     }

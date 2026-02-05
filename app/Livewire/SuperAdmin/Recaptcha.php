@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Admin;
+namespace App\Livewire\SuperAdmin;
 
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -52,7 +52,7 @@ class Recaptcha extends Component
             'recent_attempts' => RecaptchaLog::where('created_at', '>=', now()->subDays(7))->count(),
         ];
 
-        return view('livewire.admin.recaptcha', [
+        return view('livewire.superadmin.recaptcha', [
             'logs' => RecaptchaLog::latest()->paginate(10),
             'stats' => $stats
         ])->layout('layouts.app'); // Assuming this uses the main admin layout

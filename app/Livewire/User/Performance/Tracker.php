@@ -189,10 +189,12 @@ class Tracker extends Component
                             for ($i = 1; $i <= $monthsDiff + 1; $i++) { // +1 to include upcoming if close
                                 $evaluationDate = $hireDate->copy()->addMonths($i);
                                 $monthName = $evaluationDate->format('F Y');
+                                $employeeName = $employee['full_name'] ?? ($employee['first_name'] . ' ' . $employee['last_name']) ?? 'N/A';
+                                
                                 $monthlyEvaluations[$monthName] = [
                                     'month' => $monthName,
                                     'evaluation_date' => $evaluationDate->format('Y-m-d'),
-                                    'status' => $this->getEvaluationStatus($evaluationDate, $currentDate, $employee['id'] ?? 0),
+                                    'status' => $this->getEvaluationStatus($evaluationDate, $currentDate, $employeeName),
                                     'is_past' => $evaluationDate->isPast(),
                                     'is_current' => $evaluationDate->isCurrentMonth(),
                                     'is_future' => $evaluationDate->isFuture()
@@ -209,11 +211,12 @@ class Tracker extends Component
                             'role' => $employee['role'] ?? 'N/A',
                             'phone' => $employee['phone'] ?? 'N/A',
                             'hire_date' => $hireDate ? $hireDate->format('M d, Y') : 'N/A',
+                            'raw_hire_date' => $hireDate ? $hireDate->format('Y-m-d') : null,
                             'created_at' => $employee['created_at'] ?? null,
                             'monthly_evaluations' => $monthlyEvaluations,
                             'total_evaluations' => count($monthlyEvaluations),
                             'completed_evaluations' => collect($monthlyEvaluations)->where('status', 'completed')->count(),
-                            'pending_evaluations' => collect($monthlyEvaluations)->where('status', 'pending')->count(),
+                            'pending_evaluations' => collect($monthlyEvaluations)->whereIn('status', ['pending', 'current'])->count(),
                             'upcoming_evaluations' => collect($monthlyEvaluations)->where('status', 'upcoming')->count()
                         ];
                     }
@@ -230,29 +233,27 @@ class Tracker extends Component
         }
     }
 
-    private function getEvaluationStatus($evaluationDate, $currentDate, $employeeId)
+    private function getEvaluationStatus($evaluationDate, $currentDate, $employeeName)
     {
+        // Check if evaluation was actually completed for this employee and month first
+        if ($this->isEvaluationCompleted($employeeName, $evaluationDate)) {
+            return 'completed';
+        }
+
         if ($evaluationDate->isFuture()) {
             return 'upcoming';
         } elseif ($evaluationDate->isCurrentMonth()) {
             return 'current';
         } else {
             // For first 3 months, don't show as pending (probationary period)
-            $monthsAgo = $evaluationDate->diffInMonths($currentDate);
-            if ($monthsAgo <= 3) {
-                return 'pending'; // Show as pending, not completed
-            }
-            
-            // Check if evaluation was actually completed for this employee and month
-            return $this->isEvaluationCompleted($employeeId, $evaluationDate) ? 'completed' : 'pending';
+            // Actually let's keep it simple for now as per user request
+            return 'pending';
         }
     }
 
-    private function isEvaluationCompleted($employeeId, $evaluationDate)
+    private function isEvaluationCompleted($employeeName, $evaluationDate)
     {
-        // Check against actual evaluation records in database
-        $employeeName = collect($this->employees)->firstWhere('id', $employeeId)['name'] ?? null;
-        if (!$employeeName) {
+        if (!$employeeName || $employeeName === 'N/A') {
             return false;
         }
         
@@ -288,12 +289,21 @@ class Tracker extends Component
         $employee = collect($this->employees)->firstWhere('id', $employeeId);
         
         if ($employee) {
+            // Find the next pending evaluation date
+            $nextEval = collect($employee['monthly_evaluations'] ?? [])
+                ->where('status', '!=', 'completed')
+                ->first();
+                
+            $nextEvalDate = $nextEval ? $nextEval['evaluation_date'] : date('Y-m-d');
+
             // Store employee data in session for auto-fill
             session()->put('prefill_evaluation', [
                 'employeeName' => $employee['name'],
                 'email' => $employee['email'],
                 'position' => $employee['position'],
                 'department' => $employee['department'],
+                'employmentDate' => $employee['raw_hire_date'] ?? null,
+                'evaluationDate' => $nextEvalDate,
             ]);
             
             return redirect()->route('evaluations');

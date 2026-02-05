@@ -72,8 +72,7 @@
             
             {{-- SEARCH BAR --}}
             <div>
-                <x-text-input
-                    type="search"
+                <x-search-input
                     wire:model.live="search" 
                     placeholder="Search..."
                 />
@@ -124,7 +123,7 @@
                     @class('btn btn-success')
                     wire:click="exportData"
                 >
-                    <i class="bi bi-download me-2"></i>Export to CSV
+                    <i class="bi bi-download me-2"></i>Export
                 </button>
 
                 <button
@@ -231,22 +230,40 @@
                             </td>
                             <td>
                                 <button
-                                    @class('btn btn-primary btn-sm')
+                                    @class('btn btn-sm btn-outline-primary')
                                     wire:click="viewDetails({{ $reservation['request_id'] }})"
                                     title="View Details"
                                 >
                                     <i @class('bi bi-eye')></i>
                                 </button>
+                                @if(session('user.position') === 'HR Manager')
+                                <button
+                                    @class('btn btn-sm btn-danger')
+                                    wire:click="deleteRequest({{ $reservation['request_id'] }})"
+                                    wire:confirm="Are you sure you want to delete this request?"
+                                    title="Delete"
+                                >
+                                    <i @class('bi bi-trash')></i>
+                                </button>
+                                @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
                             <td colspan="7" @class('text-center text-muted py-5')>
-                                <i @class('bi bi-calendar-x d-block mx-auto fs-1')></i>
-                                <div class="mt-3">No reservations found.</div>
-                                <button class="btn btn-primary mt-3" wire:click="openBookingModal">
-                                    <i class="bi bi-plus-lg me-1"></i> Create New Booking
-                                </button>
+                                @if($search)
+                                    <i @class('bi bi-search d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No reservations found matching "{{ $search }}".</div>
+                                @elseif($statusFilter && $statusFilter !== 'All')
+                                    <i @class('bi bi-funnel d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No {{ $statusFilter }} reservations found.</div>
+                                @else
+                                    <i @class('bi bi-calendar-x d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No reservations found.</div>
+                                    <button class="btn btn-primary mt-3" wire:click="openBookingModal">
+                                        <i class="bi bi-plus-lg me-1"></i> Create New Booking
+                                    </button>
+                                @endif
                             </td>
                         </tr>
                     @endforelse

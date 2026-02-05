@@ -84,37 +84,32 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-4">
-                                <label class="form-label">Date & Time</label>
+                                <label class="form-label fw-semibold">Date & Time</label>
                                 <input type="datetime-local" class="form-control" wire:model="orientationDate">
                                 @error('orientationDate') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-4">
-                                <label class="form-label">Location</label>
-                                <input type="text" class="form-control" wire:model="location" placeholder="Conference Room A">
+                                <label class="form-label fw-semibold">Location / Facility <span class="text-danger">*</span></label>
+                                <select class="form-select @error('location') is-invalid @enderror" 
+                                        wire:model.live="selectedFacility">
+                                    <option value="">-- Select Approved Facility --</option>
+                                    @foreach($approvedFacilities as $facility)
+                                        <option value="{{ $facility['id'] }}">{{ $facility['details'] }}</option>
+                                    @endforeach
+                                </select>
                                 @error('location') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                             </div>
                         </div>
                     </div>
 
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <div class="mb-4">
-                                <label class="form-label">Facilitator</label>
+                                <label class="form-label fw-semibold">Facilitator</label>
                                 <input type="text" class="form-control" wire:model="facilitator" placeholder="John Smith">
                                 @error('facilitator') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-4">
-                                <label class="form-label">Status</label>
-                                <select class="form-select" wire:model="status">
-                                    <option value="scheduled">Scheduled</option>
-                                    <option value="completed">Completed</option>
-                                    <option value="cancelled">Cancelled</option>
-                                </select>
-                                @error('status') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                             </div>
                         </div>
                     </div>

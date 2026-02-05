@@ -15,8 +15,7 @@
             
             {{-- Search Bar --}}
             <div>
-                <x-text-input
-                    type="search"
+                <x-search-input
                     wire:model.live.debounce.3s="search"
                     placeholder="Search..."
                 />
@@ -30,7 +29,7 @@
                     @class('btn btn-success')
                     wire:click="export"
                 >
-                    Export to Excel
+                    Export
                 </button>
 
                 <button
@@ -99,35 +98,46 @@
                             </span>
                         </td>
                         <td @class('gap-3')>
-                            <button
-                                @class('btn btn-primary btn-sm me-2')
-                                wire:click="editOrientation({{ $orientation->id }})"
-                                title="Edit"
-                            >
-                                <i @class('bi bi-pencil')></i>
-                            </button>
-                            <button
-                                @class('btn btn-info btn-sm me-2')
-                                wire:click="openMessageModal({{ $orientation->id }})"
-                                title="Message"
-                            >
-                                <i @class('bi bi-envelope')></i>
-                            </button>
-                            <button
-                                @class('btn btn-danger btn-sm')
-                                wire:click="deleteOrientation({{ $orientation->id }})"
-                                wire:confirm="Are you sure you want to delete this orientation?"
-                                title="Delete"
-                            >
-                                <i @class('bi bi-trash')></i>
-                            </button>
+                            <div class="d-flex gap-2">
+                                    @if(session('user.position') === 'HR Manager')
+                                    <button
+                                        @class('btn btn-sm btn-outline-primary')
+                                        wire:click="editOrientation({{ $orientation->id }})"
+                                        title="Edit"
+                                    >
+                                        <i @class('bi bi-pencil')></i>
+                                    </button>
+                                    @endif
+                                <button
+                                    @class('btn btn-sm btn-outline-info')
+                                    wire:click="openMessageModal({{ $orientation->id }})"
+                                    title="Message"
+                                >
+                                    <i @class('bi bi-envelope')></i>
+                                </button>
+                                @if(session('user.position') === 'Super Admin')
+                                <button
+                                    @class('btn btn-sm btn-outline-danger')
+                                    wire:click="deleteOrientation({{ $orientation->id }})"
+                                    wire:confirm="Are you sure you want to delete this orientation?"
+                                    title="Delete"
+                                >
+                                    <i @class('bi bi-trash')></i>
+                                </button>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                 @empty
                     <tr>
                         <td colspan="6" @class('text-center text-muted py-5')>
-                            <i @class('bi bi-calendar d-block mx-auto fs-1')></i>
-                            No orientations scheduled
+                            @if($search)
+                                <i @class('bi bi-search d-block mx-auto fs-1')></i>
+                                <div class="mt-3">No orientations found matching "{{ $search }}".</div>
+                            @else
+                                <i @class('bi bi-calendar d-block mx-auto fs-1')></i>
+                                <div class="mt-3">No orientations scheduled</div>
+                            @endif
                         </td>
                     </tr>
                 @endforelse

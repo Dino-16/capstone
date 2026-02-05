@@ -234,6 +234,12 @@ class FacilityRequest extends Component
         // Used by toast component polling
     }
 
+    public function deleteRequest($reservationId)
+    {
+         // Placeholder for future API integration
+         session()->flash('error', 'Deletion is not currently supported for external API records.');
+    }
+
     public function render()
     {
         return view('livewire.user.facility-request', [

@@ -34,7 +34,7 @@
                     </div>
 
                     <div @class("row g-4 mb-5")>
-                        <div @class("col-md-6")>
+                        <div @class("col-md-4")>
                             <span @class('text-uppercase text-muted fw-bold small ls-1 d-block mb-2')>Evaluation Date</span>
                             <input 
                                 type="datetime-local" 
@@ -44,7 +44,16 @@
                             >
                             @error('evaluationDate') <div @class('invalid-feedback')>{{ $message }}</div> @enderror
                         </div>
-                        <div @class("col-md-6")>
+                        <div @class("col-md-4")>
+                            <span @class('text-uppercase text-muted fw-bold small ls-1 d-block mb-2')>Employment Date</span>
+                            <input 
+                                type="date" 
+                                @class("form-control border-light-subtle shadow-none") 
+                                wire:model="employmentDate"
+                            >
+                            @error('employmentDate') <div @class('invalid-feedback')>{{ $message }}</div> @enderror
+                        </div>
+                        <div @class("col-md-4")>
                             <span @class('text-uppercase text-muted fw-bold small ls-1 d-block mb-2')>Evaluator Name</span>
                             <input 
                                 type="text" 

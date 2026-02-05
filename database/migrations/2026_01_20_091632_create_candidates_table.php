@@ -25,6 +25,30 @@ return new class extends Migration
             $table->string('candidate_city');
             $table->string('candidate_barangay');
             $table->string('candidate_house_street');
+            
+            // Applied position and rating
+            $table->string('applied_position')->nullable();
+            $table->string('department')->nullable();
+            $table->decimal('rating_score', 5, 2)->nullable();
+            $table->string('rating_description')->nullable();
+            
+            // Self-scheduling
+            $table->string('scheduling_token')->nullable()->unique();
+            $table->boolean('self_scheduled')->default(false);
+            
+            // Interview results
+            $table->json('interview_scores')->nullable();
+            $table->decimal('interview_total_score', 5, 2)->nullable();
+            $table->enum('interview_result', ['pending', 'passed', 'failed'])->default('pending');
+            $table->text('interview_notes')->nullable();
+            
+            // Offering stage
+            $table->enum('contract_status', ['pending', 'sent', 'signed', 'declined'])->default('pending');
+            $table->datetime('contract_sent_at')->nullable();
+            $table->datetime('contract_signed_at')->nullable();
+            $table->boolean('documents_email_sent')->default(false);
+            $table->datetime('documents_email_sent_at')->nullable();
+
             $table->json('skills')->nullable();
             $table->json('experience')->nullable();
             $table->json('education')->nullable();

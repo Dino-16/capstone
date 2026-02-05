@@ -18,8 +18,7 @@
             
             {{-- SEARCH BAR --}}
             <div>
-                <x-text-input
-                    type="search"
+                <x-search-input
                     wire:model.live.debounce.3s="search"
                     placeholder="Search..."
                 />
@@ -34,7 +33,7 @@
                     @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
                 >
                     <i @class('bi bi-funnel-fill me-2')></i>
-                    Filter: All
+                    Filter: {{ $statusFilter ? ucfirst(str_replace('_', ' ', $statusFilter)) : 'All' }}
                 </button>
 
                 <ul @class('dropdown-menu') aria-labelledby="filterDropdown">
@@ -78,7 +77,7 @@
                     @class('btn btn-success')
                     wire:click="export"
                 >
-                    Export to Excel
+                    Export
                 </button>
 
                 @if(!$showDrafts)
@@ -136,18 +135,37 @@
                             <td>
                                 {{ Str::limit($reward->description, 30)}}
                             </td>
-                            <td>{{ $reward->type }}</td>
+                            <td>{!! $reward->type_badge !!}</td>
                             <td>{{ $reward->benefits }}</td>
-                            <td>{{ $reward->status }}</td>
+                            <td>{!! $reward->status_badge !!}</td>
                             <td>
                                 @if($reward->status === 'active')
+                                    @if(session('user.position') === 'HR Manager')
                                     <button
-                                        @class('btn btn-danger btn-sm')
+                                        @class('btn btn-sm btn-outline-primary')
+                                        wire:click="editReward({{ $reward->id }})"
+                                        title="Edit"
+                                        >
+                                        <i @class('bi bi-pencil')></i>
+                                    </button>
+                                    @endif
+                                    <button
+                                        @class('btn btn-sm btn-outline-danger')
                                         wire:click="draft({{ $reward->id }})"
-                                        title="Draft"
+                                        title="Move to Draft"
                                     >
                                         <i @class('bi bi-journal-text')></i>
                                     </button>
+                                    @if(session('user.position') === 'Super Admin')
+                                    <button
+                                        @class('btn btn-sm btn-danger')
+                                        wire:click="deleteReward({{ $reward->id }})"
+                                        wire:confirm="Are you sure you want to delete this reward?"
+                                        title="Delete"
+                                    >
+                                        <i @class('bi bi-trash')></i>
+                                    </button>
+                                    @endif
                                 @else
                                     <span>---</span>
                                 @endif
@@ -155,9 +173,17 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" @class('text-center text-muted')>
-                                <i @class('bi bi-gift d-block mx-auto fs-1 py-5')></i>
-                                <p @class('text-muted mb-0 mt-3')>No rewards found</p>
+                            <td colspan="7" @class('text-center text-muted py-5')>
+                                @if($search)
+                                    <i @class('bi bi-search d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No rewards found matching "{{ $search }}".</div>
+                                @elseif($statusFilter)
+                                    <i @class('bi bi-funnel d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No {{ str_replace('_', ' ', $statusFilter) }} rewards found.</div>
+                                @else
+                                    <i @class('bi bi-gift d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No rewards found.</div>
+                                @endif
                             </td>
                         </tr>
                     @endforelse
@@ -201,17 +227,27 @@
                             <td>
                                 {{ Str::limit($draft->description, 30)}}
                             </td>
-                            <td>{{ $draft->type }}</td>
+                            <td>{!! $draft->type_badge !!}</td>
                             <td>{{ $draft->benefits }}</td>
-                            <td>{{ $draft->status }}</td>
+                            <td>{!! $draft->status_badge !!}</td>
                             <td>
                                 <button
-                                    @class('btn btn-primary btn-sm')
+                                    @class('btn btn-sm btn-outline-warning')
                                     wire:click="restore({{ $draft->id }})"
-                                    title="Restore"
+                                    title="Restore Draft"
                                 >
                                     <i @class('bi bi-bootstrap-reboot')></i>
                                 </button>
+                                @if(session('user.position') === 'Super Admin')
+                                <button
+                                    @class('btn btn-sm btn-danger')
+                                    wire:click="deleteReward({{ $draft->id }})"
+                                    wire:confirm="Are you sure you want to delete this reward?"
+                                    title="Delete"
+                                >
+                                    <i @class('bi bi-trash')></i>
+                                </button>
+                                @endif
                             </td>
                         </tr>
                     @empty

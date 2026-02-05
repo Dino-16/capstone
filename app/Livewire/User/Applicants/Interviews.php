@@ -13,6 +13,7 @@ class Interviews extends Component
     use WithPagination;
 
     public $search;
+    public $statusFilter = '';
     
     // Interview modal properties
     public $showInterviewModal = false;
@@ -33,6 +34,11 @@ class Interviews extends Component
     public $interviewResult = '';
 
     public function updatedSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedStatusFilter()
     {
         $this->resetPage();
     }
@@ -195,7 +201,8 @@ class Interviews extends Component
     private function fetchAssessmentData()
     {
         try {
-            $response = Http::get('https://hr2.jetlougetravels-ph.com/api/assessment');
+            logger('Fetching assessment data from HR2 API...');
+            $response = Http::withoutVerifying()->get('https://hr2.jetlougetravels-ph.com/api/assessment');
             
             if ($response->successful()) {
                 $data = $response->json();
@@ -205,6 +212,9 @@ class Interviews extends Component
                 logger('Success: ' . ($data['success'] ?? 'N/A'));
                 logger('Total items: ' . (isset($data['data']) ? count($data['data']) : 0));
                 logger('Full Data: ' . json_encode($data, JSON_PRETTY_PRINT));
+                
+                $allRoles = collect($data['data'] ?? [])->pluck('role')->unique()->values()->toArray();
+                logger('Available roles in API: ' . implode(', ', $allRoles));
                 
                 return $data['data'] ?? [];
             }
@@ -224,7 +234,12 @@ class Interviews extends Component
         // Filter by role (position) and type 'question'
         $questions = collect($assessments)
             ->filter(function ($item) use ($position) {
-                return $item['role'] === $position && $item['type'] === 'question';
+                $apiRole = trim($item['role'] ?? '');
+                $applicantPos = trim($position);
+                return (strcasecmp($apiRole, $applicantPos) === 0 || 
+                        str_contains(strtolower($applicantPos), strtolower($apiRole)) || 
+                        str_contains(strtolower($apiRole), strtolower($applicantPos))) 
+                        && $item['type'] === 'question';
             })
             ->pluck('content')
             ->values()
@@ -245,7 +260,12 @@ class Interviews extends Component
         // Filter by role (position) and type 'exam'
         $exams = collect($assessments)
             ->filter(function ($item) use ($position) {
-                return $item['role'] === $position && $item['type'] === 'exam';
+                $apiRole = trim($item['role'] ?? '');
+                $applicantPos = trim($position);
+                return (strcasecmp($apiRole, $applicantPos) === 0 || 
+                        str_contains(strtolower($applicantPos), strtolower($apiRole)) || 
+                        str_contains(strtolower($apiRole), strtolower($applicantPos))) 
+                        && $item['type'] === 'exam';
             })
             ->pluck('content')
             ->values()
@@ -259,12 +279,29 @@ class Interviews extends Component
         return $exams;
     }
 
+    public function deleteCandidate($id)
+    {
+        if (session('user.position') !== 'Super Admin') {
+            session()->flash('error', 'Unauthorized action.');
+            return;
+        }
+
+        $candidate = Candidate::findOrFail($id);
+        $candidate->delete();
+        session()->flash('message', 'Candidate deleted successfully!');
+    }
+
     public function render()
     {
         // Get candidates ready for interview
         $query = Candidate::query()
-            ->whereIn('status', ['interview_ready', 'interviewed'])
             ->latest();
+        
+        if ($this->statusFilter) {
+            $query->where('status', $this->statusFilter);
+        } else {
+            $query->whereIn('status', ['interview_ready', 'interviewed']);
+        }
         
         if ($this->search) {
             $query->where(function ($q) {

@@ -488,7 +488,7 @@ class Applications extends Component
             'candidate_email' => $application->email,
             'candidate_phone' => $application->phone,
             'candidate_sex' => $application->gender ?? null,
-            'candidate_birth_date' => $application->birth_date ?? null,
+            'candidate_birth_date' => $application->date_of_birth ?? null,
             'candidate_civil_status' => $application->civil_status ?? null,
             'candidate_age' => $application->age ?? null,
             'candidate_region' => $application->region ?? null,
@@ -499,7 +499,7 @@ class Applications extends Component
             'applied_position' => $application->applied_position,
             'department' => $application->department,
             'rating_score' => $ratingScore,
-            'rating_description' => $ratingDescription,
+            'rating_description' => $this->getRatingDescription($ratingScore),
             'skills' => $resumeArray['skills'] ?? [],
             'experience' => $resumeArray['experience'] ?? [],
             'education' => $resumeArray['education'] ?? [],
@@ -569,46 +569,47 @@ class Applications extends Component
 
     public function render()
     {
-        $query = Application::query()->latest();
+        $query = Application::query()
+            ->select('applications.*')
+            ->leftJoin('filtered_resumes', 'applications.id', '=', 'filtered_resumes.application_id')
+            ->latest('applications.created_at');
 
-        // Format Filter
+        // Status Filter
         if ($this->showDrafts) {
-            $query->where('status', 'drafted');
+            $query->where('applications.status', 'drafted');
         } else {
-            $query->where('status', '!=', 'drafted');
+            $query->where('applications.status', '!=', 'drafted');
         }
 
+        // Search Filter
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('first_name', 'like', "%{$this->search}%")
-                ->orWhere('last_name', 'like', "%{$this->search}%")
-                ->orWhere('email', 'like', "%{$this->search}%")
-                ->orWhere('applied_position', 'like', "%{$this->search}%")
-                ->orWhere('department', 'like', "%{$this->search}%");
+                $q->where('applications.first_name', 'like', "%{$this->search}%")
+                ->orWhere('applications.last_name', 'like', "%{$this->search}%")
+                ->orWhere('applications.email', 'like', "%{$this->search}%")
+                ->orWhere('applications.applied_position', 'like', "%{$this->search}%")
+                ->orWhere('applications.department', 'like', "%{$this->search}%");
             });
+        }
+
+        // Qualification Filter
+        if ($this->qualificationFilter) {
+            if ($this->qualificationFilter === 'Pending Review') {
+                $query->whereNull('filtered_resumes.qualification_status');
+            } else {
+                $query->where('filtered_resumes.qualification_status', $this->qualificationFilter);
+            }
         }
 
         $applications = $query->paginate(10);
         
-        // Load qualification status and rating info for each application
+        // Load qualification status and rating info for each application (populating for view)
         foreach ($applications as $app) {
             $filteredResume = FilteredResume::where('application_id', $app->id)->first();
             $app->qualification_status = $filteredResume ? $filteredResume->qualification_status : null;
             $app->rating_score = $filteredResume ? $filteredResume->rating_score : null;
             $app->rating_description = $filteredResume ? $this->getRatingDescription($filteredResume->rating_score) : null;
             $app->rating_badge_color = $filteredResume ? $this->getRatingBadgeColor($filteredResume->rating_score) : 'secondary';
-        }
-
-        // Apply qualification filter after loading (since it's from related table)
-        if ($this->qualificationFilter) {
-            $applications->setCollection(
-                $applications->getCollection()->filter(function ($app) {
-                    if ($this->qualificationFilter === 'Pending Review') {
-                        return $app->qualification_status === null;
-                    }
-                    return $app->qualification_status === $this->qualificationFilter;
-                })
-            );
         }
 
         return view('livewire.user.applicants.applications', [

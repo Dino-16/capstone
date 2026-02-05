@@ -11,7 +11,6 @@ use App\Data\NCRAddressData;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Smalot\PdfParser\Parser;
-use OpenAI\Laravel\Facades\OpenAI;
 use App\Models\Admin\RecaptchaSetting;
 use App\Models\Admin\RecaptchaLog;
 
@@ -21,7 +20,7 @@ class ApplyNow extends Component
     use \App\Traits\WithHoneypot;
 
     public $applicantLastName, $applicantFirstName, $applicantMiddleName, $applicantSuffixName, $applicantPhone, $applicantEmail, $applicantResumeFile;
-    public $applicantAge, $applicantGender, $applicantDateOfBirth;
+    public $applicantAge, $applicantGender, $applicantCivilStatus, $applicantDateOfBirth;
     public $isUploading = false;
     public $lastAnalysisTime = null;
     public $job, $agreedToTerms = false, $showTerms = false, $showSuccessToast = false;
@@ -188,6 +187,7 @@ class ApplyNow extends Component
             'applicantAge' => 'required|integer|min:18|max:65',
             'applicantDateOfBirth' => 'required|date|before:today',
             'applicantGender' => 'required|in:male,female',
+            'applicantCivilStatus' => 'required|in:Single,Married,Widowed,Separated,Divorced',
             'applicantResumeFile' => 'required|file|mimes:pdf|max:2048',
             'selectedRegion' => 'required',
             'selectedProvince' => 'required_unless:selectedRegion,1300000000',
@@ -217,6 +217,7 @@ class ApplyNow extends Component
                 'age'              => $this->applicantAge,
                 'date_of_birth'    => $this->applicantDateOfBirth,
                 'gender'           => $this->applicantGender,
+                'civil_status'     => $this->applicantCivilStatus,
                 'email'            => $this->applicantEmail,
                 'phone'            => $this->applicantPhone,
                 'region'           => $regionName,
@@ -233,292 +234,152 @@ class ApplyNow extends Component
             // --- Run AI analysis immediately (synchronous) ---
             $aiData = [];
             $resumeContent = null;
-            $pdfParseSuccess = false;
             
             try {
                 $filePath = storage_path('app/public/' . $path);
                 
-                // Log file existence and permissions
-                if (!file_exists($filePath)) {
-                    \Log::error("Resume file does not exist", [
-                        'application_id' => $application->id,
-                        'file_path' => $filePath,
-                    ]);
-                } elseif (!is_readable($filePath)) {
-                    \Log::error("Resume file is not readable", [
-                        'application_id' => $application->id,
-                        'file_path' => $filePath,
-                        'permissions' => substr(sprintf('%o', fileperms($filePath)), -4),
-                    ]);
-                }
-
-                // Try to parse PDF to text
-                $useVisionAPI = false;
-                
+                // 1. Try smalot/pdfparser with more robust page-by-page extraction
                 try {
-                    if (!class_exists('\Smalot\PdfParser\Parser')) {
-                        \Log::error("PdfParser class not found - package may not be installed");
-                        throw new \Exception("PdfParser package not available");
-                    }
-                    
                     $parser = new Parser();
-                    $pdf = $parser->parseFile($filePath);
+                    $pdf    = $parser->parseFile($filePath);
+                    
+                    // Try getting text from the document directly
                     $resumeContent = $pdf->getText();
                     
-                    \Log::info("PDF parsed with smalot/pdfparser", [
-                        'application_id' => $application->id,
-                        'content_length' => strlen($resumeContent),
-                        'has_text' => !empty(trim($resumeContent)),
-                    ]);
-                    
-                    // If PDF parser returns empty content, use OpenAI Vision API
+                    // If still empty, try iterating through pages (sometimes more reliable)
                     if (empty(trim($resumeContent))) {
-                        \Log::info("PDF has no text layer, switching to GPT-4 Vision API", [
-                            'application_id' => $application->id,
-                        ]);
-                        $useVisionAPI = true;
-                        $resumeContent = null;
+                        $pages = $pdf->getPages();
+                        $pageCount = count($pages);
+                        \Log::info("PdfParser found no text in document object, trying pages", ['page_count' => $pageCount]);
+                        foreach ($pages as $page) {
+                            $resumeContent .= $page->getText() . "\n";
+                        }
                     }
                     
+                    \Log::info("Smalot PDF Parser final result", ['len' => strlen($resumeContent ?? '')]);
                 } catch (\Exception $e) {
-                    \Log::error("PDF parsing failed, will try Vision API", [
-                        'application_id' => $application->id,
-                        'error' => $e->getMessage(),
-                    ]);
-                    $useVisionAPI = true;
-                    $resumeContent = null;
+                    \Log::warning("Smalot PDF Parser failed: " . $e->getMessage());
                 }
 
-                // Prepare prompt for AI analysis
-                $prompt = "You are an AI that extracts structured data from resumes for automated screening.\n\nJob position: {$application->applied_position}.\n\nReturn a single valid JSON object with EXACTLY these keys and types:\n- skills: array of strings (each string is a single skill or technology, e.g. 'PHP', 'Laravel', 'Customer Service'). Always return at least 3 skills; if not explicit, infer from context.\n- experience: array of strings (each string is one job or role, e.g. 'Software Developer at Company A (2019-2022)'). Always return at least 1 experience item.\n- education: array of strings (each string is one degree or education item, e.g. 'BS Computer Science - University X (2018)'). Always return at least 1 education item.\n- score: number from 0 to 100 (overall suitability rating for the job)\n\nExample JSON format:\n{\n  \"skills\": [\"PHP\", \"Laravel\", \"Customer Support\"],\n  \"experience\": [\"Software Developer - Company A (2019-2022)\"],\n  \"education\": [\"BS Computer Science - University X (2018)\"],\n  \"score\": 85\n}\n\nReturn ONLY the JSON object, no extra text.";
-                
-                // Use Vision API for image-based PDFs
-                if ($useVisionAPI) {
+                // 2. Fallback: pdftotext command line (usually fails on Windows but worth a shot for servers)
+                if (empty(trim($resumeContent))) {
                     try {
-                        // Convert PDF to base64
-                        $pdfData = file_get_contents($filePath);
-                        $base64Pdf = base64_encode($pdfData);
+                        $outputFile = storage_path('app/temp_pdf_' . $application->id . '.txt');
+                        // Use escapeshellarg for security
+                        $command = "pdftotext -layout " . escapeshellarg($filePath) . " " . escapeshellarg($outputFile);
+                        exec($command, $output, $returnVar);
                         
-                        \Log::info("Attempting GPT-4 Vision API for image-based PDF", [
-                            'application_id' => $application->id,
-                            'pdf_size' => strlen($pdfData),
-                        ]);
-                        
-                        $response = OpenAI::chat()->create([
-                            'model' => 'gpt-4o-mini',
-                            'messages' => [
-                                [
-                                    'role' => 'user',
-                                    'content' => [
-                                        [
-                                            'type' => 'text',
-                                            'text' => $prompt
-                                        ],
-                                        [
-                                            'type' => 'image_url',
-                                            'image_url' => [
-                                                'url' => 'data:application/pdf;base64,' . $base64Pdf
-                                            ]
-                                        ]
-                                    ]
-                                ]
-                            ],
-                            'max_tokens' => 1000,
-                        ]);
-                        
-                        $text = trim($response['choices'][0]['message']['content'] ?? '{}');
-                        \Log::info("GPT-4 Vision API response received", [
-                            'application_id' => $application->id,
-                            'response_length' => strlen($text),
-                        ]);
-                        
-                        // Parse JSON response
-                        $json = json_decode($text, true);
-                        if (!is_array($json)) {
-                            $start = strpos($text, '{');
-                            $end = strrpos($text, '}');
-                            if ($start !== false && $end !== false) {
-                                $candidate = substr($text, $start, $end - $start + 1);
-                                $json = json_decode($candidate, true);
-                            }
-                        }
-                        
-                        $aiData = is_array($json) ? $json : [];
-                        
-                    } catch (\Exception $e) {
-                        \Log::error("GPT-4 Vision API failed", [
-                            'application_id' => $application->id,
-                            'error' => $e->getMessage(),
-                        ]);
-                        $aiData = [];
-                    }
-                } 
-                // Use regular text-based AI analysis
-                elseif (!empty(trim($resumeContent))) {
-                    $promptWithContent = $prompt . "\n\nResume content:\n{$resumeContent}";
-
-                    // Analyze resume with better error handling
-                    try {
-                        \Log::info("Attempting OpenAI API call", [
-                            'application_id' => $application->id,
-                            'api_key_set' => !empty(config('openai.api_key')),
-                        ]);
-                        
-                        $response = OpenAI::chat()->create([
-                            'model' => 'gpt-3.5-turbo',
-                            'messages' => [
-                                ['role' => 'system', 'content' => 'You are a helpful resume analyzer.'],
-                                ['role' => 'user', 'content' => $promptWithContent],
-                            ],
-                            'max_tokens' => 500,
-                        ]);
-
-                        $text = trim($response['choices'][0]['message']['content'] ?? '{}');
-                        
-                        \Log::info("OpenAI API response received", [
-                            'application_id' => $application->id,
-                            'response_length' => strlen($text),
-                        ]);
-
-                        // Try to decode full response first
-                        $json = json_decode($text, true);
-
-                        // If that fails, try to extract the JSON object from within the text
-                        if (!is_array($json)) {
-                            $start = strpos($text, '{');
-                            $end = strrpos($text, '}');
-
-                            if ($start !== false && $end !== false && $end > $start) {
-                                $candidate = substr($text, $start, $end - $start + 1);
-                                $json = json_decode($candidate, true);
-                            }
-                        }
-
-                        $aiData = is_array($json) ? $json : [];
-
-                        if (empty($aiData)) {
-                            \Log::warning('AI resume analysis returned empty or invalid data', [
-                                'application_id' => $application->id,
-                                'raw_text' => $text,
-                            ]);
+                        if ($returnVar === 0 && file_exists($outputFile)) {
+                            $resumeContent = file_get_contents($outputFile);
+                            \Log::info("pdftotext fallback succeeded", ['len' => strlen($resumeContent)]);
+                            @unlink($outputFile);
                         } else {
-                            \Log::info('AI resume analysis successful', [
-                                'application_id' => $application->id,
-                                'score' => $aiData['score'] ?? 'missing',
-                            ]);
+                            \Log::warning("pdftotext fallback failed with code $returnVar");
                         }
-                    } catch (\Exception $apiException) {
-                        \Log::error("OpenAI API call failed", [
-                            'application_id' => $application->id,
-                            'error' => $apiException->getMessage(),
-                            'error_class' => get_class($apiException),
-                        ]);
-                        throw $apiException;
+                    } catch (\Exception $e) {
+                        \Log::warning("pdftotext fallback exception: " . $e->getMessage());
                     }
-                } else {
-                    \Log::warning('Resume content is empty after parsing and fallback', [
-                        'application_id' => $application->id,
-                        'file_path' => $filePath,
-                        'file_exists' => file_exists($filePath),
-                        'file_size' => file_exists($filePath) ? filesize($filePath) : 0,
-                    ]);
+                }
+
+                // 3. AI Analysis with OpenAI
+                $apiKey = env('OPENAI_API_KEY');
+                if (!empty($apiKey)) {
+                    // Check if we actually have text. If not, we can't do much with Chat completions
+                    if (empty(trim($resumeContent))) {
+                        \Log::warning("No text extracted for Application #{$application->id}. AI analysis skipped.");
+                    } else {
+                        // More explicit prompt to ensure AI returns the exact structure expected by the view
+                        $prompt = "You are a professional HR Resume Parser. Extract the following data from the resume text provided.
+                        
+                        Position to evaluate for: {$application->applied_position}
+                        
+                        Structure your response as a valid JSON object with these EXACT keys:
+                        - skills: (array of strings)
+                        - experience: (array of objects with 'title', 'company', 'period', 'description' keys)
+                        - education: (array of objects with 'degree', 'field', 'institution', 'year' keys)
+                        - score: (integer 0-100 reflecting suitability for the position)
+                        
+                        Resume Text:
+                        " . substr($resumeContent, 0, 12000); // 12k chars is safe for context limits
+
+                        $apiUrl = "https://api.openai.com/v1/chat/completions";
+                        
+                        try {
+                            $payload = [
+                                "model" => "gpt-4o",
+                                "messages" => [
+                                    ["role" => "system", "content" => "You output ONLY raw JSON. Do not include markdown code blocks or any other text."],
+                                    ["role" => "user", "content" => $prompt]
+                                ],
+                                "temperature" => 0.1, // Lower temperature for more consistent JSON
+                                "response_format" => ["type" => "json_object"]
+                            ];
+
+                            $response = Http::withToken($apiKey)
+                                ->withOptions([
+                                    'verify' => env('OPENAI_SSL_VERIFY', false), 
+                                    'timeout' => 60 // Increased timeout
+                                ])
+                                ->post($apiUrl, $payload);
+                            
+                            if ($response->successful()) {
+                                $responseData = $response->json();
+                                $content = $responseData['choices'][0]['message']['content'] ?? '{}';
+                                $aiData = json_decode($content, true) ?: [];
+                                \Log::info("OpenAI Analysis successful for #{$application->id}");
+                            } else {
+                                \Log::error("OpenAI API Error for #{$application->id}: " . $response->body());
+                            }
+                        } catch (\Exception $e) {
+                            \Log::error("OpenAI request failed for #{$application->id}: " . $e->getMessage());
+                        }
+                    }
                 }
 
             } catch (\Exception $e) {
-                \Log::error("Failed AI resume analysis for application ID {$application->id}", [
-                    'error' => $e->getMessage(),
-                    'error_class' => get_class($e),
-                    'trace' => $e->getTraceAsString(),
-                ]);
+                \Log::error("Main analysis block error: " . $e->getMessage());
             }
 
-            // Parse resume text sections and age as an additional fallback
+            // --- Final Data Assembly & Fallbacks ---
             $parsedSections = $this->parseResumeSections($resumeContent ?? '');
-            $parsedSkills = $parsedSections['skills'] ?? [];
-            $parsedExperience = $parsedSections['experience'] ?? [];
-            $parsedEducation = $parsedSections['education'] ?? [];
-
-            // Normalize skills (accept array or comma/semicolon/newline-separated string)
-            $rawSkills = $aiData['skills'] ?? $aiData['Skills'] ?? $parsedSkills;
-            if (is_string($rawSkills)) {
-                $skills = array_filter(array_map('trim', preg_split('/[,;\n]+/', $rawSkills)));
-            } elseif (is_array($rawSkills)) {
-                $skills = $rawSkills;
-            } else {
-                $skills = [];
-            }
-            if (empty($skills) && !empty($parsedSkills)) {
-                $skills = $parsedSkills;
-            }
-            if (empty($skills)) {
-                $skills = ['Skills not clearly specified'];
-            }
-
-            // Normalize experience
-            $rawExperience = $aiData['experience'] ?? $aiData['Experience'] ?? $parsedExperience;
-            if (is_string($rawExperience)) {
-                $experience = array_filter(array_map('trim', preg_split('/[\n;]+/', $rawExperience)));
-            } elseif (is_array($rawExperience)) {
-                $experience = $rawExperience;
-            } else {
-                $experience = [];
-            }
-            if (empty($experience) && !empty($parsedExperience)) {
-                $experience = $parsedExperience;
-            }
-            if (empty($experience)) {
-                $experience = ['Work experience not clearly specified'];
-            }
-
-            // Normalize education
-            $rawEducation = $aiData['education'] ?? $aiData['Education'] ?? $parsedEducation;
-            if (is_string($rawEducation)) {
-                $education = array_filter(array_map('trim', preg_split('/[\n;]+/', $rawEducation)));
-            } elseif (is_array($rawEducation)) {
-                $education = $rawEducation;
-            } else {
-                $education = [];
-            }
-            if (empty($education) && !empty($parsedEducation)) {
-                $education = $parsedEducation;
-            }
-            if (empty($education)) {
-                $education = ['Education not clearly specified'];
-            }
-
-            $ratingScore = $aiData['score'] ?? $aiData['Score'] ?? 0;
             
-            // ALWAYS calculate qualification status from score (don't trust AI-provided qualification)
-            // This ensures alignment between score and status
-            if ($ratingScore >= 90) {
-                $qualificationStatus = 'Exceptional';
-            } elseif ($ratingScore >= 80) {
-                $qualificationStatus = 'Highly Qualified';
-            } elseif ($ratingScore >= 70) {
-                $qualificationStatus = 'Qualified';
-            } elseif ($ratingScore >= 60) {
-                $qualificationStatus = 'Moderately Qualified';
-            } elseif ($ratingScore >= 50) {
-                $qualificationStatus = 'Marginally Qualified';
-            } else {
-                $qualificationStatus = 'Not Qualified';
-            }
+            // Heuristic scoring if AI fails
+            $fallbackScore = $this->calculateHeuristicScore($resumeContent ?? '', $application->applied_position);
+            
+            $skills      = !empty($aiData['skills'])     ? $aiData['skills']     : ($parsedSections['skills'] ?? ['Manual review required']);
+            $experience  = !empty($aiData['experience']) ? $aiData['experience'] : ($parsedSections['experience'] ?? ['Manual review required']);
+            $education   = !empty($aiData['education'])  ? $aiData['education']  : ($parsedSections['education'] ?? ['Manual review required']);
+            $ratingScore = $aiData['score'] ?? $fallbackScore;
 
-            // Save filtered resume
+            // Qualification Status mapping
+            if ($ratingScore >= 90) $qualificationStatus = 'Exceptional';
+            elseif ($ratingScore >= 80) $qualificationStatus = 'Highly Qualified';
+            elseif ($ratingScore >= 70) $qualificationStatus = 'Qualified';
+            elseif ($ratingScore >= 60) $qualificationStatus = 'Moderately Qualified';
+            elseif ($ratingScore >= 50) $qualificationStatus = 'Marginally Qualified';
+            else $qualificationStatus = 'Not Qualified';
+
+            // Create the filtered resume record
+            // We now always create it even if empty, so the user can see it in the list 
+            // and potentially perform a manual override/edit
             $application->filteredResume()->create([
-                'skills'               => $skills,
-                'experience'           => $experience,
-                'education'            => $education,
+                'skills'               => is_array($skills) ? $skills : [$skills],
+                'experience'           => is_array($experience) ? $experience : [$experience],
+                'education'            => is_array($education) ? $education : [$education],
                 'rating_score'         => (int) $ratingScore,
                 'qualification_status' => $qualificationStatus,
             ]);
+
+            if (empty(trim($resumeContent))) {
+                \Log::warning("Record created with empty text extraction for #{$application->id}. Scanned PDF suspected.");
+            }
 
             $this->showSuccessToast = true;
 
             $this->reset([
                 'applicantLastName', 'applicantFirstName', 'applicantMiddleName',
                 'applicantSuffixName', 'applicantPhone', 'applicantEmail',
-                'applicantAge', 'applicantGender', 'applicantDateOfBirth',
+                'applicantAge', 'applicantGender', 'applicantCivilStatus', 'applicantDateOfBirth',
                 'applicantResumeFile', 'selectedRegion', 'selectedProvince',
                 'selectedCity', 'selectedBarangay', 'houseStreet', 'agreedToTerms'
             ]);
@@ -556,6 +417,47 @@ class ApplyNow extends Component
         return null;
     }
 
+    private function calculateHeuristicScore(string $text, string $position): int
+    {
+        if (empty(trim($text))) return 0;
+
+        $score = 50; // Base score if text exists
+        $textLower = strtolower($text);
+        $posLower = strtolower($position);
+
+        // 1. Position match in text (+15)
+        if (str_contains($textLower, $posLower)) {
+            $score += 15;
+        }
+
+        // 2. Keyword matching based on common job terms (+5 to +20)
+        $keywords = [
+            'experience' => 5,
+            'skills' => 5,
+            'education' => 5,
+            'degree' => 5,
+            'certified' => 5,
+            'management' => 3,
+            'technical' => 3,
+            'proficient' => 2,
+        ];
+
+        foreach ($keywords as $word => $points) {
+            if (str_contains($textLower, $word)) {
+                $score += $points;
+            }
+        }
+
+        // 3. Length heuristic (too short is suspicious)
+        if (strlen($text) < 500) {
+            $score -= 10;
+        } elseif (strlen($text) > 2000) {
+            $score += 5;
+        }
+
+        return min(max($score, 0), 75); // Cap at 75 for manual heuristic to encourage AI verification
+    }
+
     private function parseResumeSections(string $text): array
     {
         $sections = [
@@ -574,83 +476,32 @@ class ApplyNow extends Component
 
         foreach ($lines as $line) {
             $trim = trim($line);
-            if ($trim === '') {
-                continue;
-            }
+            if ($trim === '') continue;
 
             $lower = strtolower($trim);
-
-            // Skills parsing - Expanded to catch more variations
-            // Matches: "Skills", "Technical Skills", "Professional Skills", "Tech Stack", "Technologies", "Core Competencies", "My Skills"
-            // Also matches spaced out versions like "S K I L L S" or "S k i l l s"
-            $normalizedHeaderLine = preg_replace('/\s+/', '', $lower); // Remove all spaces for checking spaced headers
+            $normalizedHeaderLine = preg_replace('/\s+/', '', $lower); 
             
-            $isSkillsHeader = 
-                preg_match('/^(?:(?:my|professional|technical|hard|soft|key|core)\s+)?(?:skills|competencies|technologies|tech\s+stack)\s*[:\-]?/i', $trim) ||
-                str_starts_with($normalizedHeaderLine, 'skills') ||
-                str_starts_with($normalizedHeaderLine, 'technicalskills') ||
-                str_starts_with($normalizedHeaderLine, 'coreskills');
-
-            if ($isSkillsHeader) {
-                $current = 'skills';
-                
-                // Remove the header part to get the content
-                $headerPattern = '/^(?:(?:my|professional|technical|hard|soft|key|core)\s+)?(?:skills|competencies|technologies|tech\s+stack)\s*[:\-]?/i';
-                $rest = preg_replace($headerPattern, '', $trim);
-                
-                // If regex failed (likely because of spaced header), try simply removing the known spaced string or just taking the whole line if it's mixed
-                if ($rest === $trim && str_starts_with($normalizedHeaderLine, 'skills')) {
-                     // For "S K I L L S", usually the rest of the line is empty or on next line, but if not, we can't easily separate. 
-                     // Let's assume if it was spaced 'S K I L L S', the content is likely on next lines.
-                     $rest = ''; 
-                }
-
-                $rest = trim($rest);
-                if ($rest !== '') {
-                    // Split by typical delimiters OR bullets
-                    $items = array_filter(array_map('trim', preg_split('/[,;\n•\-\*]+/', $rest)));
-                    foreach ($items as $it) {
-                        if (strlen($it) > 1) { // Ignore single chars like remnant bullets
-                            $sections['skills'][] = $it;
-                        }
-                    }
-                }
-                continue;
+            // Detection with flexible regex
+            if (preg_match('/^(?:professional|technical|hard|soft|key|core)?\s*(?:skills|competencies|technologies|tech\s+stack)\s*[:\-]?$/i', $trim) || 
+                in_array($normalizedHeaderLine, ['skills', 'technicalskills', 'coreskills', 'keycompetencies'])) {
+                $current = 'skills'; continue;
             }
 
-            // Experience parsing - Robust like Skills
-            $isExperienceHeader = 
-                preg_match('/^(?:(?:work|professional|employment)\s+)?(?:experience|history|background)\b/i', $trim) ||
-                str_starts_with($normalizedHeaderLine, 'experience') ||
-                str_starts_with($normalizedHeaderLine, 'workexperience') ||
-                str_starts_with($normalizedHeaderLine, 'employmenthistory') ||
-                str_starts_with($normalizedHeaderLine, 'professionalexperience');
-
-            if ($isExperienceHeader) {
-                $current = 'experience';
-                continue;
+            if (preg_match('/^(?:work|professional|employment)?\s*(?:experience|history|background)\s*[:\-]?$/i', $trim) ||
+                in_array($normalizedHeaderLine, ['experience', 'workexperience', 'employmenthistory', 'workhistory'])) {
+                $current = 'experience'; continue;
             }
 
-            // Education parsing - Robust like Skills
-            $isEducationHeader = 
-                preg_match('/^(?:(?:educational|academic)\s+)?(?:education|background|history|records|academics)\b/i', $trim) ||
-                str_starts_with($normalizedHeaderLine, 'education') ||
-                str_starts_with($normalizedHeaderLine, 'educationalbackground') ||
-                str_starts_with($normalizedHeaderLine, 'academichistory');
-                
-            if ($isEducationHeader) {
-                $current = 'education';
-                continue;
+            if (preg_match('/^(?:educational|academic)?\s*(?:education|background|history|records|academics)\s*[:\-]?$/i', $trim) ||
+                in_array($normalizedHeaderLine, ['education', 'educationalbackground', 'academichistory'])) {
+                $current = 'education'; continue;
             }
 
             if ($current !== null) {
-                // If we are in a section, capture the line
                 $item = preg_replace('/^[\-\*•]+\s*/u', '', $trim);
-                
-                // Heuristic: If line is too short (like just a bullet), ignore
-                // Also ignore common non-content lines
-                if (strlen($item) > 2 && $item !== 'Reference' && $item !== 'References') {
+                if (strlen($item) > 2 && !preg_match('/^(?:references|hobbies|personal|interests)$/i', $item)) {
                     $sections[$current][] = $item;
+                    if (count($sections[$current]) > 15) $current = null; // Prevent runaway sections
                 }
             }
         }

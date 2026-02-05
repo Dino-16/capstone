@@ -22,6 +22,7 @@ class Application extends Model
         'age',
         'date_of_birth',
         'gender',
+        'civil_status',
 
         // Contact & Address
         'email',

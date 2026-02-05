@@ -16,6 +16,9 @@ class Employees extends Component
 
     #[Url]
     public $search = '';
+
+    #[Url]
+    public $statusFilter = '';
     
     public $perPage = 10;
 
@@ -33,16 +36,27 @@ class Employees extends Component
     }
 
     /**
+     * Resets pagination when status filter is updated.
+     */
+    public function updatingStatusFilter()
+    {
+        $this->resetPage();
+    }
+
+    /**
      * Fetches data from the API and returns a Paginator instance.
      */
     protected function getEmployeesPaginator()
     {
-        $page = $this->getPage(); // Livewire helper for current page
+        $page = $this->getPage();
 
+        // To support filtering by employment status (which comes from a different API),
+        // we need to fetch a sufficient amount of data if we're doing client-side filtering
+        // OR fetch all for accurate filtering across pages.
+        
         $response = Http::get('http://hr4.jetlougetravels-ph.com/api/employees', [
             'search'   => $this->search,
-            'page'     => $page,
-            'per_page' => $this->perPage,
+            'per_page' => 1000, // Fetch more to allow client-side filtering/pagination
         ]);
 
         if (!$response->successful()) {
@@ -50,37 +64,34 @@ class Employees extends Component
         }
 
         $data = $response->json();
+        $allEmployees = isset($data['data']['data']) ? $data['data']['data'] : (isset($data['data']) ? $data['data'] : $data);
+        
+        $enrichedEmployees = $this->enrichEmployeesWithDocumentStatus($allEmployees);
+        $collection = collect($enrichedEmployees);
 
-        // Check if API supports pagination natively (returns 'data' and 'total' keys)
-        if (isset($data['data'])) {
-            $employees = $this->enrichEmployeesWithDocumentStatus($data['data']);
-            return new LengthAwarePaginator(
-                $employees,
-                $data['total'] ?? 0,
-                $data['per_page'] ?? $this->perPage,
-                $data['current_page'] ?? $page,
-                ['path' => request()->url(), 'query' => request()->query()]
-            );
+        // Apply Employment Status Filter
+        if (!empty($this->statusFilter)) {
+            $collection = $collection->filter(function ($emp) {
+                return strtolower($emp['employment_status'] ?? '') === strtolower($this->statusFilter);
+            });
         }
 
-        // FALLBACK: API returns a simple array (Manual Client-side Pagination)
-        $collection = collect($data);
-
+        // Apply Search Filter (if API didn't handle it or for double safety)
         if (!empty($this->search)) {
             $searchTerm = strtolower(trim($this->search));
             $collection = $collection->filter(function ($emp) use ($searchTerm) {
-                $name = strtolower($emp['first_name'] ?? $emp['full_name'] ?? '');
+                $name = strtolower(($emp['first_name'] ?? '') . ' ' . ($emp['last_name'] ?? ''));
                 $pos = strtolower($emp['position'] ?? '');
                 return str_contains($name, $searchTerm) || str_contains($pos, $searchTerm);
             });
         }
 
+        $total = $collection->count();
         $paginatedItems = $collection->forPage($page, $this->perPage)->values()->toArray();
-        $employees = $this->enrichEmployeesWithDocumentStatus($paginatedItems);
 
         return new LengthAwarePaginator(
-            $employees,
-            $collection->count(),
+            $paginatedItems,
+            $total,
             $this->perPage,
             $page,
             ['path' => request()->url(), 'query' => request()->query()]
@@ -95,9 +106,31 @@ class Employees extends Component
         // Get all document checklists for efficient lookup
         $checklists = DocumentChecklist::where('status', 'active')->get();
 
-        return collect($employees)->map(function ($emp) use ($checklists) {
+        // Fetch accounts to get employment status
+        $accountStatusMap = [];
+        try {
+            $accountsResponse = Http::withoutVerifying()->get('https://hr4.jetlougetravels-ph.com/api/accounts');
+            if ($accountsResponse->successful()) {
+                $accountsData = $accountsResponse->json();
+                $systemAccounts = $accountsData['data']['system_accounts'] ?? [];
+                $essAccounts = $accountsData['data']['ess_accounts'] ?? [];
+                
+                foreach (array_merge($systemAccounts, $essAccounts) as $account) {
+                    $empId = $account['employee_id'] ?? null;
+                    $status = $account['employee']['employee_status'] ?? null;
+                    if ($empId && $status) {
+                        $accountStatusMap[$empId] = $status;
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to fetch accounts for employee status: ' . $e->getMessage());
+        }
+
+        return collect($employees)->map(function ($emp) use ($checklists, $accountStatusMap) {
             $employeeName = trim(($emp['first_name'] ?? '') . ' ' . ($emp['last_name'] ?? ''));
             $employeeEmail = $emp['email'] ?? null;
+            $employeeId = $emp['id'] ?? null;
 
             // Find matching document checklist by name or email
             $matchingChecklist = $checklists->first(function ($checklist) use ($employeeName, $employeeEmail) {
@@ -115,6 +148,9 @@ class Employees extends Component
             $emp['document_status'] = $matchingChecklist 
                 ? ($matchingChecklist->getCompletionPercentage() == 100 ? 'Complete' : 'In Progress') 
                 : 'Not Integrated';
+
+            // Add employment status from accounts map or fallback to 'status' field if exists
+            $emp['employment_status'] = $accountStatusMap[$employeeId] ?? $emp['status'] ?? '---';
 
             return $emp;
         })->toArray();
@@ -171,7 +207,7 @@ class Employees extends Component
                 'Position'         => $emp['position'] ?? '—',
                 'Department'       => $emp['department']['name'] ?? 'Not Integrated',
                 'HR Documents'     => $emp['document_status'] ?? 'Not Integrated',
-                'Employment Status' => $emp['employement_status'] ?? '---',
+                'Employment Status' => $emp['employment_status'] ?? '---',
                 'Date Hired'       => $emp['date_hired'] ?? '---',
             ]);
 
@@ -179,6 +215,12 @@ class Employees extends Component
         }
 
         return response()->streamDownload(fn() => print("Export failed"), "error.xls");
+    }
+
+    public function deleteEmployee($index)
+    {
+        // Placeholder for future API integration
+        session()->flash('error', 'Deletion is not currently supported for external API records.');
     }
 
     public function render()

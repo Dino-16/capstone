@@ -1,8 +1,10 @@
+@section('page-title', 'RECAPTCHA')
+@section('page-subtitle', 'Manage bot protection and verification settings')
+@section('breadcrumbs', 'RECAPTCHA')
+
 <div class="container-fluid p-4">
     <div class="row mb-4">
-        <div class="col-12 d-flex justify-content-between align-items-center">
-            <h2 class="h3 text-gray-800">reCAPTCHA Management</h2>
-        </div>
+        {{-- Header is handled by layout now --}}
     </div>
 
     {{-- Alert Messages --}}

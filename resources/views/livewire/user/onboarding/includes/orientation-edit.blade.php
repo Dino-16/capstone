@@ -34,9 +34,15 @@
                             </div>
                             <div @class('col-md-6')>
                                 <div @class('mb-3')>
-                                    <label @class('form-label fw-bold')>Location</label>
-                                    <input type="text" @class('form-control') wire:model="location" placeholder="Conference Room A">
-                                    @error('location') <div @class('invalid-feedback')>{{ $message }}</div> @enderror
+                                    <label @class('form-label fw-bold')>Location / Facility <span class="text-danger">*</span></label>
+                                    <select class="form-select @error('location') is-invalid @enderror" 
+                                            wire:model.live="selectedFacility">
+                                        <option value="">-- Select Approved Facility --</option>
+                                        @foreach($approvedFacilities as $facility)
+                                            <option value="{{ $facility['id'] }}">{{ $facility['details'] }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('location') <div @class('invalid-feedback d-block')>{{ $message }}</div> @enderror
                                 </div>
                             </div>
                         </div>
@@ -45,16 +51,6 @@
                             <label @class('form-label fw-bold')>Facilitator</label>
                             <input type="text" @class('form-control') wire:model="facilitator" placeholder="John Smith">
                             @error('facilitator') <div @class('invalid-feedback')>{{ $message }}</div> @enderror
-                        </div>
-
-                        <div @class('mb-3')>
-                            <label @class('form-label fw-bold')>Status</label>
-                            <select @class('form-select') wire:model="status">
-                                <option value="scheduled">Scheduled</option>
-                                <option value="completed">Completed</option>
-                                <option value="cancelled">Cancelled</option>
-                            </select>
-                            @error('status') <div @class('invalid-feedback')>{{ $message }}</div> @enderror
                         </div>
 
                         <div @class('mb-3')>

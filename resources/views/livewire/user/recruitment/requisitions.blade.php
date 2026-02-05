@@ -18,8 +18,7 @@
             
             {{-- SEARCH BAR --}}
             <div>
-                <x-text-input
-                    type="search"
+                <x-search-input
                     wire:model.live="search" 
                     placeholder="Search..."
                 />
@@ -70,7 +69,7 @@
                     @class('btn btn-success')
                     wire:click="export"
                 >
-                    Export to Excel
+                    Export
                 </button>
 
                 @if(!$showDrafts)
@@ -138,28 +137,65 @@
                             </td>
                             @if($req->status === 'Pending')
                                 <td @class('gap-3')>
-                                    <button
-                                        @class('btn btn-success btn-sm')
-                                        wire:click="approve({{ $req->id }})"
-                                        title="Approve"
-                                    >
-                                        <i @class('bi bi-check-lg')></i>
-                                    </button>
+                                    <div class="d-flex gap-2">
+                                        @if(session('user.position') === 'HR Manager')
+                                            <button
+                                                class="btn btn-sm btn-outline-primary"
+                                                wire:click="editRequisition({{ $req->id }})"
+                                                title="Edit"
+                                            >
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                        @endif
+                                        <button
+                                            @class('btn btn-sm btn-success')
+                                            wire:click="approve({{ $req->id }})"
+                                            title="Approve"
+                                        >
+                                            <i @class('bi bi-check-lg')></i>
+                                        </button>
 
-                                    <button
-                                        @class('btn btn-danger btn-sm')
-                                        wire:click="draft({{ $req->id }})"
-                                        title="Draft"
-                                    >
-                                        <i @class('bi bi-file-earmark-text')></i>
-                                    </button>
+                                        <button
+                                            @class('btn btn-sm btn-outline-danger')
+                                            wire:click="draft({{ $req->id }})"
+                                            title="Move to Draft"
+                                        >
+                                            <i @class('bi bi-file-earmark-text')></i>
+                                        </button>
+                                        
+                                        <button
+                                            @class('btn btn-sm btn-outline-primary')
+                                            wire:click="editRequisition({{ $req->id }})"
+                                            title="Edit"
+                                        >
+                                            <i @class('bi bi-pencil')></i>
+                                        </button>
+                                        
+                                        @if(session('user.position') === 'Super Admin')
+                                            <button
+                                                @class('btn btn-sm btn-danger')
+                                                wire:click="deleteRequisition({{ $req->id }})"
+                                                wire:confirm="Are you sure you want to delete this requisition?"
+                                                title="Delete"
+                                            >
+                                                <i @class('bi bi-trash')></i>
+                                            </button>
+                                        @endif
+                                    </div>
                                 </td>
                             @else
                                 <td>---</td>
                             @endif
                         </tr>
                     @empty
-                        @if($statusFilter === 'Pending')
+                        @if($search)
+                            <tr>
+                                <td colspan="7" @class('text-center text-muted py-5')>
+                                    <i @class('bi bi-search d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No positions found matching "{{ $search }}".</div>
+                                </td>
+                            </tr>
+                        @elseif($statusFilter === 'Pending')
                             <tr>
                                 <td colspan="7" @class('text-center text-muted py-5')>
                                     <i @class('bi bi-hourglass-split d-block mx-auto fs-1')></i>
@@ -223,12 +259,29 @@
                             <td><span @class('badge bg-danger')>{{ $draft->status }}</span></td>
                             <td>
                                 <button
-                                    @class('btn btn-primary btn-sm')
+                                    @class('btn btn-sm btn-outline-warning')
                                     wire:click="restore({{ $draft->id }})"
                                     title="Restore"
                                 >
                                     <i @class('bi bi-bootstrap-reboot')></i>
                                 </button>
+                                <button
+                                    @class('btn btn-sm btn-outline-primary')
+                                    wire:click="editRequisition({{ $draft->id }})"
+                                    title="Edit"
+                                >
+                                    <i @class('bi bi-pencil')></i>
+                                </button>
+                                @if(session('user.position') === 'Super Admin')
+                                    <button
+                                        @class('btn btn-sm btn-danger')
+                                        wire:click="deleteRequisition({{ $draft->id }})"
+                                        wire:confirm="Are you sure you want to delete this requisition?"
+                                        title="Delete"
+                                    >
+                                        <i @class('bi bi-trash')></i>
+                                    </button>
+                                @endif
                             </td>
                         </tr>
                         @endif
@@ -243,5 +296,42 @@
             </table>
             {{ $drafts->links() }}
         </div>
+    @endif
+
+    {{-- Edit Modal --}}
+    @if($showEditModal)
+    <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-white border-bottom">
+                    <h5 class="modal-title">Edit Requisition</h5>
+                    <button type="button" class="btn-close" wire:click="closeEditModal"></button>
+                </div>
+                <div class="modal-body">
+                    <form wire:submit.prevent="updateRequisition">
+                        <div class="mb-3">
+                            <label class="form-label">Position</label>
+                            <input type="text" class="form-control" wire:model="position">
+                            @error('position') <span class="text-danger small">{{ $message }}</span> @enderror
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Department</label>
+                            <input type="text" class="form-control" wire:model="department">
+                            @error('department') <span class="text-danger small">{{ $message }}</span> @enderror
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Opening</label>
+                            <input type="number" class="form-control" wire:model="opening">
+                            @error('opening') <span class="text-danger small">{{ $message }}</span> @enderror
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" wire:click="closeEditModal">Close</button>
+                    <button type="button" class="btn btn-primary" wire:click="updateRequisition">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
     @endif
 </div>

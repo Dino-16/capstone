@@ -1,8 +1,10 @@
+@section('page-title', 'Multi-Factor Authentication')
+@section('page-subtitle', 'Configure and monitor MFA security settings')
+@section('breadcrumbs', 'MFA')
+
 <div class="container-fluid p-4">
     <div class="row mb-4">
-        <div class="col-12 d-flex justify-content-between align-items-center">
-            <h2 class="h3 text-gray-800">Multi-Factor Authentication (MFA) Management</h2>
-        </div>
+        {{-- Header is handled by layout now --}}
     </div>
 
     {{-- Alert Messages --}}
@@ -12,7 +14,7 @@
     <div class="row g-4 mb-4">
         {{-- Global Setting --}}
         <!-- Global Setting Card -->
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card shadow-sm h-100">
                 <div class="card-body d-flex flex-column justify-content-between">
                     <div>
@@ -28,7 +30,7 @@
         </div>
 
         <!-- HR Staff Setting Card -->
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card shadow-sm h-100 border-start border-warning border-4">
                 <div class="card-body d-flex flex-column justify-content-between">
                     <div>
@@ -44,7 +46,7 @@
         </div>
 
         <!-- HR Manager Setting Card -->
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card shadow-sm h-100 border-start border-primary border-4">
                 <div class="card-body d-flex flex-column justify-content-between">
                     <div>
@@ -54,6 +56,22 @@
                     <div class="form-check form-switch mt-3">
                         <input class="form-check-input" type="checkbox" role="switch" wire:click="toggleHrManager" {{ $isHrManagerEnabled ? 'checked' : '' }} {{ !$isGlobalEnabled ? 'disabled' : '' }} style="width: 3em; height: 1.5em;">
                          <label class="form-check-label ms-2 fw-bold">{{ $isHrManagerEnabled ? 'Required' : 'Optional' }}</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Super Admin Setting Card -->
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100 border-start border-danger border-4">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <div>
+                        <h5 class="card-title fw-bold mb-2 text-danger">Super Admin Access</h5>
+                         <p class="text-muted small">Require MFA for Super Admin logins.</p>
+                    </div>
+                    <div class="form-check form-switch mt-3">
+                        <input class="form-check-input" type="checkbox" role="switch" wire:click="toggleSuperAdmin" {{ $isSuperAdminEnabled ? 'checked' : '' }} {{ !$isGlobalEnabled ? 'disabled' : '' }} style="width: 3em; height: 1.5em;">
+                         <label class="form-check-label ms-2 fw-bold">{{ $isSuperAdminEnabled ? 'Required' : 'Optional' }}</label>
                     </div>
                 </div>
             </div>

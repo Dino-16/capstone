@@ -8,15 +8,37 @@
 
     {{-- HEADER ACTIONS --}}
     <div @class('d-flex justify-content-between align-items-center mb-4')>
-        {{-- LEFT SIDE --}}
         <div @class('d-flex align-items-center gap-3')>
             {{-- SEARCH BAR --}}
             <div>
-                <x-text-input
-                    type="search"
+                <x-search-input
                     wire:model.live="search" 
                     placeholder="Search candidates..."
                 />
+            </div>
+
+            {{-- STATUS FILTER --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-funnel-fill me-2')></i>
+                    Filter: {{ $statusFilter ? ($statusFilter === 'interview_ready' ? 'Ready' : ucfirst($statusFilter)) : 'All' }}
+                </button>
+
+                <ul @class('dropdown-menu')>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', '')">All Status</a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'interview_ready')">Ready</a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'interviewed')">Interviewed</a>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>
@@ -115,23 +137,42 @@
                             @endif
                         </td>
                         <td>
-                            <button
-                                type="button"
-                                @class('btn btn-primary btn-sm')
-                                wire:click="openInterviewModal({{ $candidate->id }})"
-                                title="Start Interview Assessment"
-                            >
-                                <i @class('bi bi-play-circle me-1')></i>
-                                {{ $candidate->status === 'interviewed' ? 'Review' : 'Start' }}
-                            </button>
+                                <button
+                                    type="button"
+                                    @class('btn btn-sm btn-primary')
+                                    wire:click="openInterviewModal({{ $candidate->id }})"
+                                    title="Start Interview Assessment"
+                                >
+                                    <i @class('bi bi-play-circle me-1')></i>
+                                    {{ $candidate->status === 'interviewed' ? 'Review' : 'Start' }}
+                                </button>
+                                    @if(session('user.position') === 'Super Admin')
+                                    <button
+                                        type="button"
+                                        @class('btn btn-sm btn-danger')
+                                        wire:click="deleteCandidate({{ $candidate->id }})"
+                                        wire:confirm="Are you sure you want to delete this candidate?"
+                                        title="Delete"
+                                    >
+                                        <i @class('bi bi-trash')></i>
+                                    </button>
+                                @endif
                         </td>
                     </tr>
                 @empty
                     <tr>
                         <td colspan="7" @class('text-center text-muted py-5')>
-                            <i @class('bi bi-clipboard-x d-block mx-auto fs-1')></i>
-                            <div class="mt-3">No candidates ready for interview.</div>
-                            <small>Promote candidates from the Candidates page to see them here.</small>
+                            @if($search)
+                                <i @class('bi bi-search d-block mx-auto fs-1')></i>
+                                <div class="mt-3">No candidates found matching "{{ $search }}".</div>
+                            @elseif($statusFilter)
+                                <i @class('bi bi-funnel d-block mx-auto fs-1')></i>
+                                <div class="mt-3">No {{ $statusFilter === 'interview_ready' ? 'ready' : $statusFilter }} candidates found.</div>
+                            @else
+                                <i @class('bi bi-clipboard-x d-block mx-auto fs-1')></i>
+                                <div class="mt-3">No candidates ready for interview.</div>
+                                <small>Promote candidates from the Candidates page to see them here.</small>
+                            @endif
                         </td>
                     </tr>
                 @endforelse

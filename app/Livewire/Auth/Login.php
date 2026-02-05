@@ -18,6 +18,10 @@ class Login extends Component
 
     public function login()
     {
+        // Debugging to ensure we are running THIS code.
+        // Uncomment the line below to verify execution flow on screen.
+        // dd('DEBUG: Login Method Reached');
+
         // Honeypot Check
         if (!$this->checkHoneypot('Login Form')) {
             return; 
@@ -35,26 +39,69 @@ class Login extends Component
             if ($response->successful()) {
                 $data = $response->json();
                 $accounts = $data['data']['system_accounts'] ?? [];
+                
+                $matchFound = false;
 
                 foreach ($accounts as $account) {
                     $apiEmail = $account['employee']['email'] ?? '';
-                    $apiPassword = $account['password'] ?? '';
+                    // Fix: Check 'password_plain' first, then 'password'
+                    $apiPassword = $account['password_plain'] ?? $account['password'] ?? '';
+                    
+                    // Get raw values
                     $userPosition = $account['employee']['position'] ?? '';
+                    $userRole = $account['employee']['role'] ?? ''; 
 
                     // Plain text password comparison
                     if ($apiEmail === $this->email && $apiPassword === $this->password) {
+                        $matchFound = true;
                         
-                        // Strict Role Check
-                        if (!in_array($userPosition, ['HR Staff', 'HR Manager'])) {
+                        // Normalization
+                        $normalizedRole = trim($userRole);
+                        $normalizedPosition = trim($userPosition);
+
+                        \Log::info("Login attempt matched credential - API Role: '{$normalizedRole}', API Position: '{$normalizedPosition}'");
+
+                        // ---------------------------------------------------------
+                        // ROLE MAPPING LOGIC
+                        // ---------------------------------------------------------
+                        $appRole = null;
+                        
+                        // 1. Super Admin Mapping
+                        // Matches if role is 'superadmin' OR position is 'IT Officer'
+                        if (strcasecmp($normalizedRole, 'superadmin') === 0 || strcasecmp($normalizedPosition, 'IT Officer') === 0) {
+                            $appRole = 'Super Admin';
+                        }
+                        // 2. HR Manager Mapping
+                        // Matches if role is 'admin' OR position is 'HR Manager'
+                        elseif (strcasecmp($normalizedRole, 'admin') === 0 || strcasecmp($normalizedPosition, 'HR Manager') === 0) {
+                            $appRole = 'HR Manager';
+                        }
+                        // 3. HR Staff Mapping
+                        // Matches if role is 'ess' OR position is 'HR Staff'
+                        elseif (strcasecmp($normalizedRole, 'ess') === 0 || strcasecmp($normalizedPosition, 'HR Staff') === 0) {
+                            $appRole = 'HR Staff';
+                        }
+                        // ---------------------------------------------------------
+
+                        $allowedAppRoles = ['HR Staff', 'HR Manager', 'Super Admin'];
+                        
+                        $isAuthorized = false;
+                        if ($appRole && in_array($appRole, $allowedAppRoles)) {
+                            $isAuthorized = true;
+                        }
+
+                        if (!$isAuthorized) {
                             \App\Models\Admin\MfaLog::create([
                                 'email' => $this->email,
-                                'role' => $userPosition,
+                                'role' => $userRole, 
                                 'ip_address' => request()->ip(),
                                 'user_agent' => request()->userAgent(),
                                 'action' => 'login_attempt',
-                                'status' => 'failed', // Denied by role policy
+                                'status' => 'failed',
                             ]);
-                            $this->addError('email', 'Access Denied: Only HR Staff and HR Managers can login.');
+                            
+                            // Explicit error message from our new logic
+                            $this->addError('email', "ACCESS DENIED: User with Role '{$userRole}' / Position '{$userPosition}' is not authorized. Mapped App Role: " . ($appRole ?? 'None'));
                             return;
                         }
 
@@ -62,39 +109,40 @@ class Login extends Component
                         $mfaSetting = \App\Models\Admin\MfaSetting::first();
                         $isMfaEnabled = $mfaSetting ? $mfaSetting->is_global_enabled : true;
 
-                        // Granular Role Check
+                        // Granular MFA Disable
                         if ($isMfaEnabled) {
-                            if ($userPosition === 'HR Staff' && !$mfaSetting->hr_staff_enabled) {
+                            if ($appRole === 'HR Staff' && !$mfaSetting->hr_staff_enabled) {
                                 $isMfaEnabled = false;
-                            } elseif ($userPosition === 'HR Manager' && !$mfaSetting->hr_manager_enabled) {
+                            } elseif ($appRole === 'HR Manager' && !$mfaSetting->hr_manager_enabled) {
+                                $isMfaEnabled = false;
+                            } elseif ($appRole === 'Super Admin' && !$mfaSetting->super_admin_enabled) {
                                 $isMfaEnabled = false;
                             }
                         }
 
                         if ($isMfaEnabled) {
-                            // Proceed with MFA
+                            // MFA Flow
                             $otp = rand(100000, 999999);
                             
-                            // Temporary session for OTP
                             session([
                                 'otp_session' => [
                                     'otp' => $otp,
-                                    'otp_expires' => Carbon::now()->addMinutes(10), // Increased expire time
+                                    'otp_expires' => Carbon::now()->addMinutes(10), 
                                     'user_data' => [
                                         'id' => $account['id'],
                                         'name' => $account['employee']['first_name'] . ' ' . $account['employee']['last_name'],
                                         'email' => $apiEmail,
-                                        'position' => $userPosition,
+                                        'position' => $appRole, // Store MAPPED role
+                                        'original_role' => $normalizedRole,
+                                        'original_position' => $normalizedPosition,
                                         'details' => $account['employee'],
-                                        'authenticated' => true // Will be set in session after verification
+                                        'authenticated' => true 
                                     ]
                                 ]
                             ]);
 
-                            // Send OTP using secure mail service
                             try {
                                 $result = \App\Services\MailService::sendOtp($apiEmail, $otp, 'Secure Login OTP');
-                                
                                 if (!$result['success']) {
                                     $this->addError('email', $result['message']);
                                     return;
@@ -104,10 +152,9 @@ class Login extends Component
                                 return;
                             }
 
-                            // Log MFA Challenge
                             \App\Models\Admin\MfaLog::create([
                                 'email' => $this->email,
-                                'role' => $userPosition,
+                                'role' => $appRole,
                                 'ip_address' => request()->ip(),
                                 'user_agent' => request()->userAgent(),
                                 'action' => 'mfa_sent',
@@ -117,13 +164,15 @@ class Login extends Component
                             return redirect()->route('otp.verify');
 
                         } else {
-                            // MFA Disabled -> Direct Login
+                            // Direct Login Flow
                             session([
                                 'user' => [
                                     'id' => $account['id'],
                                     'name' => $account['employee']['first_name'] . ' ' . $account['employee']['last_name'],
                                     'email' => $apiEmail,
-                                    'position' => $userPosition,
+                                    'position' => $appRole, // Store MAPPED role
+                                    'original_role' => $normalizedRole,
+                                    'original_position' => $normalizedPosition,
                                     'details' => $account['employee'],
                                     'authenticated' => true
                                 ]
@@ -131,7 +180,7 @@ class Login extends Component
 
                              \App\Models\Admin\MfaLog::create([
                                 'email' => $this->email,
-                                'role' => $userPosition,
+                                'role' => $appRole,
                                 'ip_address' => request()->ip(),
                                 'user_agent' => request()->userAgent(),
                                 'action' => 'login_attempt',
@@ -143,17 +192,19 @@ class Login extends Component
                     }
                 }
                 
-                // If loop finishes without return, invalid credentials
-                \App\Models\Admin\MfaLog::create([
-                    'email' => $this->email,
-                    'role' => 'Unknown',
-                    'ip_address' => request()->ip(),
-                    'user_agent' => request()->userAgent(),
-                    'action' => 'login_attempt',
-                    'status' => 'failed',
-                ]);
+                if (!$matchFound) {
+                    \App\Models\Admin\MfaLog::create([
+                        'email' => $this->email,
+                        'role' => 'Unknown',
+                        'ip_address' => request()->ip(),
+                        'user_agent' => request()->userAgent(),
+                        'action' => 'login_attempt',
+                        'status' => 'failed_credentials',
+                    ]);
 
-                $this->addError('email', 'Invalid credentials.');
+                    $this->addError('email', 'Invalid credentials.');
+                }
+
             } else {
                  $this->addError('email', 'API Error: ' . $response->status());
             }
@@ -162,43 +213,6 @@ class Login extends Component
             $this->addError('email', 'Connection failed: ' . $e->getMessage());
         }
     }
-
-
-        /* 
-
-        // ====================================
-        // EMAIL VERIFICATION SETUP
-        // ====================================
-        $credentials = ['email' => $this->email, 'password' => $this->password];
-
-        if (Auth::validate($credentials)) {
-          $user = Auth::getProvider()->retrieveByCredentials($credentials);
-
-                // Generate OTP
-                $otp = rand(100000, 999999);
-
-                // Store OTP in session
-                session([
-                    'otp' => $otp,
-                    'otp_expires' => Carbon::now()->addMinutes(5),
-                    'user_id' => $user->id,
-                    'user_email' => $user->email,
-                ]);
-
-                // Send OTP email
-                Mail::raw("Your OTP code is: {$otp}", function ($message) use ($user) {
-                    $message->to($user->email)
-                            ->subject('Login OTP Verification');
-                });
-
-                // Redirect to OTP verification component
-                return redirect()->route('otp.verify');
-            }
-
-            $this->addError('email', 'Invalid credentials.');
-
-            */
-    
 
     public function render()
     {

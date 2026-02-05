@@ -29,7 +29,11 @@
                 @endif>
                 <div @class('row g-4')>
                     @forelse($jobs as $job)
-                        <div @class('col col-lg-4')>
+                        <div @class([
+                            'col-12', 
+                            'col-md-6', 
+                            $showDetails ? 'col-lg-12 col-xl-6' : 'col-lg-4'
+                        ])>
                             <div @class('card shadow-sm h-100 ' . ($selectedJob && $selectedJob->id === $job->id ? 'border border-3 border-warning' : ''))>
                                 <div @class('card-body d-flex flex-column')>
                                     <h4 @class('h5 mb-3')>{{ $job->position }}</h4>

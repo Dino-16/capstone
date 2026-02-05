@@ -21,6 +21,8 @@ class JobPostings extends Component
     #[Url]
     public $jobListSort = 'position_asc';
 
+    public $filterMonth;
+
     public $type = 'On-Site';
     public $arrangement = 'Full-Time';
     public $expiration_date;
@@ -224,6 +226,10 @@ class JobPostings extends Component
                 ->orWhere('type', 'like', '%' . $this->search . '%')
                 ->orWhere('arrangement', 'like', '%' . $this->search . '%');
             });
+        }
+
+        if (!empty($this->filterMonth)) {
+            $query->whereMonth('expiration_date', $this->filterMonth);
         }
 
         $jobs = $query->where('status', 'Active')->latest()->paginate(10);

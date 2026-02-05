@@ -32,7 +32,7 @@
                             </div>
                             <h4 class="card-title fw-bold mb-3">HR 2</h4>
                             <p class="card-text text-muted small mb-4">Human Resources Department System 2</p>
-                            <a href="#" class="btn btn-outline-success w-100 rounded-pill">
+                            <a href="https://hr2.jetlougetravels-ph.com/admin/login" class="btn btn-outline-success w-100 rounded-pill">
                                 Login to HR 2
                             </a>
                         </div>
@@ -48,7 +48,7 @@
                             </div>
                             <h4 class="card-title fw-bold mb-3">HR 3</h4>
                             <p class="card-text text-muted small mb-4">Human Resources Department System 3</p>
-                            <a href="#" class="btn btn-outline-warning w-100 rounded-pill">
+                            <a href="https://hr3.jetlougetravels-ph.com/admin/login" class="btn btn-outline-warning w-100 rounded-pill">
                                 Login to HR 3
                             </a>
                         </div>
@@ -64,7 +64,7 @@
                             </div>
                             <h4 class="card-title fw-bold mb-3">HR 4</h4>
                             <p class="card-text text-muted small mb-4">Human Resources Department System 4</p>
-                            <a href="#" class="btn btn-outline-danger w-100 rounded-pill">
+                            <a href="https://hr4.jetlougetravels-ph.com/login" class="btn btn-outline-danger w-100 rounded-pill">
                                 Login to HR 4
                             </a>
                         </div>
@@ -80,7 +80,7 @@
                             </div>
                             <h4 class="card-title fw-bold mb-3">ESS</h4>
                             <p class="card-text text-muted small mb-4">Employee Self-Service Portal</p>
-                            <a href="#" class="btn btn-outline-info w-100 rounded-pill">
+                            <a href="https://hr2.jetlougetravels-ph.com/employee/login" class="btn btn-outline-info w-100 rounded-pill">
                                 Login to ESS
                             </a>
                         </div>

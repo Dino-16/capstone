@@ -28,6 +28,7 @@ class EvaluationRecords extends Component
     public $overallScore;
     public $performanceAreas;
     public $notes;
+    public $employmentDate;
     public $status = 'Pending';
 
     protected $paginationTheme = 'bootstrap';
@@ -72,6 +73,7 @@ class EvaluationRecords extends Component
         $this->overallScore = $evaluation->overall_score;
         $this->performanceAreas = $evaluation->performance_areas;
         $this->notes = $evaluation->notes;
+        $this->employmentDate = $evaluation->employment_date ? $evaluation->employment_date->format('Y-m-d') : null;
         $this->status = $evaluation->status;
         $this->showEditModal = true;
     }
@@ -85,6 +87,7 @@ class EvaluationRecords extends Component
                 'evaluationDate' => 'required|date',
                 'evaluatorName' => 'required|string|max:255',
                 'overallScore' => 'required|numeric|min:0|max:100',
+                'employmentDate' => 'nullable|date',
                 'performanceAreas' => 'required|string',
                 'status' => 'required|in:Draft,Ongoing,Completed',
             ]);
@@ -98,6 +101,7 @@ class EvaluationRecords extends Component
                 'evaluator_name' => $this->evaluatorName,
                 'overall_score' => $this->overallScore,
                 'performance_areas' => $this->performanceAreas,
+                'employment_date' => $this->employmentDate,
                 'notes' => $this->notes,
                 'status' => $this->status,
             ]);
@@ -113,6 +117,11 @@ class EvaluationRecords extends Component
 
     public function deleteEvaluation($id)
     {
+        if (auth()->user()->role !== 'Super Admin') {
+            session()->flash('error', 'Unauthorized action.');
+            return;
+        }
+
         $evaluation = Evaluation::find($id);
         
         if ($evaluation) {

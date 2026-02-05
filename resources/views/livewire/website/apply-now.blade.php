@@ -160,13 +160,24 @@
                     <x-input-error field="applicantGender" />
                 </div>
 
+                <div class="col-md-2">
+                    <x-input-label for="applicant-civil-status" :value="__('Civil Status')" />
+                    <select wire:model.live="applicantCivilStatus" id="applicant-civil-status" class="form-select form-select-lg">
+                        <option value="">Select Status</option>
+                        @foreach(['Single', 'Married', 'Widowed', 'Separated', 'Divorced'] as $status)
+                            <option value="{{ $status }}">{{ $status }}</option>
+                        @endforeach
+                    </select>
+                    <x-input-error field="applicantCivilStatus" />
+                </div>
+
                 <div class="col-md-3">
                     <x-input-label for="applicant-dob" :value="__('Date of Birth')" />
                     <x-text-input wire:model.blur="applicantDateOfBirth" type="date" id="applicant-dob" class="form-control-lg" />
                     <x-input-error field="applicantDateOfBirth" />
                 </div>
 
-                <div class="col-md-5">
+                <div class="col-md-3">
                     <x-input-label for="applicant-phone" :value="__('Phone Number')" />
                     <x-text-input wire:model.blur="applicantPhone" type="text" id="applicant-phone" class="form-control-lg" />
                     <x-input-error field="applicantPhone" />

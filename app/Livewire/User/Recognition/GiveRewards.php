@@ -176,6 +176,11 @@ class GiveRewards extends Component
 
     public function deleteRewardGiven($id)
     {
+        if (auth()->user()->role !== 'Super Admin') {
+            session()->flash('error', 'Unauthorized action.');
+            return;
+        }
+
         $rewardGiven = GiveReward::find($id);
         
         if ($rewardGiven) {

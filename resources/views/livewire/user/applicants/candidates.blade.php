@@ -14,19 +14,32 @@
         <div @class('d-flex align-items-center gap-3')>
             {{-- SEARCH BAR --}}
             <div>
-                <x-text-input
-                    type="search"
+                <x-search-input
                     wire:model.live="search" 
                     placeholder="Search candidates..."
                 />
             </div>
-            {{-- STATUS FILTER --}}
-            <div>
-                <select class="form-select" wire:model.live="statusFilter">
-                    <option value="">All Status</option>
-                    <option value="scheduled">Scheduled</option>
-                    <option value="interview_ready">Interview Ready</option>
-                </select>
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-funnel-fill me-2')></i>
+                    Filter: {{ $statusFilter ? ucfirst(str_replace('_', ' ', $statusFilter)) : 'All' }}
+                </button>
+
+                <ul @class('dropdown-menu')>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', '')">All Status</a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'scheduled')">Scheduled</a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'interview_ready')">Interview Ready</a>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>
@@ -123,59 +136,92 @@
                                     <span class="text-muted">Not scheduled</span>
                                 @endif
                             </td>
-                            <td>
-                                <div class="d-flex gap-1 flex-wrap">
-                                    {{-- View Details --}}
-                                    <button
-                                        type="button"
-                                        @class('btn btn-outline-info btn-sm')
-                                        wire:click="viewCandidate({{ $candidate->id }})"
-                                        title="View Details"
-                                    >
-                                        <i @class('bi bi-eye-fill')></i>
-                                    </button>
-                                    
-                                    {{-- Send Scheduling Link --}}
-                                    @if($candidate->status === 'scheduled' && !$candidate->self_scheduled)
+                             <td>
+                                 <div class="d-flex gap-2 flex-wrap">
+                                    {{-- Edit Candidate --}}
+                                    @if(session('user.position') === 'Super Admin')
                                         <button
                                             type="button"
-                                            @class('btn btn-outline-primary btn-sm')
-                                            wire:click="openSendLinkModal({{ $candidate->id }})"
-                                            title="Send Self-Scheduling Link"
+                                            @class('btn btn-sm btn-danger')
+                                            wire:click="deleteCandidate({{ $candidate->id }})"
+                                            wire:confirm="Are you sure you want to delete this candidate?"
+                                            title="Delete"
                                         >
-                                            <i @class('bi bi-send')></i>
+                                            <i @class('bi bi-trash')></i>
                                         </button>
                                     @endif
 
-                                    {{-- Reschedule --}}
-                                    <button
-                                        type="button"
-                                        @class('btn btn-outline-warning btn-sm')
-                                        wire:click="openRescheduleModal({{ $candidate->id }})"
-                                        title="Reschedule Interview"
-                                    >
-                                        <i @class('bi bi-calendar2-plus')></i>
-                                    </button>
-
-                                    {{-- Promote to Interview --}}
-                                    @if($candidate->interview_schedule && $candidate->status === 'scheduled')
+                                    {{-- Edit Candidate --}}
+                                    @if(session('user.position') === 'HR Manager')
                                         <button
                                             type="button"
-                                            @class('btn btn-success btn-sm')
-                                            wire:click="promoteToInterview({{ $candidate->id }})"
-                                            title="Move to Interviews"
+                                            @class('btn btn-sm btn-outline-primary')
+                                            wire:click="editCandidate({{ $candidate->id }})"
+                                            title="Edit Details"
                                         >
-                                            <i @class('bi bi-arrow-right-circle')></i> Ready
+                                            <i @class('bi bi-pencil')></i>
                                         </button>
                                     @endif
-                                </div>
-                            </td>
+
+                                     {{-- View Details --}}
+                                     <button
+                                         type="button"
+                                         @class('btn btn-sm btn-outline-primary')
+                                         wire:click="viewCandidate({{ $candidate->id }})"
+                                         title="View Details"
+                                     >
+                                         <i @class('bi bi-eye')></i>
+                                     </button>
+                                     
+                                     {{-- Send Scheduling Link --}}
+                                     @if($candidate->status === 'scheduled' && !$candidate->self_scheduled)
+                                         <button
+                                             type="button"
+                                             @class('btn btn-sm btn-outline-primary')
+                                             wire:click="openSendLinkModal({{ $candidate->id }})"
+                                             title="Send Self-Scheduling Link"
+                                         >
+                                             <i @class('bi bi-send')></i>
+                                         </button>
+                                     @endif
+ 
+                                     {{-- Reschedule --}}
+                                     <button
+                                         type="button"
+                                         @class('btn btn-sm btn-outline-warning')
+                                         wire:click="openRescheduleModal({{ $candidate->id }})"
+                                         title="Reschedule Interview"
+                                     >
+                                         <i @class('bi bi-calendar2-plus')></i>
+                                     </button>
+ 
+                                     {{-- Promote to Interview --}}
+                                     @if($candidate->interview_schedule && $candidate->status === 'scheduled')
+                                         <button
+                                             type="button"
+                                             @class('btn btn-sm btn-success')
+                                             wire:click="promoteToInterview({{ $candidate->id }})"
+                                             title="Move to Interviews"
+                                         >
+                                             <i @class('bi bi-arrow-right-circle')></i>
+                                         </button>
+                                     @endif
+                                 </div>
+                             </td>
                         </tr>
                     @empty
                         <tr>
                             <td colspan="7" @class('text-center text-muted py-5')>
-                                <i @class('bi bi-person-x d-block mx-auto fs-1')></i>
-                                <div class="mt-3">No candidates found.</div>
+                                @if($search)
+                                    <i @class('bi bi-search d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No candidates found matching "{{ $search }}".</div>
+                                @elseif($statusFilter)
+                                    <i @class('bi bi-person-x d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No {{ str_replace('_', ' ', $statusFilter) }} candidates found.</div>
+                                @else
+                                    <i @class('bi bi-person-x d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No candidates found.</div>
+                                @endif
                             </td>
                         </tr>
                     @endforelse
@@ -183,6 +229,50 @@
             </table>
             {{ $candidates->links() }}
         </div>
+    @endif
+
+    {{-- Edit Candidate Modal --}}
+    @if($showEditModal)
+    <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-white border-bottom">
+                    <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Edit Candidate</h5>
+                    <button type="button" class="btn-close" wire:click="closeEditModal"></button>
+                </div>
+                <div class="modal-body">
+                    <form wire:submit.prevent="updateCandidate">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Name</label>
+                                <input type="text" class="form-control" wire:model="candidate_name">
+                                @error('candidate_name') <span class="text-danger small">{{ $message }}</span> @enderror
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" wire:model="candidate_email">
+                                @error('candidate_email') <span class="text-danger small">{{ $message }}</span> @enderror
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Phone</label>
+                                <input type="text" class="form-control" wire:model="candidate_phone">
+                            </div>
+                             <div class="col-md-6 mb-3">
+                                <label class="form-label">Applied Position</label>
+                                <input type="text" class="form-control" wire:model="applied_position">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" wire:click="closeEditModal">Close</button>
+                    <button type="button" class="btn btn-primary" wire:click="updateCandidate">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
     @endif
 
     {{-- View Candidate Modal --}}

@@ -150,8 +150,7 @@
     {{-- HEADER ACTIONS --}}
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div class="d-flex align-items-center gap-2">
-            <x-text-input
-                type="search"
+            <x-search-input
                 wire:model.live.debounce.3s="search"
                 placeholder="Search saved reports..."
             />
@@ -162,10 +161,10 @@
                 type="button"
                 id="filterDropdown"
                 data-bs-toggle="dropdown"
-                class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center"
+                @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
             >
-                <i class="bi bi-funnel-fill me-2"></i>
-                Filter: {{ $typeFilter === 'All' ? 'All Types' : $reportTypes[$typeFilter] ?? $typeFilter }}
+                <i @class('bi bi-funnel-fill me-2')></i>
+                Filter: {{ $typeFilter === 'All' ? 'All Types' : ($reportTypes[$typeFilter] ?? $typeFilter) }}
             </button>
 
             <ul class="dropdown-menu" aria-labelledby="filterDropdown">
@@ -240,21 +239,33 @@
                             <div>{{ $report->created_at->format('M d, Y') }}</div>
                             <small class="text-muted">{{ $report->created_at->format('h:i A') }}</small>
                         </td>
-                        <td class="text-center">
-                            <button
-                                wire:click="quickGenerate('{{ $report->report_type }}')"
-                                class="btn btn-success btn-sm"
-                                title="Download Report"
-                                wire:loading.attr="disabled"
-                            >
-                                <span wire:loading.remove wire:target="quickGenerate('{{ $report->report_type }}')">
-                                    <i class="bi bi-download"></i>
-                                </span>
-                                <span wire:loading wire:target="quickGenerate('{{ $report->report_type }}')">
-                                    <span class="spinner-border spinner-border-sm"></span>
-                                </span>
-                            </button>
-                        </td>
+                         <td class="text-center">
+                             <div class="d-flex justify-content-center gap-2">
+                                 <button
+                                     wire:click="quickGenerate('{{ $report->report_type }}')"
+                                     class="btn btn-sm btn-outline-success"
+                                     title="Download Report"
+                                     wire:loading.attr="disabled"
+                                 >
+                                     <span wire:loading.remove wire:target="quickGenerate('{{ $report->report_type }}')">
+                                         <i class="bi bi-download"></i>
+                                     </span>
+                                     <span wire:loading wire:target="quickGenerate('{{ $report->report_type }}')">
+                                         <span class="spinner-border spinner-border-sm"></span>
+                                     </span>
+                                 </button>
+                                 @if(session('user.position') === 'HR Manager')
+                                 <button 
+                                     class="btn btn-sm btn-danger" 
+                                     title="Delete Report"
+                                     wire:click="deleteReport({{ $report->id }})"
+                                     wire:confirm="Are you sure you want to delete this report?"
+                                 >
+                                     <i class="bi bi-trash"></i>
+                                 </button>
+                                 @endif
+                             </div>
+                         </td>
                     </tr>
                 @empty
                     <tr>

@@ -16,6 +16,7 @@ return new class extends Migration
             
             $table->string('applied_position');
             $table->string('department');
+            $table->enum('status', ['active', 'drafted'])->default('active');
 
             // Personal Info
             $table->string('first_name');
@@ -23,7 +24,9 @@ return new class extends Migration
             $table->string('last_name');
             $table->string('suffix_name')->nullable();
             $table->integer('age');
+            $table->date('date_of_birth')->nullable();
             $table->enum('gender', ['male', 'female']);
+            $table->string('civil_status')->nullable();
             // Contact & Address
             $table->string('email');
             $table->string('phone');

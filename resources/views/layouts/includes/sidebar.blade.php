@@ -19,8 +19,16 @@
     {{-- Navigation Menu --}}
     <ul @class('nav flex-column')>
         <li @class("nav-item")>
-            <a href="{{ route('dashboard') }}"
-                @class('nav-link text-dark ' . (request()->is('dashboard') ? 'active' : ''))>
+            @php
+                $position = session('user.position');
+                $dashboardRoute = 'dashboard';
+                $isSuperAdmin = ($position === 'Super Admin');
+                
+                if ($isSuperAdmin) $dashboardRoute = 'superadmin.dashboard';
+                elseif ($position === 'HR Manager') $dashboardRoute = 'admin.dashboard';
+            @endphp
+            <a href="{{ route($dashboardRoute) }}"
+                @class('nav-link text-dark ' . (request()->is('dashboard') || request()->is('admin/dashboard') || request()->is('admin/superadmin/dashboard') ? 'active' : ''))>
                 <i @class('bi bi-grid me-2')></i> Dashboard
             </a>
         </li>
@@ -213,41 +221,55 @@
             </a>
         </li>
 
-        {{-- Security Menu (HR Manager only) --}}
-        @if(session('user.position') === 'HR Manager')
+        {{-- Security Menu (Super Admin only) --}}
+        @if(session('user.position') === 'Super Admin')
+        <li @class("nav-item")>
+            <a href="{{ route('superadmin.tickets.index') }}" @class('nav-link text-dark' . (request()->is('admin/superadmin/tickets') ? 'active' : ''))>
+                <i class="bi bi-ticket-perforated me-2"></i> Ticket Requests
+            </a>
+        </li>
         <li @class("nav-item")>
             <a href="#securityMenu"
             role="button"
-            aria-expanded="{{ (request()->is('admin/recaptcha') || request()->is('admin/mfa') || request()->is('admin/honeypots')) ? 'true' : 'false' }}"
+            aria-expanded="{{ (request()->is('admin/superadmin/recaptcha') || request()->is('admin/superadmin/mfa') || request()->is('admin/superadmin/honeypots')) ? 'true' : 'false' }}"
             aria-controls="securityMenu"
             data-bs-toggle="collapse"
             @class("nav-link text-dark d-flex justify-content-between align-items-center")>
-                <span><i @class('bi bi-shield-lock me-2')></i> Security</span>
+                <span><i @class('bi bi-shield-lock me-2')></i> Security Settings</span>
                 <i @class('bi bi-chevron-down small')></i>
             </a>
 
-            <div id="securityMenu" @class('collapse ps-4 ' . ((request()->is('admin/recaptcha') || request()->is('admin/mfa') || request()->is('admin/honeypots')) ? 'show' : ''))>
+            <div id="securityMenu" @class('collapse ps-4 ' . ((request()->is('admin/superadmin/recaptcha') || request()->is('admin/superadmin/mfa') || request()->is('admin/superadmin/honeypots')) ? 'show' : ''))>
                 <ul @class('nav flex-column')>
                     <li @class("nav-item")>
-                        <a href="{{ route('admin.recaptcha') }}"
-                            @class('nav-link text-dark' . (request()->is('admin/recaptcha') ? 'active' : ''))>
+                        <a href="{{ route('superadmin.recaptcha') }}"
+                            @class('nav-link text-dark' . (request()->is('admin/superadmin/recaptcha') ? 'active' : ''))>
                             <i @class('bi bi-robot me-2')></i> Recaptcha
                         </a>
                     </li>
                     <li @class("nav-item")>
-                        <a href="{{ route('admin.mfa') }}"
-                            @class('nav-link text-dark' . (request()->is('admin/mfa') ? 'active' : ''))>
+                        <a href="{{ route('superadmin.mfa') }}"
+                            @class('nav-link text-dark' . (request()->is('admin/superadmin/mfa') ? 'active' : ''))>
                             <i @class('bi bi-key-fill me-2')></i> MFA Settings
                         </a>
                     </li>
                     <li @class("nav-item")>
-                        <a href="{{ route('admin.honeypots') }}"
-                            @class('nav-link text-dark' . (request()->is('admin/honeypots') ? 'active' : ''))>
+                        <a href="{{ route('superadmin.honeypots') }}"
+                            @class('nav-link text-dark' . (request()->is('admin/superadmin/honeypots') ? 'active' : ''))>
                             <i @class('bi bi-bug-fill me-2')></i> Honeypots
                         </a>
                     </li>
                 </ul>
             </div>
+        </li>
+        @endif
+
+        {{-- HR Manager Support Ticket Link --}}
+        @if(session('user.position') === 'HR Manager')
+        <li class="nav-item">
+            <a href="{{ route('admin.tickets.index') }}" @class('nav-link text-dark' . (request()->is('admin/support/*') ? 'active' : ''))>
+                <i class="bi bi-life-preserver me-2"></i> Support Tickets
+            </a>
         </li>
         @endif
 

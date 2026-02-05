@@ -97,21 +97,38 @@
         <div @class('d-flex align-items-center gap-3')>
             {{-- SEARCH BAR --}}
             <div>
-                <x-text-input
-                    type="search"
+                <x-search-input
                     wire:model.live="search" 
                     placeholder="Search candidates..."
                 />
             </div>
-            {{-- CONTRACT STATUS FILTER --}}
-            <div>
-                <select class="form-select" wire:model.live="statusFilter">
-                    <option value="">All Contract Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="sent">Sent</option>
-                    <option value="signed">Signed</option>
-                    <option value="declined">Declined</option>
-                </select>
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-funnel-fill me-2')></i>
+                    Filter: {{ $statusFilter ? ucfirst($statusFilter) : 'All' }}
+                </button>
+
+                <ul @class('dropdown-menu')>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', '')">All Contract Status</a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'pending')">Pending</a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'sent')">Sent</a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'signed')">Signed</a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'declined')">Declined</a>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>
@@ -207,79 +224,111 @@
                                 <span class="badge bg-secondary">Not Sent</span>
                             @endif
                         </td>
-                        <td>
-                            <div class="d-flex gap-1 flex-wrap">
-                                {{-- View Details --}}
-                                <button
-                                    type="button"
-                                    @class('btn btn-outline-info btn-sm')
-                                    wire:click="viewCandidate({{ $candidate->id }})"
-                                    title="View Details"
-                                >
-                                    <i @class('bi bi-eye-fill')></i>
-                                </button>
+                         <td>
+                             <div class="d-flex gap-2 flex-wrap">
+                                 {{-- View Details --}}
+                                 <button
+                                     type="button"
+                                     @class('btn btn-sm btn-outline-primary')
+                                     wire:click="viewCandidate({{ $candidate->id }})"
+                                     title="View Details"
+                                 >
+                                     <i @class('bi bi-eye')></i>
+                                 </button>
+                                 
+                                 @if(session('user.position') === 'Super Admin')
+                                     <button
+                                         type="button"
+                                         @class('btn btn-sm btn-danger')
+                                         wire:click="deleteCandidate({{ $candidate->id }})"
+                                         wire:confirm="Are you sure you want to delete this candidate?"
+                                         title="Delete"
+                                     >
+                                         <i @class('bi bi-trash')></i>
+                                     </button>
+                                 @endif
+ 
+                                 {{-- Update Contract Status --}}
+                                 <button
+                                     type="button"
+                                     @class('btn btn-sm btn-outline-secondary')
+                                     wire:click="openContractModal({{ $candidate->id }})"
+                                     title="Update Contract Status"
+                                 >
+                                     <i @class('bi bi-file-earmark-text')></i>
+                                 </button>
+ 
+                                 {{-- Send Contract Email --}}
+                                 @if($candidate->contract_status === 'pending' || $candidate->contract_status === 'sent')
+                                     <button
+                                         type="button"
+                                         @class('btn btn-sm btn-outline-info')
+                                         wire:click="openContractEmailModal({{ $candidate->id }})"
+                                         title="Send Contract Email"
+                                     >
+                                         <i @class('bi bi-send-plus-fill me-1')></i>Contract
+                                     </button>
+                                 @endif
 
-                                {{-- Update Contract Status --}}
-                                <button
-                                    type="button"
-                                    @class('btn btn-outline-secondary btn-sm')
-                                    wire:click="openContractModal({{ $candidate->id }})"
-                                    title="Update Contract Status"
-                                >
-                                    <i @class('bi bi-file-earmark-text')></i>
-                                </button>
-
-                                {{-- Quick Sign (if contract sent) --}}
-                                @if($candidate->contract_status === 'sent')
-                                    <button
-                                        type="button"
-                                        @class('btn btn-success btn-sm')
-                                        wire:click="markContractSigned({{ $candidate->id }})"
-                                        title="Mark as Signed"
-                                    >
-                                        <i @class('bi bi-check2-square')></i>
-                                    </button>
-                                @endif
-
-                                {{-- Send Document Email (if contract signed) --}}
-                                @if($candidate->contract_status === 'signed' && !$candidate->documents_email_sent)
-                                    <button
-                                        type="button"
-                                        @class('btn btn-primary btn-sm')
-                                        wire:click="openEmailModal({{ $candidate->id }})"
-                                        title="Send Document Requirements Email"
-                                    >
-                                        <i @class('bi bi-envelope-fill me-1')></i>Email
-                                    </button>
-                                @endif
-
-                                {{-- Complete Onboarding --}}
-                                @if($candidate->contract_status === 'signed' && $candidate->documents_email_sent && $candidate->status !== 'hired')
-                                    <button
-                                        type="button"
-                                        @class('btn btn-warning btn-sm')
-                                        wire:click="completeOnboarding({{ $candidate->id }})"
-                                        title="Complete Onboarding"
-                                    >
-                                        <i @class('bi bi-person-check me-1')></i>Hire
-                                    </button>
-                                @endif
-
-                                {{-- Hired Badge --}}
-                                @if($candidate->status === 'hired')
-                                    <span class="badge bg-success fs-6 ms-2">
-                                        <i class="bi bi-trophy me-1"></i>HIRED
-                                    </span>
-                                @endif
-                            </div>
-                        </td>
+                                 {{-- Quick Sign (if contract sent) --}}
+                                 @if($candidate->contract_status === 'sent')
+                                     <button
+                                         type="button"
+                                         @class('btn btn-sm btn-success')
+                                         wire:click="markContractSigned({{ $candidate->id }})"
+                                         title="Mark as Signed"
+                                     >
+                                         <i @class('bi bi-check2-square')></i>
+                                     </button>
+                                 @endif
+ 
+                                 {{-- Send Document Email (if contract signed) --}}
+                                 @if($candidate->contract_status === 'signed' && !$candidate->documents_email_sent)
+                                     <button
+                                         type="button"
+                                         @class('btn btn-sm btn-outline-primary')
+                                         wire:click="openEmailModal({{ $candidate->id }})"
+                                         title="Send Document Requirements Email"
+                                     >
+                                         <i @class('bi bi-envelope-fill me-1')></i>Email
+                                     </button>
+                                 @endif
+ 
+                                 {{-- Complete Onboarding --}}
+                                 @if($candidate->contract_status === 'signed' && $candidate->documents_email_sent && $candidate->status !== 'hired')
+                                     <button
+                                         type="button"
+                                         @class('btn btn-sm btn-success')
+                                         wire:click="completeOnboarding({{ $candidate->id }})"
+                                         title="Complete Onboarding"
+                                     >
+                                         <i @class('bi bi-person-check me-1')></i>Hire
+                                     </button>
+                                 @endif
+ 
+                                 {{-- Hired Badge --}}
+                                 @if($candidate->status === 'hired')
+                                     <span class="badge bg-success fs-6 ms-2">
+                                         <i class="bi bi-trophy me-1"></i>HIRED
+                                     </span>
+                                 @endif
+                             </div>
+                         </td>
                     </tr>
                 @empty
                     <tr>
                         <td colspan="6" @class('text-center text-muted py-5')>
-                            <i @class('bi bi-file-earmark-x d-block mx-auto fs-1')></i>
-                            <div class="mt-3">No candidates in offering stage.</div>
-                            <small>Candidates who pass interview will appear here.</small>
+                            @if($search)
+                                <i @class('bi bi-search d-block mx-auto fs-1')></i>
+                                <div class="mt-3">No candidates found matching "{{ $search }}".</div>
+                            @elseif($statusFilter)
+                                <i @class('bi bi-funnel d-block mx-auto fs-1')></i>
+                                <div class="mt-3">No candidates with "{{ $statusFilter }}" contract status found.</div>
+                            @else
+                                <i @class('bi bi-file-earmark-x d-block mx-auto fs-1')></i>
+                                <div class="mt-3">No candidates in offering stage.</div>
+                                <small>Candidates who pass interview will appear here.</small>
+                            @endif
                         </td>
                     </tr>
                 @endforelse
@@ -455,6 +504,54 @@
                     <button type="button" class="btn btn-primary btn-lg" wire:click="sendDocumentEmail" wire:loading.attr="disabled">
                         <span wire:loading.remove><i class="bi bi-send me-1"></i>Send Email</span>
                         <span wire:loading>Sending...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+ 
+    {{-- CONTRACT EMAIL MODAL --}}
+    @if($showContractEmailModal)
+    <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-white border-bottom shadow-sm">
+                    <h5 class="modal-title text-primary"><i class="bi bi-file-earmark-medical me-2"></i>Send Employment Contract</h5>
+                    <button type="button" class="btn-close" wire:click="closeContractEmailModal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Email Subject</label>
+                        <input type="text" class="form-control" wire:model="contractEmailSubject">
+                        @error('contractEmailSubject') <div class="text-danger small">{{ $message }}</div> @enderror
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Contract Content</label>
+                        <div class="bg-white border p-4 rounded shadow-sm">
+                            <textarea 
+                                class="form-control border-0 font-monospace" 
+                                wire:model="contractEmailContent" 
+                                rows="15"
+                                style="font-size: 0.9rem; resize: none; background: transparent;"
+                            ></textarea>
+                        </div>
+                        @error('contractEmailContent') <div class="text-danger small">{{ $message }}</div> @enderror
+                    </div>
+
+                    <div class="alert alert-info border-0 shadow-sm d-flex align-items-center">
+                        <i class="bi bi-info-circle-fill me-3 fs-4"></i>
+                        <div>
+                            Sending this email will automatically update the candidate's contract status to <strong>"Sent"</strong> and record the timestamp.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white border-top">
+                    <button type="button" class="btn btn-outline-secondary" wire:click="closeContractEmailModal">Cancel</button>
+                    <button type="button" class="btn btn-primary px-4" wire:click="sendContractEmail" wire:loading.attr="disabled">
+                        <span wire:loading.remove><i class="bi bi-send-check-fill me-2"></i>Send Contract</span>
+                        <span wire:loading><span class="spinner-border spinner-border-sm me-2"></span>Sending...</span>
                     </button>
                 </div>
             </div>

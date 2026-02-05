@@ -13,13 +13,42 @@
             {{-- HEADER ACTIONS --}}
             <div @class('d-flex justify-content-between align-items-center mb-3')>
 
-                {{-- SEARCH BAR --}}
-                <div>
-                    <x-text-input
-                        type="search"
-                        wire:model.live.debounce.3s="search"
-                        placeholder="Search..."
-                    />
+                <div class="d-flex gap-2">
+                    {{-- SEARCH BAR --}}
+                    <div>
+                        <x-search-input
+                            wire:model.live.debounce.3s="search"
+                            placeholder="Search..."
+                        />
+                    </div>
+
+                    {{-- MONTH FILTER DROPDOWN --}}
+                    <div @class('dropdown')>
+                        <button
+                            type="button"
+                            id="monthFilterDropdown"
+                            data-bs-toggle="dropdown"
+                            @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                        >
+                            <i @class('bi bi-funnel-fill me-2')></i>
+                            Filter: {{ $filterMonth ? \Carbon\Carbon::create()->month($filterMonth)->format('F') : 'All Months' }}
+                        </button>
+
+                        <ul @class('dropdown-menu') aria-labelledby="monthFilterDropdown" style="max-height: 300px; overflow-y: auto;">
+                            <li>
+                                <a @class('dropdown-item') wire:click="$set('filterMonth', '')">
+                                    All Months
+                                </a>
+                            </li>
+                            @foreach(range(1, 12) as $m)
+                                <li>
+                                    <a @class('dropdown-item') wire:click="$set('filterMonth', {{ $m }})">
+                                        {{ \Carbon\Carbon::create()->month($m)->format('F') }}
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
                 </div>
 
                 <div >
@@ -27,7 +56,7 @@
                         @class('btn btn-success')
                         wire:click="export"
                     >
-                        Export to Excel
+                        Export
                     </button>
                 </div>
             </div>
@@ -62,25 +91,37 @@
                                 <td><span class="badge bg-success">{{ $job->status }}</span></td>
                                 <td>
                                     <div class="d-flex gap-1">
+                                        @if(session('user.position') === 'HR Manager')
                                         <button wire:click="editJob({{ $job->id }})" 
                                             class="btn btn-sm btn-outline-primary"
                                             title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </button>
+                                        @endif
+                                        @if(session('user.position') === 'Super Admin')
                                         <button wire:click="deactivateJob({{ $job->id }})" 
                                             class="btn btn-sm btn-outline-danger"
                                             title="Remove"
                                             onclick="return confirm('Are you sure you want to remove this job?')">
                                             <i class="bi bi-trash"></i>
                                         </button>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" @class('text-center text-muted py-5')>
-                                    <i @class('bi bi-briefcase d-block mx-auto fs-1')></i>
-                                    <div class="mt-3">No Active Jobs.</div>
+                                <td colspan="7" @class('text-center text-muted py-5')>
+                                    @if($search)
+                                        <i @class('bi bi-search d-block mx-auto fs-1')></i>
+                                        <div class="mt-3">No jobs found matching "{{ $search }}".</div>
+                                    @elseif($filterMonth)
+                                        <i @class('bi bi-calendar-x d-block mx-auto fs-1')></i>
+                                        <div class="mt-3">No jobs expiring in {{ \Carbon\Carbon::create()->month($filterMonth)->format('F') }}.</div>
+                                    @else
+                                        <i @class('bi bi-briefcase d-block mx-auto fs-1')></i>
+                                        <div class="mt-3">No Active Jobs.</div>
+                                    @endif
                                 </td>
                             </tr>
                         @endforelse
@@ -176,7 +217,7 @@
                                         $positionJson = json_encode($position);
                                     @endphp
                                     <button 
-                                        @class('btn btn-sm btn-primary ms-2')
+                                        @class('btn btn-sm btn-outline-primary ms-2')
                                         wire:click="activateApiPosition({{ $positionJson }})"
                                         wire:loading.attr="disabled"
                                         wire:target="activateApiPosition({{ $positionJson }})"

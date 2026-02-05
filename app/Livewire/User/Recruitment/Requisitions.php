@@ -15,6 +15,13 @@ class Requisitions extends Component
     public $statusFilter = 'All';
     public $showDrafts = false;
 
+    // Edit Modal Properties
+    public $showEditModal = false;
+    public $editingId;
+    public $position;
+    public $department;
+    public $opening;
+
     // Actions 
     public function approve($id)
     {
@@ -73,6 +80,54 @@ class Requisitions extends Component
     public function clearStatus()
     {
         session()->forget('status');
+    }
+
+    public function deleteRequisition($id)
+    {
+        if (auth()->user()->role !== 'Super Admin') {
+            session()->push('status', 'Unauthorized action.');
+            return;
+        }
+        
+        $requisition = Requisition::findOrFail($id);
+        $requisition->delete();
+        session()->push('status', 'Requisition deleted successfully!');
+    }
+
+    public function editRequisition($id)
+    {
+        $requisition = Requisition::findOrFail($id);
+        $this->editingId = $id;
+        $this->position = $requisition->position;
+        $this->department = $requisition->department;
+        $this->opening = $requisition->opening;
+        $this->showEditModal = true;
+    }
+
+    public function closeEditModal()
+    {
+        $this->showEditModal = false;
+        $this->resetValidation();
+        $this->reset(['editingId', 'position', 'department', 'opening']);
+    }
+
+    public function updateRequisition()
+    {
+        $this->validate([
+            'position' => 'required|string|max:255',
+            'department' => 'required|string|max:255',
+            'opening' => 'required|integer|min:1',
+        ]);
+
+        $requisition = Requisition::findOrFail($this->editingId);
+        $requisition->update([
+            'position' => $this->position,
+            'department' => $this->department,
+            'opening' => $this->opening,
+        ]);
+
+        $this->showEditModal = false;
+        session()->push('status', 'Requisition updated successfully!');
     }
 
     public function render()

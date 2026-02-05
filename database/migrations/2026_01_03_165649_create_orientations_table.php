@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('employee_name')->unique();
             $table->string('email')->nullable();
+            $table->string('position')->nullable();
             $table->datetime('orientation_date');
             $table->string('location');
             $table->string('facilitator');

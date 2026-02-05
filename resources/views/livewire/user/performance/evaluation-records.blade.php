@@ -18,8 +18,7 @@
             
             {{-- SEARCH BAR --}}
             <div>
-                <x-text-input
-                    type="search"
+                <x-search-input
                     wire:model.live.debounce.3s="search"
                     placeholder="Search..."
                 />
@@ -116,7 +115,7 @@
                     @class('btn btn-success')
                     wire:click="exportData"
                 >
-                    <i @class('bi bi-download me-2')></i>Export to CSV
+                    <i @class('bi bi-download me-2')></i>Export
                 </button>
 
                 @if(!$showDrafts)
@@ -208,7 +207,16 @@
                                 </div>
                             </td>
                             <td>
-                                {{ $evaluation->status }}
+                                @php
+                                    $statusClass = match(strtolower($evaluation->status)) {
+                                        'completed' => 'bg-success',
+                                        'draft' => 'bg-warning text-dark',
+                                        default => 'bg-secondary'
+                                    };
+                                @endphp
+                                <span class="badge {{ $statusClass }}">
+                                    {{ ucfirst($evaluation->status) }}
+                                </span>
                             </td>
                             <td>
                                 <div @class('d-flex align-items-center')>
@@ -217,36 +225,49 @@
                                 </div>
                             </td>
                             <td @class('gap-3')>
-                                <button
-                                    @class('btn btn-info btn-sm')
-                                    wire:click="viewEvaluation({{ $evaluation->id }})"
-                                    title="View Evaluation"
-                                >
-                                    <i @class('bi bi-eye-fill')></i>
-                                </button>
+                                <div class="d-flex gap-2">
+                                    <button
+                                        @class('btn btn-sm btn-outline-primary')
+                                        wire:click="viewEvaluation({{ $evaluation->id }})"
+                                        title="View Evaluation"
+                                    >
+                                        <i @class('bi bi-eye')></i>
+                                    </button>
 
-                                <button
-                                    @class('btn btn-primary btn-sm')
-                                    wire:click="editEvaluation({{ $evaluation->id }})"
-                                    title="Edit Evaluation"
-                                >
-                                    <i @class('bi bi-pencil-fill')></i>
-                                </button>
-
-                                <button
-                                    @class('btn btn-danger btn-sm')
-                                    wire:click="draft({{ $evaluation->id }})"
-                                    title="Draft Evaluation"
-                                >
-                                    <i @class('bi bi-journal-text')></i>
-                                </button>
+                                    <button
+                                        @class('btn btn-sm btn-outline-danger')
+                                        wire:click="draft({{ $evaluation->id }})"
+                                        title="Move to Draft"
+                                    >
+                                        <i @class('bi bi-journal-text')></i>
+                                    </button>
+                                    
+                                    @if(session('user.position') === 'Super Admin')
+                                    <button
+                                        @class('btn btn-sm btn-danger')
+                                        wire:click="deleteEvaluation({{ $evaluation->id }})"
+                                        wire:confirm="Are you sure you want to delete this evaluation?"
+                                        title="Delete"
+                                    >
+                                        <i @class('bi bi-trash')></i>
+                                    </button>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
                             <td colspan="9" @class('text-center text-muted py-5')>
-                                <i @class('bi bi-file-text d-block mx-auto fs-1')></i>
-                                <p @class('text-muted mb-0 mt-3')>No evaluation records found</p>
+                                @if($search)
+                                    <i @class('bi bi-search d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No evaluation records found matching "{{ $search }}".</div>
+                                @elseif($statusFilter)
+                                    <i @class('bi bi-funnel d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No {{ $statusFilter }} evaluation records found.</div>
+                                @else
+                                    <i @class('bi bi-file-text d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No evaluation records found.</div>
+                                @endif
                             </td>
                         </tr>
                     @endforelse
@@ -332,7 +353,11 @@
                                     </div>
                                 </div>
                             </td>
-                            <td>{{ $draft->status }}</td>
+                            <td>
+                                <span class="badge bg-warning text-dark">
+                                    {{ ucfirst($draft->status) }}
+                                </span>
+                            </td>
                             <td>
                                 @if($draft->performance_areas)
                                     <div @class('d-flex flex-wrap gap-1')>
@@ -358,21 +383,34 @@
                                 </div>
                             </td>
                             <td>
-                                <button
-                                    @class('btn btn-info btn-sm')
-                                    wire:click="viewEvaluation({{ $draft->id }})"
-                                    title="View Evaluation"
-                                >
-                                    <i @class('bi bi-eye-fill')></i>
-                                </button>
-                                
-                                <button
-                                    @class('btn btn-primary btn-sm')
-                                    wire:click="restore({{ $draft->id }})"
-                                    title="Restore Draft"
-                                >
-                                    <i @class('bi bi-bootstrap-reboot')></i>
-                                </button>
+                                <div class="d-flex gap-2">
+                                    <button
+                                        @class('btn btn-sm btn-outline-primary')
+                                        wire:click="viewEvaluation({{ $draft->id }})"
+                                        title="View Evaluation"
+                                    >
+                                        <i @class('bi bi-eye')></i>
+                                    </button>
+                                    
+                                    <button
+                                        @class('btn btn-sm btn-outline-warning')
+                                        wire:click="restore({{ $draft->id }})"
+                                        title="Restore Draft"
+                                    >
+                                        <i @class('bi bi-bootstrap-reboot')></i>
+                                    </button>
+
+                                    @if(session('user.position') === 'Super Admin')
+                                    <button
+                                        @class('btn btn-sm btn-danger')
+                                        wire:click="deleteEvaluation({{ $draft->id }})"
+                                        wire:confirm="Are you sure you want to delete this evaluation?"
+                                        title="Delete"
+                                    >
+                                        <i @class('bi bi-trash')></i>
+                                    </button>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -387,9 +425,6 @@
             {{ $drafts->links() }}
         </div>
     @endif
-{{-- Edit Evaluation Modal --}}
-    @include('livewire.user.performance.includes.evaluation-edit')
-    
     {{-- View Evaluation Modal --}}
     @include('livewire.user.performance.includes.evaluation-view')
 

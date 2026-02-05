@@ -13,7 +13,7 @@ class Evaluations extends Component
     // Form fields
     public $employeeName = '';
     public $email = '';
-    public $evaluationDate = '2026-01-15';
+    public $evaluationDate = ''; // Fixed: removed hardcoded 2026-01-15
     public $evaluatorName = 'HR Manager';
     public $position = '';
     public $department = '';
@@ -29,7 +29,7 @@ class Evaluations extends Component
     public $strengths = '';
     public $areasForImprovement = '';
     public $comments = '';
-    public $status = 'Draft';
+    public $status = 'Completed';
 
     // Employee search
     public $employees = [];
@@ -56,7 +56,6 @@ class Evaluations extends Component
         'strengths' => 'nullable|string',
         'areasForImprovement' => 'nullable|string',
         'comments' => 'nullable|string',
-        'status' => 'required|in:Draft,Ongoing,Completed',
     ];
 
     public function mount()
@@ -72,6 +71,10 @@ class Evaluations extends Component
             $this->email = $prefill['email'] ?? '';
             $this->position = $prefill['position'] ?? '';
             $this->department = $prefill['department'] ?? '';
+            $this->employmentDate = $prefill['employmentDate'] ?? '';
+            $this->evaluationDate = $prefill['evaluationDate'] ?? date('Y-m-d');
+        } else {
+            $this->evaluationDate = date('Y-m-d');
         }
     }
 
@@ -128,6 +131,18 @@ class Evaluations extends Component
         
         $this->email = $employee['email'] ?? null;
         $this->position = $employee['position'] ?? null;
+        
+        // Ensure employment date is in Y-m-d format for the date input
+        $rawDate = $employee['date_hired'] ?? $employee['employment_date'] ?? null;
+        if ($rawDate) {
+            try {
+                $this->employmentDate = \Carbon\Carbon::parse($rawDate)->format('Y-m-d');
+            } catch (\Exception $e) {
+                $this->employmentDate = null;
+            }
+        } else {
+            $this->employmentDate = null;
+        }
         
         // Handle department - could be string or object
         $department = $employee['department'] ?? null;
@@ -220,6 +235,7 @@ class Evaluations extends Component
             'status' => $this->status,
         ]);
 
+        \Illuminate\Support\Facades\Cache::forget('pending_evaluations_count');
         session()->flash('status', 'Evaluation scheduled successfully!');
         
         $this->reset([
@@ -228,8 +244,9 @@ class Evaluations extends Component
             'overallScore', 'jobKnowledge', 'workQuality',
             'initiative', 'communication', 'dependability', 'attendance',
             'strengths', 'areasForImprovement', 'comments',
-            'status'
         ]);
+        
+        $this->status = 'Completed';
     }
 
     public function clearStatus()

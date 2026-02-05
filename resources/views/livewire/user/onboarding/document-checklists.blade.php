@@ -16,8 +16,7 @@
             
             {{-- SEARCH BAR --}}
             <div>
-                <x-text-input
-                    type="search"
+                <x-search-input
                     wire:model.live.debounce.3s="search"
                     placeholder="Search..."
                 />
@@ -69,7 +68,7 @@
                     @class('btn btn-success')
                     wire:click="export"
                 >
-                    Export to Excel
+                    Export
                 </button>
 
                 {{-- DRAFT BUTTON --}}
@@ -163,23 +162,23 @@
                                 @else
                                     <div @class('d-flex gap-2 align-items-center')>
                                         <button
-                                            @class('btn btn-primary btn-sm')
+                                            @class('btn btn-sm btn-outline-primary')
                                             wire:click="editEmployee({{ $document->id }})"
                                             title="Edit"
                                         >
                                             <i @class('bi bi-pencil')></i>
                                         </button>
                                         <button
-                                            @class('btn btn-info btn-sm')
+                                            @class('btn btn-sm btn-outline-info')
                                             wire:click="openMessageModal({{ $document->id }})"
                                             title="Message"
                                         >
                                             <i @class('bi bi-envelope')></i>
                                         </button>
                                         <button
-                                            @class('btn btn-danger btn-sm')
+                                            @class('btn btn-sm btn-outline-danger')
                                             wire:click="draft({{ $document->id }})"
-                                            title="Draft Employee"
+                                            title="Move to Draft"
                                         >
                                             <i @class('bi bi-journal-text')></i>
                                         </button>
@@ -188,7 +187,14 @@
                             </td>
                         </tr>
                     @empty
-                        @if($completionFilter === 'Complete')
+                        @if($search)
+                            <tr>
+                                <td colspan="5" @class('text-center text-muted py-5')>
+                                    <i @class('bi bi-search d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No checklists found matching "{{ $search }}".</div>
+                                </td>
+                            </tr>
+                        @elseif($completionFilter === 'Complete')
                             <tr>
                                 <td colspan="5" @class('text-center text-muted py-5')>
                                     <i @class('bi bi-check-circle d-block mx-auto fs-1')></i>
@@ -199,13 +205,13 @@
                             <tr>
                                 <td colspan="5" @class('text-center text-muted py-5')>
                                     <i @class('bi bi-x d-block mx-auto fs-1')></i>
-                                    <div class="mt-3">No incomplete checklists found.</div>
+                                    <div class="mt-3">No incomplete checklists found</div>
                                 </td>
                             </tr>
                         @else
                             <tr>
                                 <td colspan="5" @class('text-center text-muted py-5')>
-                                    <i @class('bi bi-bookmark-check d-block mx-auto fs-1')></i>
+                                    <i @class('bi bi-inbox d-block mx-auto fs-1')></i>
                                     <div class="mt-3">No checklists found</div>
                                 </td>
                             </tr>
@@ -286,7 +292,7 @@
                             </td>
                             <td>
                                 <button
-                                    @class('btn btn-primary btn-sm')
+                                    @class('btn btn-sm btn-outline-warning')
                                     wire:click="restore({{ $draft->id }})"
                                     title="Restore Draft"
                                 >

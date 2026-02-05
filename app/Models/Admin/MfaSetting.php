@@ -9,5 +9,5 @@ class MfaSetting extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['is_global_enabled', 'hr_staff_enabled', 'hr_manager_enabled'];
+    protected $fillable = ['is_global_enabled', 'hr_staff_enabled', 'hr_manager_enabled', 'super_admin_enabled'];
 }

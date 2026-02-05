@@ -26,6 +26,12 @@ class Offers extends Component
     public $emailSubject = 'Required Documents for Your Employment';
     public $emailContent = '';
 
+    // Contract Email Properties
+    public $showContractEmailModal = false;
+    public $contractEmailCandidateId = null;
+    public $contractEmailSubject = 'Employment Contract - JetLounge Travels';
+    public $contractEmailContent = '';
+
     // Contract status modal
     public $showContractModal = false;
     public $contractCandidateId = null;
@@ -259,6 +265,82 @@ Best regards,
 Human Resources Department
 JetLounge Travels";
     }
+    public function openContractEmailModal($candidateId)
+    {
+        $candidate = Candidate::find($candidateId);
+        if (!$candidate) return;
+
+        $this->contractEmailCandidateId = $candidateId;
+        $this->contractEmailSubject = "Employment Contract - {$candidate->candidate_name} ({$candidate->applied_position})";
+        $this->contractEmailContent = $this->getContractTemplate($candidate);
+        $this->showContractEmailModal = true;
+    }
+
+    public function closeContractEmailModal()
+    {
+        $this->showContractEmailModal = false;
+        $this->contractEmailCandidateId = null;
+        $this->contractEmailSubject = 'Employment Contract - JetLounge Travels';
+        $this->contractEmailContent = '';
+    }
+
+    public function sendContractEmail()
+    {
+        $this->validate([
+            'contractEmailSubject' => ['required', 'string', 'max:255'],
+            'contractEmailContent' => ['required', 'string'],
+        ]);
+
+        $candidate = Candidate::find($this->contractEmailCandidateId);
+        if (!$candidate) return;
+
+        // Mark contract as sent
+        $candidate->contract_status = 'sent';
+        $candidate->contract_sent_at = now();
+        $candidate->save();
+
+        session()->flash('message', "Contract email sent to {$candidate->candidate_email} successfully!");
+        $this->closeContractEmailModal();
+    }
+
+    private function getContractTemplate($candidate)
+    {
+        $position = $candidate->applied_position ?? 'Employee';
+        $department = $candidate->department ?? 'Operations';
+        $date = now()->format('F d, Y');
+
+        return "EMPLOYMENT CONTRACT (OFFER)
+Date: {$date}
+
+DEAR {$candidate->candidate_name},
+
+We are pleased to offer you the position of {$position} in the {$department} Department at JetLounge Travels.
+
+1. TERMS OF EMPLOYMENT:
+Your employment will commence on a date to be mutually agreed upon, following the signing of this contract.
+
+2. COMPENSATION & BENEFITS:
+• Monthly Base Salary: As discussed in the final interview.
+• Benefits: Mandatory government benefits (SSS, PhilHealth, Pag-IBIG).
+• Performance Bonuses: Eligibility after 6 months of probation.
+
+3. PROBATIONARY PERIOD:
+The first 6 months of your employment will be a probationary period.
+
+4. RESPONSIBILITIES:
+Your duties and responsibilities will be outlined in the detailed job description provided on your first day.
+
+5. CONFIDENTIALITY:
+You agree to maintain the confidentiality of all proprietary information of JetLounge Travels.
+
+ACCEPTANCE:
+By electronically acknowledging this offer, you confirm your acceptance of the terms outlined above.
+
+Best regards,
+
+Manager, Human Resources
+JetLounge Travels";
+    }
 
     // Complete onboarding - move to employees
     public function completeOnboarding($candidateId)
@@ -275,6 +357,18 @@ JetLounge Travels";
         $candidate->save();
 
         session()->flash('message', "{$candidate->candidate_name} has been marked as HIRED! Ready for employee onboarding.");
+    }
+
+    public function deleteCandidate($id)
+    {
+        if (session('user.position') !== 'Super Admin') {
+            session()->flash('error', 'Unauthorized action.');
+            return;
+        }
+
+        $candidate = Candidate::findOrFail($id);
+        $candidate->delete();
+        session()->flash('message', 'Candidate deleted successfully!');
     }
 
     public function render()

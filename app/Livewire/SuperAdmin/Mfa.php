@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Admin;
+namespace App\Livewire\SuperAdmin;
 
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -14,6 +14,7 @@ class Mfa extends Component
     public $isGlobalEnabled = true;
     public $isHrStaffEnabled = true;
     public $isHrManagerEnabled = true;
+    public $isSuperAdminEnabled = true;
 
     public function mount()
     {
@@ -22,11 +23,13 @@ class Mfa extends Component
             $this->isGlobalEnabled = (bool) $setting->is_global_enabled;
             $this->isHrStaffEnabled = (bool) $setting->hr_staff_enabled;
             $this->isHrManagerEnabled = (bool) $setting->hr_manager_enabled;
+            $this->isSuperAdminEnabled = (bool) $setting->super_admin_enabled;
         } else {
             MfaSetting::create([
                 'is_global_enabled' => true, 
                 'hr_staff_enabled' => true, 
-                'hr_manager_enabled' => true
+                'hr_manager_enabled' => true,
+                'super_admin_enabled' => true
             ]);
         }
     }
@@ -49,12 +52,19 @@ class Mfa extends Component
         $this->updateSettings();
     }
 
+    public function toggleSuperAdmin()
+    {
+        $this->isSuperAdminEnabled = !$this->isSuperAdminEnabled;
+        $this->updateSettings();
+    }
+
     private function updateSettings()
     {
         MfaSetting::first()->update([
             'is_global_enabled' => $this->isGlobalEnabled,
             'hr_staff_enabled' => $this->isHrStaffEnabled,
             'hr_manager_enabled' => $this->isHrManagerEnabled,
+            'super_admin_enabled' => $this->isSuperAdminEnabled,
         ]);
         
         session()->flash('status', 'MFA settings updated successfully.');
@@ -73,7 +83,7 @@ class Mfa extends Component
             'total_logs' => MfaLog::count(),
         ];
 
-        return view('livewire.admin.mfa', [
+        return view('livewire.superadmin.mfa', [
             'logs' => MfaLog::latest()->paginate(10),
             'stats' => $stats
         ])->layout('layouts.app');

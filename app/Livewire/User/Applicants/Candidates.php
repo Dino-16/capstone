@@ -30,6 +30,14 @@ class Candidates extends Component
     public $sendLinkCandidateName = '';
     public $sendLinkCandidateEmail = '';
 
+    // Edit candidate properties
+    public $showEditModal = false;
+    public $editingCandidateId = null;
+    public $candidate_name = '';
+    public $candidate_email = '';
+    public $candidate_phone = '';
+    public $applied_position = '';
+
     public function updatedSearch()
     {
         $this->resetPage();
@@ -150,6 +158,61 @@ class Candidates extends Component
         $candidate->save();
 
         session()->flash('message', "Candidate {$candidate->candidate_name} is ready for interview!");
+    }
+
+    // Edit candidate
+    public function editCandidate($id)
+    {
+        $candidate = Candidate::findOrFail($id);
+        $this->editingCandidateId = $id;
+        $this->candidate_name = $candidate->candidate_name;
+        $this->candidate_email = $candidate->candidate_email;
+        $this->candidate_phone = $candidate->candidate_phone;
+        $this->applied_position = $candidate->applied_position;
+        $this->showEditModal = true;
+    }
+
+    public function closeEditModal()
+    {
+        $this->showEditModal = false;
+        $this->editingCandidateId = null;
+        $this->candidate_name = '';
+        $this->candidate_email = '';
+        $this->candidate_phone = '';
+        $this->applied_position = '';
+    }
+
+    public function updateCandidate()
+    {
+        $this->validate([
+            'candidate_name' => ['required', 'string', 'max:255'],
+            'candidate_email' => ['required', 'email', 'max:255'],
+            'candidate_phone' => ['required', 'string', 'max:20'],
+            'applied_position' => ['required', 'string', 'max:255'],
+        ]);
+
+        $candidate = Candidate::findOrFail($this->editingCandidateId);
+        $candidate->update([
+            'candidate_name' => $this->candidate_name,
+            'candidate_email' => $this->candidate_email,
+            'candidate_phone' => $this->candidate_phone,
+            'applied_position' => $this->applied_position,
+        ]);
+
+        session()->flash('message', 'Candidate updated successfully!');
+        $this->closeEditModal();
+    }
+
+    public function deleteCandidate($id)
+    {
+        if (session('user.position') !== 'Super Admin') {
+            session()->flash('error', 'Unauthorized action.');
+            return;
+        }
+
+        $candidate = Candidate::findOrFail($id);
+        $candidate->delete();
+        session()->flash('message', 'Candidate deleted successfully!');
     }
 
     public function render()

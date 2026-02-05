@@ -16,6 +16,7 @@ return new class extends Migration
             $table->boolean('is_global_enabled')->default(true);
             $table->boolean('hr_staff_enabled')->default(true);
             $table->boolean('hr_manager_enabled')->default(true);
+            $table->boolean('super_admin_enabled')->default(true);
             $table->timestamps();
         });
 
@@ -24,6 +25,7 @@ return new class extends Migration
             'is_global_enabled' => true,
             'hr_staff_enabled' => true,
             'hr_manager_enabled' => true,
+            'super_admin_enabled' => true,
             'created_at' => now(),
             'updated_at' => now(),
         ]);

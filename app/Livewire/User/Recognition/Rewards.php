@@ -118,6 +118,18 @@ class Rewards extends Component
         session()->push('status', 'Reward restored successfully!');
     }
 
+    public function deleteReward($id)
+    {
+        if (auth()->user()->role !== 'Super Admin') {
+            session()->push('status', 'Unauthorized action.');
+            return;
+        }
+
+        $reward = Reward::findOrFail($id);
+        $reward->delete();
+        session()->push('status', 'Reward deleted successfully!');
+    }
+
     // Drafted Section
     public function openDraft()
     {

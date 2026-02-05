@@ -1,22 +1,12 @@
+@section('page-title', 'Performance Evaluations')
+@section('page-subtitle', 'Create and manage employee performance evaluations')
+@section('breadcrumbs', 'Performance Evaluations')
+
 <div>
-    {{-- Header --}}
-    <div @class('mb-4')>
-        <h3 @class('fw-bold')>Performance Evaluations</h3>
-        <p @class('text-muted')>Create and manage employee performance evaluations</p>
-    </div>
+
 
     <!-- Toast Notification -->
-    <style>
-        .fixed-toast {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            z-index: 1050;
-        }
-    </style>
-    <div class="fixed-toast">
-        <x-toast />
-    </div>
+    <x-toast />
 
     <!-- Evaluation Form -->
     <div @class('card')>
@@ -322,7 +312,7 @@
 
                                     <!-- Overall Score and Status -->
                                     <div @class('row g-3')>
-                                        <div @class('col-md-6')>
+                                        <div @class('col-md-12')>
                                             <div @class('mb-3')>
                                                 <label @class('form-label fw-semibold')>Overall Score</label>
                                                 <div @class('input-group')>
@@ -330,17 +320,6 @@
                                                     <span @class('input-group-text bg-primary text-white')>/ 100</span>
                                                 </div>
                                                 @error('overallScore') <div @class('invalid-feedback')>{{ $message }}</div> @enderror
-                                            </div>
-                                        </div>
-                                        <div @class('col-md-6')>
-                                            <div @class('mb-3')>
-                                                <label @class('form-label fw-semibold')>Status</label>
-                                                <select @class('form-select') wire:model="status">
-                                                    <option value="Draft">Draft</option>
-                                                    <option value="Ongoing">Ongoing</option>
-                                                    <option value="Completed">Completed</option>
-                                                </select>
-                                                @error('status') <div @class('invalid-feedback')>{{ $message }}</div> @enderror
                                             </div>
                                         </div>
                                     </div>
@@ -370,7 +349,7 @@
                                         </div>
                                     </div>
                                     <div @class('row g-3')>
-                                        <div @class('col-md-6')>
+                                        <div @class('col-md-12')>
                                             <div @class('mb-3')>
                                                 <label @class('form-label fw-semibold')>Evaluator Comments</label>
                                                 <textarea @class('form-control') wire:model="comments" rows="4" placeholder="Additional comments..."></textarea>

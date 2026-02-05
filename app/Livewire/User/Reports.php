@@ -153,6 +153,21 @@ class Reports extends Component
         session()->flash('message', 'Report created successfully! Click the download button to generate the file.');
     }
 
+    public function deleteReport($id)
+    {
+        if (auth()->user()->role !== 'Super Admin') {
+            session()->flash('error', 'Unauthorized action.');
+            return;
+        }
+
+        $report = Report::find($id);
+        if ($report) {
+            $report->delete();
+            session()->flash('message', 'Report deleted successfully!');
+            $this->reports = Report::latest()->get();
+        }
+    }
+
     public function render()
     {
         return view('livewire.user.reports')->layout('layouts.app');

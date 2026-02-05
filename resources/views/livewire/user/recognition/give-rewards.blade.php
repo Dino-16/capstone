@@ -75,7 +75,7 @@
                 @class('btn btn-success')
                 wire:click="export"
             >
-                Export to Excel
+                Export
             </button>
         </div>
     </div>
@@ -144,29 +144,43 @@
                             </div>
                         </td>
                         <td>{!! $rewardGiven->status_badge !!}</td>
-                        <td @class('gap-3')>
-                            <button
-                                @class('btn btn-primary btn-sm me-2')
-                                wire:click="editRewardGiven({{ $rewardGiven->id }})"
-                                title="Edit"
-                            >
-                                <i @class('bi bi-pencil')></i>
-                            </button>
-                            <button
-                                @class('btn btn-danger btn-sm')
-                                wire:click="deleteRewardGiven({{ $rewardGiven->id }})"
-                                wire:confirm="Are you sure you want to delete this reward given?"
-                                title="Delete"
-                            >
-                                <i @class('bi bi-trash')></i>
-                            </button>
+                        <td>
+                            <div class="d-flex gap-2">
+                                    @if(session('user.position') === 'HR Manager')
+                                    <button
+                                        @class('btn btn-sm btn-outline-primary')
+                                        wire:click="editRewardGiven({{ $rewardGiven->id }})"
+                                        title="Edit"
+                                    >
+                                        <i @class('bi bi-pencil')></i>
+                                    </button>
+                                    @endif
+                                    @if(session('user.position') === 'Super Admin')
+                                    <button
+                                        @class('btn btn-sm btn-outline-danger')
+                                        wire:click="deleteRewardGiven({{ $rewardGiven->id }})"
+                                        wire:confirm="Are you sure you want to delete this reward given?"
+                                        title="Delete"
+                                    >
+                                        <i @class('bi bi-trash')></i>
+                                    </button>
+                                    @endif
+                            </div>
                         </td>
                     </tr>
                 @empty
                     <tr>
                         <td colspan="7" @class('text-center text-muted py-5')>
-                            <i @class('bi bi-heart text-muted fs-1')></i>
-                            <p @class('text-muted mt-3 mb-0')>No rewards given yet</p>
+                            @if($search)
+                                <i @class('bi bi-search d-block mx-auto fs-1')></i>
+                                <div class="mt-3">No rewards found matching "{{ $search }}".</div>
+                            @elseif($statusFilter)
+                                <i @class('bi bi-funnel d-block mx-auto fs-1')></i>
+                                <div class="mt-3">No {{ $statusFilter }} rewards found.</div>
+                            @else
+                                <i @class('bi bi-heart d-block mx-auto fs-1')></i>
+                                <div class="mt-3">No rewards given yet.</div>
+                            @endif
                         </td>
                     </tr>
                 @endforelse
