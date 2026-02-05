@@ -49,6 +49,12 @@ class SupportTicket extends Component
         session()->flash('success', "Ticket {$status} successfully.");
     }
 
+    public function exportData()
+    {
+        $export = new \App\Exports\SupportTicketsExport();
+        return $export->export();
+    }
+
     public function render()
     {
         $tickets = TicketModel::query()

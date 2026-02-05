@@ -91,7 +91,6 @@
         </div>
     </div>
 
-    {{-- HEADER ACTIONS --}}
     <div @class('d-flex justify-content-between align-items-center mb-4')>
         {{-- LEFT SIDE --}}
         <div @class('d-flex align-items-center gap-3')>
@@ -131,18 +130,16 @@
                 </ul>
             </div>
         </div>
-    </div>
 
-    {{-- WORKFLOW INFO --}}
-    <div @class('card mb-4 border-0 shadow-sm bg-light')>
-        <div @class('card-body py-3')>
-            <div @class('d-flex align-items-center gap-3')>
-                <i class="bi bi-file-earmark-check-fill text-primary fs-4"></i>
-                <div>
-                    <strong>Step 4: Offering & Contract</strong>
-                    <p class="mb-0 text-muted small">Track contract status and send document requirement emails. Once signed, complete onboarding to move to employees.</p>
-                </div>
-            </div>
+        {{-- RIGHT SIDE --}}
+        <div>
+            <button 
+                type="button" 
+                @class('btn btn-success')
+                wire:click="exportData"
+            >
+                <i @class('bi bi-download me-2')></i>Export
+            </button>
         </div>
     </div>
 

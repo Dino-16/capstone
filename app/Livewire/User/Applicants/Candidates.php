@@ -215,6 +215,12 @@ class Candidates extends Component
         session()->flash('message', 'Candidate deleted successfully!');
     }
 
+    public function exportData()
+    {
+        $export = new \App\Exports\Applicants\CandidatesExport();
+        return $export->export();
+    }
+
     public function render()
     {
         $query = Candidate::query()

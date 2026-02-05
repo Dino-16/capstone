@@ -41,18 +41,16 @@
                 </ul>
             </div>
         </div>
-    </div>
 
-    {{-- WORKFLOW INFO --}}
-    <div @class('card mb-4 border-0 shadow-sm bg-light')>
-        <div @class('card-body py-3')>
-            <div @class('d-flex align-items-center gap-3')>
-                <i class="bi bi-clipboard-check-fill text-success fs-4"></i>
-                <div>
-                    <strong>Step 3: Interview & Exam Assessment</strong>
-                    <p class="mb-0 text-muted small">Click on a candidate to open the Interview Modal. Score their responses and mark Pass/Fail to proceed.</p>
-                </div>
-            </div>
+        {{-- RIGHT SIDE --}}
+        <div>
+            <button 
+                type="button" 
+                @class('btn btn-success')
+                wire:click="exportData"
+            >
+                <i @class('bi bi-download me-2')></i>Export
+            </button>
         </div>
     </div>
 

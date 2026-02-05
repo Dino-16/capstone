@@ -291,6 +291,12 @@ class Interviews extends Component
         session()->flash('message', 'Candidate deleted successfully!');
     }
 
+    public function exportData()
+    {
+        $export = new \App\Exports\Applicants\InterviewsExport();
+        return $export->export();
+    }
+
     public function render()
     {
         // Get candidates ready for interview

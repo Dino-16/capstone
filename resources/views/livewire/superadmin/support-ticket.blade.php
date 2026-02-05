@@ -2,22 +2,53 @@
 @section('page-subtitle', 'Manage support requests')
 
 <div>
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <div class="input-group shadow-sm">
-                <span class="input-group-text bg-white border-end-0">
-                    <i class="bi bi-search text-muted"></i>
-                </span>
-                <input type="text" wire:model.live.debounce.300ms="search" class="form-control border-start-0 ps-0" placeholder="Search by subject or requester...">
+    <div @class('d-flex justify-content-between align-items-center')>
+        {{-- LEFT SIDE --}}
+        <div @class('mb-3 d-flex justify-content-between align-items-center gap-2')>
+            {{-- SEARCH BAR --}}
+            <div>
+                <x-search-input
+                    wire:model.live="search" 
+                    placeholder="Search by subject or requester..."
+                />
+            </div>
+
+            {{-- STATUS FILTER --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-funnel-fill me-2')></i>
+                    Filter: {{ $statusFilter ? $statusFilter : 'All' }}
+                </button>
+
+                <ul @class('dropdown-menu')>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', '')">All Status</a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'Pending')">Pending</a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'Approved')">Approved</a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'Rejected')">Rejected</a>
+                    </li>
+                </ul>
             </div>
         </div>
-        <div class="col-md-4">
-            <select wire:model.live="statusFilter" class="form-select shadow-sm">
-                <option value="">All Statuses</option>
-                <option value="Pending">Pending</option>
-                <option value="Approved">Approved</option>
-                <option value="Rejected">Rejected</option>
-            </select>
+
+        {{-- RIGHT SIDE --}}
+        <div @class('mb-3 d-flex gap-2')>
+            <button
+                @class('btn btn-success')
+                wire:click="exportData"
+            >
+                <i @class('bi bi-download me-2')></i>Export
+            </button>
         </div>
     </div>
 

@@ -10,11 +10,25 @@ class SubmitTicket extends Component
 {
     use WithPagination;
 
+    // List Filtering properties
+    public $search = '';
+    public $statusFilter = '';
+
     // Create Form Properties
     public $subject;
     public $description;
     public $priority = 'Low';
     public $showCreateModal = false;
+
+    public function updatingSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingStatusFilter()
+    {
+        $this->resetPage();
+    }
 
     protected $rules = [
         'subject' => 'required|min:5|max:255',
@@ -57,11 +71,24 @@ class SubmitTicket extends Component
         session()->flash('success', 'Support ticket submitted successfully. Pending Super Admin approval.');
     }
 
+    public function exportData()
+    {
+        $export = new \App\Exports\SupportTicketsExport(session('user.email'));
+        return $export->export();
+    }
+
     public function render()
     {
         $userEmail = session('user.email');
 
         $tickets = SupportTicket::where('requester_email', $userEmail)
+            ->when($this->search, function ($query) {
+                $query->where('subject', 'like', '%' . $this->search . '%')
+                      ->orWhere('description', 'like', '%' . $this->search . '%');
+            })
+            ->when($this->statusFilter, function ($query) {
+                $query->where('status', $this->statusFilter);
+            })
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 

@@ -371,6 +371,12 @@ JetLounge Travels";
         session()->flash('message', 'Candidate deleted successfully!');
     }
 
+    public function exportData()
+    {
+        $export = new \App\Exports\Applicants\OffersExport();
+        return $export->export();
+    }
+
     public function render()
     {
         // Get candidates who passed interview (in offering stage)
