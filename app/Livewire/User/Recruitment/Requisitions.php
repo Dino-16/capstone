@@ -13,14 +13,15 @@ class Requisitions extends Component
 
     public $search;
     public $statusFilter = 'All';
-    public $showDrafts = false;
 
-    // Edit Modal Properties
+    // Modal Properties
     public $showEditModal = false;
+    public $showViewModal = false;
     public $editingId;
     public $position;
     public $department;
     public $opening;
+    public $selectedRequisition = null;
 
     // Actions 
     public function approve($id)
@@ -31,39 +32,11 @@ class Requisitions extends Component
         session()->push('status', 'Accepted Successfully!');
     }
 
-    public function draft($id)
-    {
-        $requisition = Requisition::findOrFail($id);
-        $requisition->status = 'Drafted';
-        $requisition->save();
-        session()->push('status', 'Drafted Successfully!');
-    }
-
-    public function restore($id) 
-    {
-        $requisition = Requisition::findOrFail($id);
-        $requisition->status = 'Pending';
-        $requisition->save();    
-        session()->push('status', 'Draft Restored Successfully!');
-    }
-
     public function export()
     {
         $export = new RequisitionsExport();
         return $export->export();
     }
-
-
-    // Drafted Section
-    public function openDraft()
-    {
-        $this->showDrafts = true;
-    }
-
-   public function showAll()
-    {
-        $this->showDrafts = false;
-    } 
 
     // Pagination Page when Filtered
     public function updatedSearch()
@@ -91,7 +64,19 @@ class Requisitions extends Component
         
         $requisition = Requisition::findOrFail($id);
         $requisition->delete();
-        session()->push('status', 'Requisition deleted successfully!');
+        session()->push('status', 'Deleted successfully!');
+    }
+
+    public function viewRequisition($id)
+    {
+        $this->selectedRequisition = Requisition::findOrFail($id);
+        $this->showViewModal = true;
+    }
+
+    public function closeViewModal()
+    {
+        $this->showViewModal = false;
+        $this->selectedRequisition = null;
     }
 
     public function editRequisition($id)
@@ -127,7 +112,7 @@ class Requisitions extends Component
         ]);
 
         $this->showEditModal = false;
-        session()->push('status', 'Requisition updated successfully!');
+        session()->push('status', 'Updated successfully!');
     }
 
     public function render()
@@ -135,18 +120,8 @@ class Requisitions extends Component
         $statusCounts = [
             'Pending'  => Requisition::where('status', 'Pending')->count(),
             'Accepted' => Requisition::where('status', 'Accepted')->count(),
-            'Drafted'  => Requisition::where('status', 'Drafted')->count(),
             'All'      => Requisition::count(),
         ];
-
-        // When drafts are open → only draft data
-        if ($this->showDrafts) {
-            return view('livewire.user.recruitment.requisitions', [
-                'statusCounts' => $statusCounts,
-                'requisitions' => null,
-                'drafts'       => Requisition::where('status', 'Drafted')->latest()->paginate(10),
-            ])->layout('layouts.app');
-        }
 
         // Otherwise show normal list
         $query = Requisition::query()->latest();
@@ -166,8 +141,6 @@ class Requisitions extends Component
         return view('livewire.user.recruitment.requisitions', [
             'statusCounts' => $statusCounts,
             'requisitions' => $query->paginate(10),
-            'drafts'       => null,
         ])->layout('layouts.app');
     }
-
 }

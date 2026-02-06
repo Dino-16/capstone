@@ -19,7 +19,19 @@
                 $pendingTicketsCount = \App\Models\SupportTicket::where('status', 'Pending')->count();
             }
 
-            $totalNotifications = $pendingRequisitionsCount + $pendingEvaluationsCount + $expiringJobsCount + $pendingTicketsCount;
+            $isHR = in_array(session('user.position'), ['HR Staff', 'HR Manager', 'HR']);
+            
+            $pendingDocumentsCount = $isHR ? \App\Models\Onboarding\DocumentChecklist::where('status', 'active')->get()->filter(function($doc) {
+                return $doc->getCompletionPercentage() < 100;
+            })->count() : 0;
+
+            $eligibleRewardsCount = $isHR ? \App\Models\Performance\Evaluation::where('status', 'Completed')
+                ->whereMonth('evaluation_date', now()->month)
+                ->whereYear('evaluation_date', now()->year)
+                ->where('overall_score', '>=', 4)
+                ->count() : 0;
+
+            $totalNotifications = $pendingRequisitionsCount + $pendingEvaluationsCount + $expiringJobsCount + $pendingTicketsCount + $pendingDocumentsCount + $eligibleRewardsCount;
             
             $user = session('user');
             $userName = $user['name'] ?? 'Guest';
@@ -98,6 +110,36 @@
                                         <div>
                                             <div class="small fw-bold">Support Tickets</div>
                                             <div class="small text-muted">{{ $pendingTicketsCount }} ticket{{ $pendingTicketsCount > 1 ? 's' : '' }} pending</div>
+                                        </div>
+                                    </div>
+                                </a>
+                            </li>
+                        @endif
+                        @if($pendingDocumentsCount > 0)
+                            <li>
+                                <a class="dropdown-item py-2" href="{{ route('document-checklists') }}">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-info bg-opacity-10 text-info rounded-circle p-2 me-3">
+                                            <i class="bi bi-file-earmark-check"></i>
+                                        </div>
+                                        <div>
+                                            <div class="small fw-bold">Pending HR Documents</div>
+                                            <div class="small text-muted">{{ $pendingDocumentsCount }} checklist{{ $pendingDocumentsCount > 1 ? 's' : '' }} incomplete</div>
+                                        </div>
+                                    </div>
+                                </a>
+                            </li>
+                        @endif
+                        @if($eligibleRewardsCount > 0)
+                            <li>
+                                <a class="dropdown-item py-2" href="{{ route('rewards') }}">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-warning bg-opacity-10 text-warning rounded-circle p-2 me-3">
+                                            <i class="bi bi-stars"></i>
+                                        </div>
+                                        <div>
+                                            <div class="small fw-bold">Reward Eligibility</div>
+                                            <div class="small text-muted">{{ $eligibleRewardsCount }} employee{{ $eligibleRewardsCount > 1 ? 's' : '' }} recognized for high performance</div>
                                         </div>
                                     </div>
                                 </a>

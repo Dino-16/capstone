@@ -27,18 +27,22 @@
                         @if($showEmployeeDropdown && count($filteredEmployees) > 0)
                             <div class="position-absolute w-100 bg-white border rounded shadow mt-1" style="z-index: 1000; max-height: 200px; overflow-y: auto;">
                                 @foreach($filteredEmployees as $employee)
-                                    <div 
-                                        class="px-3 py-2 border-bottom cursor-pointer"
-                                        style="cursor: pointer;"
-                                        wire:click="selectEmployee('{{ $employee['name'] ?? $employee['employee_name'] ?? 'Unknown' }}')"
+                                    <button 
+                                        type="button"
+                                        wire:key="emp-{{ $employee['id'] ?? $loop->index }}"
+                                        class="w-100 text-start px-3 py-2 border-0 border-bottom bg-white"
+                                        wire:click.prevent="selectEmployee('{{ $employee['id'] ?? '' }}')"
                                         onmouseover="this.style.backgroundColor='#f8f9fa'"
                                         onmouseout="this.style.backgroundColor='white'"
                                     >
-                                        <strong>{{ $employee['name'] ?? $employee['employee_name'] ?? 'Unknown' }}</strong>
+                                        <div class="fw-bold">{{ $employee['name'] ?? $employee['employee_name'] ?? 'Unknown' }}</div>
                                         @if(isset($employee['department']))
-                                            <br><small class="text-muted">{{ is_array($employee['department']) ? ($employee['department']['name'] ?? 'N/A') : $employee['department'] }}</small>
+                                            <small class="text-muted d-block">{{ is_array($employee['department']) ? ($employee['department']['name'] ?? 'N/A') : $employee['department'] }}</small>
                                         @endif
-                                    </div>
+                                        @if(isset($employee['email']))
+                                            <small class="text-secondary d-block">{{ $employee['email'] }}</small>
+                                        @endif
+                                    </button>
                                 @endforeach
                             </div>
                         @elseif($showEmployeeDropdown && count($filteredEmployees) == 0)

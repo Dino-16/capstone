@@ -7,10 +7,12 @@ use Livewire\WithPagination;
 use Livewire\WithFileUploads;
 use App\Models\Applicants\Candidate;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 class Offers extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, WithPagination;
 
     public $search;
     public $statusFilter = '';
@@ -275,25 +277,14 @@ Congratulations on your successful interview! We are pleased to proceed with you
 Please prepare the following documents and bring them to our office:
 
 REQUIRED DOCUMENTS:
-1. Updated Resume/CV
-2. Valid Government-issued ID (2 copies)
-3. Birth Certificate (NSO/PSA certified)
-4. NBI Clearance (within 6 months)
-5. Barangay Clearance
-6. Police Clearance
-7. SSS Number/E1 Form
-8. PhilHealth ID/MDR
-9. Pag-IBIG MID Number
-10. TIN Number
-11. 2x2 ID Photos (4 copies, white background)
-12. Previous Employment Certificate (if applicable)
-13. Transcript of Records/Diploma
-14. Medical Certificate (fit to work)
-15. Drug Test Result
+1. Updated Resume
+2. Valid Government ID
+3. NBI Clearance
+4. Medical Certificate
+5. Transcript of Records
+6. Barangay Clearance
 
-DEADLINE: Please submit all documents within 5 working days.
-
-If you have any questions, please don't hesitate to contact us.
+Please submit all documents within 5 working days.
 
 Best regards,
 HR Department";
@@ -307,62 +298,29 @@ HR Department";
 
 Congratulations on successfully passing your interview for the position of {$position}!
 
-We are excited to have you join our team. Before we finalize your employment, please prepare and submit the following documents:
+We are excited to have you join our team. Before we finalize your employment, please prepare and submit the following required documents:
 
-═══════════════════════════════════════
-REQUIRED DOCUMENTS CHECKLIST
-═══════════════════════════════════════
-
-PERSONAL IDENTIFICATION:
-☐ Updated Resume/CV
-☐ Valid Government-issued ID (2 copies)
-☐ Birth Certificate (NSO/PSA certified)
-☐ Marriage Certificate (if applicable)
-
-CLEARANCES:
-☐ NBI Clearance (must be within 6 months)
+REQUIRED DOCUMENTS CHECKLIST:
+☐ Updated Resume
+☐ Valid Government ID
+☐ NBI Clearance
+☐ Medical Certificate
+☐ Transcript of Records
 ☐ Barangay Clearance
-☐ Police Clearance
-
-GOVERNMENT REGISTRATIONS:
-☐ SSS Number/E1 Form
-☐ PhilHealth ID/MDR
-☐ Pag-IBIG MID Number
-☐ TIN Number
-
-EDUCATIONAL/EMPLOYMENT:
-☐ Transcript of Records/Diploma (original + photocopy)
-☐ Previous Employment Certificate (if applicable)
-☐ Certificate of Employment from previous employer
-
-MEDICAL:
-☐ Medical Certificate (fit to work)
-☐ Drug Test Result (from accredited laboratory)
-
-PHOTOS:
-☐ 2x2 ID Photos (4 copies, white background)
-☐ 1x1 ID Photos (2 copies, white background)
-
-═══════════════════════════════════════
 
 IMPORTANT REMINDERS:
-• Please bring ORIGINAL documents for verification
-• Photocopies should be clear and legible
-• Deadline: Submit within 5 WORKING DAYS
+• Please bring ORIGINAL documents for verification.
+• Photocopies should be clear and legible.
+• Deadline: Submit within 5 WORKING DAYS.
 
 SUBMISSION LOCATION:
 HR Department, Ground Floor
 Office Hours: 8:00 AM - 5:00 PM (Monday-Friday)
 
-If you have any questions or concerns, please contact us:
-Email: hr@company.com
-Phone: (02) 1234-5678
-
-We look forward to welcoming you to the team!
+If you have any questions or concerns, please contact us.
 
 Best regards,
-Human Resources Department
-JetLounge Travels";
+JetLounge Travels HR Team";
     }
     public function openContractEmailModal($candidateId)
     {
@@ -426,10 +384,87 @@ JetLounge Travels";
             return;
         }
 
-        $candidate->status = 'hired';
-        $candidate->save();
+        // 1. Fetch departments from API to get the correct ID
+        $departmentId = null;
+        try {
+            $departmentsResponse = Http::withoutVerifying()->get('https://hr4.jetlougetravels-ph.com/api/departments');
+            if ($departmentsResponse->successful()) {
+                $departmentsData = $departmentsResponse->json();
+                
+                // Compare candidate's department name with departments API 'name' key
+                foreach ($departmentsData as $dept) {
+                    if (isset($dept['name']) && strcasecmp($dept['name'], $candidate->department) === 0) {
+                        $departmentId = $dept['id'];
+                        break;
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error("Failed to fetch departments for candidate {$candidateId}: " . $e->getMessage());
+        }
 
-        session()->flash('message', "{$candidate->candidate_name} has been marked as HIRED! Ready for employee onboarding.");
+        // 2. Prepare Name Parts
+        // Assuming candidate_name is "First Middle Last" or "First Last"
+        $nameParts = explode(' ', trim($candidate->candidate_name));
+        $firstName = $nameParts[0] ?? '';
+        $lastName = count($nameParts) > 1 ? end($nameParts) : '';
+        $middleName = '';
+        
+        if (count($nameParts) > 2) {
+            // Middle name is everything between first and last name
+            $middleName = implode(' ', array_slice($nameParts, 1, -1));
+        }
+
+        // 3. Prepare combined address from candidate parts
+        $address = implode(', ', array_filter([
+            $candidate->candidate_house_street,
+            $candidate->candidate_barangay,
+            $candidate->candidate_city,
+            $candidate->candidate_province,
+            $candidate->candidate_region
+        ]));
+
+        // 4. Post data to Employees API
+        try {
+            $employeeData = [
+                'start_date'      => now()->format('Y-m-d'),
+                'first_name'      => $firstName,
+                'middle_name'     => $middleName,
+                'last_name'       => $lastName,
+                'suffix_name'     => '', // Suffix is not currently stored separately
+                'address'         => $address,
+                'phone'           => $candidate->candidate_phone,
+                'age'             => (int)$candidate->candidate_age,
+                'gender'          => $candidate->candidate_sex, // Maps candidate_sex to gender
+                'birth_date'      => $candidate->candidate_birth_date,
+                'civil_status'    => $candidate->candidate_civil_status,
+                'skills'          => is_array($candidate->skills) ? implode(', ', $candidate->skills) : $candidate->skills,
+                'experience'      => is_array($candidate->experience) ? json_encode($candidate->experience) : $candidate->experience,
+                'education'       => is_array($candidate->education) ? json_encode($candidate->education) : $candidate->education,
+                'position'        => $candidate->applied_position,
+                'date_hired'      => $candidate->contract_approved_at ? $candidate->contract_approved_at->format('Y-m-d') : now()->format('Y-m-d'),
+                'employee_status' => 'new_hire',
+                'email'           => $candidate->candidate_email,
+                'department_id'   => $departmentId,
+            ];
+
+            $response = Http::withoutVerifying()->post('https://hr4.jetlougetravels-ph.com/api/employees', $employeeData);
+
+            if ($response->successful()) {
+                // 5. Delete candidate record from local database upon success
+                $candidateName = $candidate->candidate_name;
+                $candidate->delete();
+
+                session()->flash('message', "{$candidateName} has been successfully hired and record has been moved to the HR Employee system!");
+            } else {
+                $errorBody = $response->json('message') ?? $response->body() ?? 'Unknown API error';
+                \Log::error("Employees API Error: " . $errorBody);
+                session()->flash('error', "Failed to move employee to HR system: " . Str::limit($errorBody, 150));
+            }
+        } catch (\Exception $e) {
+            \Log::error("Error during completeOnboarding for candidate {$candidateId}: " . $e->getMessage());
+            session()->flash('error', "An error occurred while connecting to the HR system: " . $e->getMessage());
+        }
     }
 
     public function deleteCandidate($id)

@@ -585,6 +585,25 @@ class Applications extends Component
         session()->flash('status', 'Application restored to active list.');
     }
 
+    public function delete($id)
+    {
+        // Security check: Only Super Admin can delete
+        if (strcasecmp(session('user.position'), 'Super Admin') !== 0) {
+            session()->flash('error', 'Unauthorized: Only Super Admin can delete applications.');
+            return;
+        }
+
+        $app = Application::findOrFail($id);
+        
+        // Delete associated filtered resume if exists
+        FilteredResume::where('application_id', $id)->delete();
+        
+        // Delete application record
+        $app->delete();
+        
+        session()->flash('status', 'Application deleted successfully.');
+    }
+
     public function exportData()
     {
         $export = new \App\Exports\Applicants\ApplicationsExport();

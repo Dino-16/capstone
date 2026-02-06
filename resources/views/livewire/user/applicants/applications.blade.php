@@ -235,6 +235,20 @@
                                          >
                                              <i @class('bi bi-bootstrap-reboot')></i> 
                                          </button>
+
+                                         {{-- Delete button (Super Admin only) --}}
+                                         @if(strcasecmp(session('user.position'), 'Super Admin') === 0)
+                                             <button
+                                                 type="button"
+                                                 @class('btn btn-sm btn-outline-danger')
+                                                 wire:click="delete({{ $app->id }})"
+                                                 wire:confirm="Are you sure you want to permanently delete this application?"
+                                                 wire:loading.attr="disabled"
+                                                 title="Delete Application"
+                                             >
+                                                 <i @class('bi bi-trash')></i> 
+                                             </button>
+                                         @endif
                                      @else
                                          <button
                                              type="button"

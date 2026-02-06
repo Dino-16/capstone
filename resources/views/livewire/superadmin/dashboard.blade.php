@@ -121,7 +121,7 @@
     new Chart(auditCtx, {
         type: 'doughnut',
         data: {
-            labels: ['Operational', 'Security Logs', 'Manual Reviews'],
+            labels: ['Operational', 'Security Logs', 'System Audits'],
             datasets: [{
                 data: [65, 25, 10],
                 backgroundColor: ['#0d6efd', '#198754', '#ffc107'],

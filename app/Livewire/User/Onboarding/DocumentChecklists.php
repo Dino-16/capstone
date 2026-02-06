@@ -91,17 +91,16 @@ class DocumentChecklists extends Component
         }
     }
 
-    public function selectEmployee($employeeName)
+    public function selectEmployee($id)
     {
-        $this->employeeName = $employeeName;
-        
-        // Find the employee and get their email
-        $employee = collect($this->employees)->first(function ($emp) use ($employeeName) {
-            $name = $emp['name'] ?? $emp['employee_name'] ?? '';
-            return $name === $employeeName;
+        $employee = collect($this->employees)->first(function ($emp) use ($id) {
+            return (string)($emp['id'] ?? '') === (string)$id;
         });
-        
-        $this->email = $employee['email'] ?? null;
+
+        if ($employee) {
+            $this->employeeName = $employee['name'] ?? $employee['employee_name'] ?? '';
+            $this->email = $employee['email'] ?? null;
+        }
         
         $this->showEmployeeDropdown = false;
         $this->filteredEmployees = $this->employees;

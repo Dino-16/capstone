@@ -100,8 +100,8 @@
                         </td>
                         <td>
                             @php
-                                $status = str_replace('_', ' ', $employee['employment_status'] ?? '---');
-                                $statusClass = match(strtolower($employee['employment_status'] ?? '')) {
+                                $status = $employee['employment_status'] ?? '---';
+                                $statusClass = match(strtolower($status)) {
                                     'regular' => 'bg-success',
                                     'new_hire' => 'bg-info text-white',
                                     default => 'bg-secondary'

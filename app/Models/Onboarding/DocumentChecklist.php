@@ -37,9 +37,14 @@ class DocumentChecklist extends Model
     public function getCompletionPercentage()
     {
         $documents = $this->documents ?? [];
+        if (empty($documents)) return 0;
         
-        // Calculate completion based on document count only (6 total documents)
-        return (count($documents) / 6) * 100;
+        $total = count($documents);
+        $completeCount = collect($documents)->filter(function($status) {
+            return $status === 'complete';
+        })->count();
+        
+        return ($completeCount / $total) * 100;
     }
 
     public function initializeDocuments()

@@ -237,6 +237,12 @@
                                         <h6 class="mb-0 fw-bold"><i class="bi bi-chat-quote me-2"></i>Interview Questions</h6>
                                     </div>
                                     <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                                        {{-- Rating Guide --}}
+                                        <div class="alert alert-info py-2 mb-3 small">
+                                            <i class="bi bi-info-circle me-2"></i>
+                                            <strong>Measurement (1-10):</strong> 
+                                            1-2: Poor, 3-4: Below Average, 5-6: Satisfactory, 7-8: Good, 9-10: Excellent
+                                        </div>
                                         @if(count($interviewQuestions) > 0)
                                             @foreach($interviewQuestions as $index => $question)
                                                 <div class="mb-4 p-3 border rounded bg-light">
@@ -280,6 +286,12 @@
                                         <h6 class="mb-0 fw-bold"><i class="bi bi-pencil-square me-2"></i>Practical Examination</h6>
                                     </div>
                                     <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                                        {{-- Rating Guide --}}
+                                        <div class="alert alert-info py-2 mb-3 small">
+                                            <i class="bi bi-info-circle me-2"></i>
+                                            <strong>Measurement (1-10):</strong> 
+                                            1-2: Poor, 3-4: Below Average, 5-6: Satisfactory, 7-8: Good, 9-10: Excellent
+                                        </div>
                                         @if(count($practicalExams) > 0)
                                             @foreach($practicalExams as $index => $exam)
                                                 <div class="mb-4 p-3 border rounded bg-light">

@@ -60,14 +60,6 @@
                 </ul>
             </div>
 
-            {{-- CREATE REWARD BUTTON --}}
-            <button
-                @class('btn btn-primary')
-                wire:click="openModal"
-            >
-                <i @class('bi bi-plus-circle me-2')></i>
-                Create Reward
-            </button>
         </div>
 
         {{-- RIGHT SIDE --}}
@@ -139,36 +131,38 @@
                             <td>{{ $reward->benefits }}</td>
                             <td>{!! $reward->status_badge !!}</td>
                             <td>
-                                @if($reward->status === 'active')
-                                    @if(session('user.position') === 'HR Manager')
-                                    <button
-                                        @class('btn btn-sm btn-outline-primary')
-                                        wire:click="editReward({{ $reward->id }})"
-                                        title="Edit"
+                                <div @class('d-flex gap-2 align-items-center')>
+                                    @if($reward->status === 'active')
+                                        @if(session('user.position') === 'HR Manager')
+                                        <button
+                                            @class('btn btn-sm btn-outline-primary')
+                                            wire:click="editReward({{ $reward->id }})"
+                                            title="Edit"
+                                            >
+                                            <i @class('bi bi-pencil')></i>
+                                        </button>
+                                        @endif
+                                        <button
+                                            @class('btn btn-sm btn-outline-danger')
+                                            wire:click="draft({{ $reward->id }})"
+                                            title="Move to Draft"
                                         >
-                                        <i @class('bi bi-pencil')></i>
-                                    </button>
+                                            <i @class('bi bi-journal-text')></i>
+                                        </button>
+                                        @if(session('user.position') === 'Super Admin')
+                                        <button
+                                            @class('btn btn-sm btn-danger')
+                                            wire:click="deleteReward({{ $reward->id }})"
+                                            wire:confirm="Are you sure you want to delete this reward?"
+                                            title="Delete"
+                                        >
+                                            <i @class('bi bi-trash')></i>
+                                        </button>
+                                        @endif
+                                    @else
+                                        <span class="text-muted">---</span>
                                     @endif
-                                    <button
-                                        @class('btn btn-sm btn-outline-danger')
-                                        wire:click="draft({{ $reward->id }})"
-                                        title="Move to Draft"
-                                    >
-                                        <i @class('bi bi-journal-text')></i>
-                                    </button>
-                                    @if(session('user.position') === 'Super Admin')
-                                    <button
-                                        @class('btn btn-sm btn-danger')
-                                        wire:click="deleteReward({{ $reward->id }})"
-                                        wire:confirm="Are you sure you want to delete this reward?"
-                                        title="Delete"
-                                    >
-                                        <i @class('bi bi-trash')></i>
-                                    </button>
-                                    @endif
-                                @else
-                                    <span>---</span>
-                                @endif
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -231,23 +225,25 @@
                             <td>{{ $draft->benefits }}</td>
                             <td>{!! $draft->status_badge !!}</td>
                             <td>
-                                <button
-                                    @class('btn btn-sm btn-outline-warning')
-                                    wire:click="restore({{ $draft->id }})"
-                                    title="Restore Draft"
-                                >
-                                    <i @class('bi bi-bootstrap-reboot')></i>
-                                </button>
-                                @if(session('user.position') === 'Super Admin')
-                                <button
-                                    @class('btn btn-sm btn-danger')
-                                    wire:click="deleteReward({{ $draft->id }})"
-                                    wire:confirm="Are you sure you want to delete this reward?"
-                                    title="Delete"
-                                >
-                                    <i @class('bi bi-trash')></i>
-                                </button>
-                                @endif
+                                <div @class('d-flex gap-2 align-items-center')>
+                                    <button
+                                        @class('btn btn-sm btn-outline-warning')
+                                        wire:click="restore({{ $draft->id }})"
+                                        title="Restore Draft"
+                                    >
+                                        <i @class('bi bi-bootstrap-reboot')></i>
+                                    </button>
+                                    @if(session('user.position') === 'Super Admin')
+                                    <button
+                                        @class('btn btn-sm btn-danger')
+                                        wire:click="deleteReward({{ $draft->id }})"
+                                        wire:confirm="Are you sure you want to delete this reward?"
+                                        title="Delete"
+                                    >
+                                        <i @class('bi bi-trash')></i>
+                                    </button>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -263,6 +259,92 @@
             {{ $drafts->links() }}
         </div>
     @endif
+    
+    {{-- ELIGIBILITY TABLE --}}
+    @if(!$showDrafts)
+        <div @class('mt-5 p-5 bg-white rounded border rounded-bottom-0 border-bottom-0')>
+            <div @class('d-flex justify-content-between align-items-center')>
+                <div>
+                    <h3 @class('mb-0 text-primary')><i class="bi bi-stars me-2"></i>Reward Eligibility</h3>
+                    <p @class('text-secondary mb-0')>
+                        Employees matching key recognition criteria for <strong>{{ now()->format('F Y') }}</strong>
+                    </p>
+                </div>
+                <button wire:click="loadEligibleEmployees" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                    <i class="bi bi-arrow-clockwise me-1" wire:loading.class="spin"></i> Refresh Criteria
+                </button>
+            </div>
+        </div>
+        <div @class('table-responsive border rounded bg-white px-5 rounded-top-0 border-top-0')>
+            <table @class('table align-middle')>
+                <thead>
+                    <tr @class('bg-dark')>
+                        <th @class('text-secondary')>Employee</th>
+                        <th @class('text-secondary')>Position/Dept</th>
+                        <th @class('text-secondary')>Recognition Highlights</th>
+                        <th @class('text-secondary text-end px-4')>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if($loadingEligible)
+                        <tr>
+                            <td colspan="4" class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2 text-muted">Analyzing HR data from internal systems...</p>
+                            </td>
+                        </tr>
+                    @else
+                        @forelse($eligibleEmployees as $emp)
+                            <tr wire:key="eligible-{{ $emp['id'] }}">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; font-weight: bold; font-size: 1.2rem;">
+                                            {{ $emp['avatar'] }}
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold">{{ $emp['name'] }}</div>
+                                            <div class="small text-muted">ID: #{{ substr($emp['id'], -6) }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="small fw-bold">{{ $emp['position'] }}</div>
+                                    <div class="small text-muted">{{ $emp['department'] }}</div>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        @foreach($emp['reasons'] as $reason)
+                                            <span class="badge rounded-pill bg-white border text-dark d-flex align-items-center px-2 py-1 shadow-sm" style="font-weight: 500;">
+                                                <i class="bi {{ $reason['icon'] }} me-2 text-primary" style="font-size: 1rem;"></i>
+                                                {{ $reason['detail'] }}
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                </td>
+                                <td class="text-end px-4">
+                                    <button class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm" onclick="alert('In a real scenario, this would open a Reward Granting form for {{ addslashes($emp['name']) }}')">
+                                        <i class="bi bi-gift-fill me-1"></i> Give Reward
+                                    </button>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-muted">
+                                    <div class="bg-light d-inline-block rounded-circle p-4 mb-3">
+                                        <i class="bi bi-search fs-1"></i>
+                                    </div>
+                                    <p class="mb-0">No employees meet the automatic recognition criteria for this period.</p>
+                                    <small>Checked: Performance (Rating 4+), Monthly Birthdays, and Work Anniversaries.</small>
+                                </td>
+                            </tr>
+                        @endforelse
+                    @endif
+                </tbody>
+            </table>
+        </div>
+    @endif
 
     <!-- Add/Edit Reward Modal -->
     @if($showModal)
@@ -270,11 +352,11 @@
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg">
                     <div class="modal-header bg-white border-bottom">
-                        <h5 class="modal-title">{{ $editing ? 'Edit Reward' : 'Create New Reward' }}</h5>
+                        <h5 class="modal-title">Edit Reward</h5>
                         <button type="button" class="btn-close" wire:click="$set('showModal', false)"></button>
                     </div>
 
-                    <form wire:submit="{{ $editing ? 'updateReward' : 'addReward' }}">
+                    <form wire:submit="updateReward">
                         <div class="modal-body p-4">
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Reward Name *</label>
@@ -339,7 +421,7 @@
                                 <i class="bi bi-x-circle me-2"></i>Cancel
                             </button>
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle me-2"></i>{{ $editing ? 'Update Reward' : 'Create Reward' }}
+                                <i class="bi bi-check-circle me-2"></i>Update Reward
                             </button>
                         </div>
                     </form>
