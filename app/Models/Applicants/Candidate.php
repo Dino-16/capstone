@@ -40,7 +40,7 @@ class Candidate extends Model
         'interview_notes',
         'contract_status',
         'contract_sent_at',
-        'contract_signed_at',
+        'contract_approved_at',
         'documents_email_sent',
         'documents_email_sent_at',
         'created_at',
@@ -54,7 +54,7 @@ class Candidate extends Model
         'interview_scores' => 'array',
         'interview_schedule' => 'datetime',
         'contract_sent_at' => 'datetime',
-        'contract_signed_at' => 'datetime',
+        'contract_approved_at' => 'datetime',
         'documents_email_sent_at' => 'datetime',
         'self_scheduled' => 'boolean',
         'documents_email_sent' => 'boolean',
@@ -140,7 +140,6 @@ class Candidate extends Model
      */
     public function isInOfferingStage(): bool
     {
-        return $this->interview_result === 'passed' && in_array($this->contract_status, ['pending', 'sent', 'signed']);
+        return $this->interview_result === 'passed' && in_array($this->contract_status, ['pending', 'sent', 'approved']);
     }
 }
-

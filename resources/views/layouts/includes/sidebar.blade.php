@@ -88,6 +88,14 @@
                             <i @class('bi bi-person-check me-2')></i> Candidates
                         </a>
                     </li>
+
+                    
+        <li @class("nav-item")>
+            <a href="{{ route('facility-request') }}" @class('nav-link text-dark'. (request()->is('facility-request') ? 'active' : ''))>
+                <i @class('bi bi-building me-2')></i> Facility Request
+            </a>
+        </li>
+
                     <li @class("nav-item")>
                         <a href="{{ route('interviews') }}"
                         @class('nav-link text-dark' . (request()->is('interviews') ? 'active' : ''))>
@@ -206,12 +214,6 @@
                     </li>
                 </ul>
             </div>
-        </li>
-
-        <li @class("nav-item")>
-            <a href="{{ route('facility-request') }}" @class('nav-link text-dark'. (request()->is('facility-request') ? 'active' : ''))>
-                <i @class('bi bi-building me-2')></i> Facility Request
-            </a>
         </li>
 
         <li @class("nav-item")>

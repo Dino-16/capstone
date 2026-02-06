@@ -113,9 +113,34 @@ class OrientationSchedule extends Component
                 // Filter for Approved ones only (following Applications logic)
                 $this->approvedFacilities = collect($allReservations)
                     ->filter(function($res) {
-                        $name = $res['requested_by'] ?? $res['full_name'] ?? '';
-                        return strtolower($res['status'] ?? '') === 'approved' &&
-                               in_array(strtolower(trim($name)), ['hr staff', 'hr manager']);
+                        $status = strtolower($res['status'] ?? '');
+                        if ($status !== 'approved') {
+                            return false;
+                        }
+
+                        $name = strtolower($res['requested_by'] ?? $res['full_name'] ?? '');
+                        $dept = strtolower($res['department_name'] ?? $res['department'] ?? '');
+                        
+                        // Visible if status is approved AND name or department contains HR keywords
+                        $hrKeywords = ['hr staff', 'hr manager', 'hr', 'human resource'];
+                        
+                        $matchesName = false;
+                        foreach ($hrKeywords as $keyword) {
+                            if (str_contains($name, $keyword)) {
+                                $matchesName = true;
+                                break;
+                            }
+                        }
+
+                        $matchesDept = false;
+                        foreach ($hrKeywords as $keyword) {
+                            if (str_contains($dept, $keyword)) {
+                                $matchesDept = true;
+                                break;
+                            }
+                        }
+                        
+                        return $matchesName || $matchesDept;
                     })
                     ->map(function($res) {
                         return [

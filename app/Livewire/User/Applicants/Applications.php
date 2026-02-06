@@ -410,10 +410,34 @@ class Applications extends Component
                 
                 $this->approvedFacilities = collect($reservations)
                     ->filter(function($r) {
-                        $name = $r['requested_by'] ?? $r['full_name'] ?? '';
-                        return isset($r['status']) && 
-                               strtolower($r['status']) === 'approved' &&
-                               in_array(strtolower(trim($name)), ['hr staff', 'hr manager']);
+                        $status = strtolower($r['status'] ?? '');
+                        if ($status !== 'approved') {
+                            return false;
+                        }
+
+                        $name = strtolower($r['requested_by'] ?? $r['full_name'] ?? '');
+                        $dept = strtolower($r['department_name'] ?? $r['department'] ?? '');
+                        
+                        // Visible if status is approved AND name or department contains HR keywords
+                        $hrKeywords = ['hr staff', 'hr manager', 'hr', 'human resource'];
+                        
+                        $matchesName = false;
+                        foreach ($hrKeywords as $keyword) {
+                            if (str_contains($name, $keyword)) {
+                                $matchesName = true;
+                                break;
+                            }
+                        }
+
+                        $matchesDept = false;
+                        foreach ($hrKeywords as $keyword) {
+                            if (str_contains($dept, $keyword)) {
+                                $matchesDept = true;
+                                break;
+                            }
+                        }
+                        
+                        return $matchesName || $matchesDept;
                     })
                     ->map(function($r) {
                         return [

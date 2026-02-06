@@ -106,11 +106,38 @@ class FacilityRequest extends Component
 
     public function getFilteredReservationsProperty()
     {
-        $filtered = collect($this->reservations)->filter(function ($reservation) {
-            $name = $reservation['requested_by'] ?? $reservation['full_name'] ?? '';
-            // User requested explicit visibility only if Requested By is HR Staff / HR Manager
-            return in_array(strtolower(trim($name)), ['hr staff', 'hr manager']);
-        });
+        $userPosition = session('user.position');
+        
+        $filtered = collect($this->reservations);
+
+        // If not Super Admin, apply department/role filtering
+        if ($userPosition !== 'Super Admin') {
+            $filtered = $filtered->filter(function ($reservation) {
+                $name = strtolower($reservation['requested_by'] ?? $reservation['full_name'] ?? '');
+                $dept = strtolower($reservation['department_name'] ?? $reservation['department'] ?? '');
+                
+                // Visible if name or department contains HR-related keywords
+                $hrKeywords = ['hr staff', 'hr manager', 'hr', 'human resource'];
+                
+                $matchesName = false;
+                foreach ($hrKeywords as $keyword) {
+                    if (str_contains($name, $keyword)) {
+                        $matchesName = true;
+                        break;
+                    }
+                }
+
+                $matchesDept = false;
+                foreach ($hrKeywords as $keyword) {
+                    if (str_contains($dept, $keyword)) {
+                        $matchesDept = true;
+                        break;
+                    }
+                }
+                
+                return $matchesName || $matchesDept;
+            });
+        }
 
         // Apply status filter
         if ($this->statusFilter !== 'All') {

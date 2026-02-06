@@ -23,7 +23,7 @@ class OffersExport
             'Department',
             'Contract Status',
             'Contract Sent At',
-            'Contract Signed At',
+            'Contract Approved At',
             'Status'
         ];
 
@@ -37,8 +37,8 @@ class OffersExport
             'Contract Sent At' => function($item) {
                 return $item->contract_sent_at ? $item->contract_sent_at->format('Y-m-d H:i') : 'N/A';
             },
-            'Contract Signed At' => function($item) {
-                return $item->contract_signed_at ? $item->contract_signed_at->format('Y-m-d H:i') : 'N/A';
+            'Contract Approved At' => function($item) {
+                return $item->contract_approved_at ? $item->contract_approved_at->format('Y-m-d H:i') : 'N/A';
             },
             'Status' => 'status',
         ];

@@ -4,12 +4,13 @@ namespace App\Livewire\User\Applicants;
 
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\WithFileUploads;
 use App\Models\Applicants\Candidate;
 use Illuminate\Support\Facades\Mail;
 
 class Offers extends Component
 {
-    use WithPagination;
+    use WithFileUploads;
 
     public $search;
     public $statusFilter = '';
@@ -29,14 +30,46 @@ class Offers extends Component
     // Contract Email Properties
     public $showContractEmailModal = false;
     public $contractEmailCandidateId = null;
+    public $contractEmailCandidateName = '';
     public $contractEmailSubject = 'Employment Contract - JetLounge Travels';
     public $contractEmailContent = '';
+    public $contractFile; // For file attachment
 
     // Contract status modal
     public $showContractModal = false;
     public $contractCandidateId = null;
     public $contractCandidateName = '';
     public $newContractStatus = '';
+
+    // Request Contract Modal Properties
+    public $showRequestContractModal = false;
+    public $requestCandidateId = null;
+    public $requestDepartment = '';
+    public $requestorName = '';
+    public $requestorEmail = '';
+    public $requestContractType = '';
+    public $requestPurpose = '';
+
+    public $departments = [
+        'HR Department',
+        'IT Department',
+        'Finance Department',
+        'Operations Department',
+        'Marketing Department',
+        'Legal Department',
+        'Executive Department'
+    ];
+
+    public $contractTypes = [
+        'Service Agreement',
+        'Employment Contract',
+        'Vendor Contract',
+        'Partnership Agreement',
+        'Non-Disclosure Agreement (NDA)',
+        'Supplier Contract',
+        'Lease Agreement',
+        'Other'
+    ];
 
     public function mount()
     {
@@ -98,8 +131,8 @@ class Offers extends Component
             $candidate->contract_sent_at = now();
         }
         
-        if ($this->newContractStatus === 'signed' && !$candidate->contract_signed_at) {
-            $candidate->contract_signed_at = now();
+        if ($this->newContractStatus === 'approved' && !$candidate->contract_approved_at) {
+            $candidate->contract_approved_at = now();
         }
         
         $candidate->save();
@@ -108,17 +141,83 @@ class Offers extends Component
         $this->closeContractModal();
     }
 
-    // Mark contract as signed (quick action)
-    public function markContractSigned($candidateId)
+    // Request Contract Management
+    public function openRequestContractModal($candidateId)
     {
         $candidate = Candidate::find($candidateId);
         if (!$candidate) return;
 
-        $candidate->contract_status = 'signed';
-        $candidate->contract_signed_at = now();
+        $this->requestCandidateId = $candidateId;
+        $this->requestDepartment = session('user.department') ?? 'HR Department';
+        $this->requestorName = session('user.name') ?? '';
+        $this->requestorEmail = session('user.email') ?? '';
+        $this->requestContractType = 'Employment Contract';
+        $this->requestPurpose = "Requesting employment contract for candidate {$candidate->candidate_name} for the position of {$candidate->applied_position}.";
+        $this->showRequestContractModal = true;
+    }
+
+    public function closeRequestContractModal()
+    {
+        $this->showRequestContractModal = false;
+        $this->requestCandidateId = null;
+        $this->requestDepartment = '';
+        $this->requestorName = '';
+        $this->requestContractType = '';
+        $this->requestPurpose = '';
+    }
+
+    public function submitContractRequest()
+    {
+        $this->validate([
+            'requestDepartment' => 'required',
+            'requestorName' => 'required|string|max:255',
+            'requestorEmail' => 'required|email',
+            'requestContractType' => 'required',
+            'requestPurpose' => 'required|string',
+        ]);
+
+        $candidate = Candidate::find($this->requestCandidateId);
+        if (!$candidate) return;
+
+        try {
+            // Trying HTTP instead of HTTPS and switching back to asForm() based on curl findings
+            $response = \Illuminate\Support\Facades\Http::withoutVerifying()->asForm()->post('http://legal-admin.jetlougetravels-ph.com/API.php', [
+                'action' => 'create_request',
+                'requesting_department' => $this->requestDepartment,
+                'requestor_name' => $this->requestorName,
+                'requestor_email' => $this->requestorEmail,
+                'contract_type_requested' => $this->requestContractType,
+                'purpose' => $this->requestPurpose,
+                'candidate_name' => $candidate->candidate_name,
+                'candidate_email' => $candidate->candidate_email,
+                'position' => $candidate->applied_position,
+            ]);
+
+            if ($response->successful()) {
+                session()->flash('message', "Contract request submitted successfully to Legal Admin!");
+                $this->closeRequestContractModal();
+            } else {
+                $errorMsg = $response->json('message') ?? $response->body() ?? 'Unknown Error';
+                \Log::error("Legal API Response Error: " . $errorMsg);
+                session()->flash('error', "Legal API Error: " . Str::limit($errorMsg, 100));
+            }
+        } catch (\Exception $e) {
+            \Log::error("Legal API Connection Error: " . $e->getMessage());
+            session()->flash('error', "Could not connect to Legal API. Please check your internet connection.");
+        }
+    }
+
+    // Mark contract as approved (quick action)
+    public function markContractApproved($candidateId)
+    {
+        $candidate = Candidate::find($candidateId);
+        if (!$candidate) return;
+
+        $candidate->contract_status = 'approved';
+        $candidate->contract_approved_at = now();
         $candidate->save();
 
-        session()->flash('message', "Contract marked as signed for {$candidate->candidate_name}!");
+        session()->flash('message', "Contract marked as approved for {$candidate->candidate_name}!");
     }
 
     // Email modal for document explainer
@@ -272,7 +371,7 @@ JetLounge Travels";
 
         $this->contractEmailCandidateId = $candidateId;
         $this->contractEmailSubject = "Employment Contract - {$candidate->candidate_name} ({$candidate->applied_position})";
-        $this->contractEmailContent = $this->getContractTemplate($candidate);
+        $this->contractEmailContent = "Dear {$candidate->candidate_name},\n\nPlease find the attached employment contract for your review and signature.\n\nBest regards,\nHR Department";
         $this->showContractEmailModal = true;
     }
 
@@ -282,6 +381,7 @@ JetLounge Travels";
         $this->contractEmailCandidateId = null;
         $this->contractEmailSubject = 'Employment Contract - JetLounge Travels';
         $this->contractEmailContent = '';
+        $this->contractFile = null;
     }
 
     public function sendContractEmail()
@@ -289,57 +389,30 @@ JetLounge Travels";
         $this->validate([
             'contractEmailSubject' => ['required', 'string', 'max:255'],
             'contractEmailContent' => ['required', 'string'],
+            'contractFile' => ['required', 'file', 'mimes:pdf,doc,docx', 'max:10240'], // 10MB max
         ]);
 
         $candidate = Candidate::find($this->contractEmailCandidateId);
         if (!$candidate) return;
+
+        // In production:
+        // Mail::send([], [], function($message) use ($candidate) {
+        //     $message->to($candidate->candidate_email)
+        //             ->subject($this->contractEmailSubject)
+        //             ->setBody($this->contractEmailContent)
+        //             ->attach($this->contractFile->getRealPath(), [
+        //                 'as' => $this->contractFile->getClientOriginalName(),
+        //                 'mime' => $this->contractFile->getMimeType(),
+        //             ]);
+        // });
 
         // Mark contract as sent
         $candidate->contract_status = 'sent';
         $candidate->contract_sent_at = now();
         $candidate->save();
 
-        session()->flash('message', "Contract email sent to {$candidate->candidate_email} successfully!");
+        session()->flash('message', "Contract email with attachment sent to {$candidate->candidate_email} successfully!");
         $this->closeContractEmailModal();
-    }
-
-    private function getContractTemplate($candidate)
-    {
-        $position = $candidate->applied_position ?? 'Employee';
-        $department = $candidate->department ?? 'Operations';
-        $date = now()->format('F d, Y');
-
-        return "EMPLOYMENT CONTRACT (OFFER)
-Date: {$date}
-
-DEAR {$candidate->candidate_name},
-
-We are pleased to offer you the position of {$position} in the {$department} Department at JetLounge Travels.
-
-1. TERMS OF EMPLOYMENT:
-Your employment will commence on a date to be mutually agreed upon, following the signing of this contract.
-
-2. COMPENSATION & BENEFITS:
-• Monthly Base Salary: As discussed in the final interview.
-• Benefits: Mandatory government benefits (SSS, PhilHealth, Pag-IBIG).
-• Performance Bonuses: Eligibility after 6 months of probation.
-
-3. PROBATIONARY PERIOD:
-The first 6 months of your employment will be a probationary period.
-
-4. RESPONSIBILITIES:
-Your duties and responsibilities will be outlined in the detailed job description provided on your first day.
-
-5. CONFIDENTIALITY:
-You agree to maintain the confidentiality of all proprietary information of JetLounge Travels.
-
-ACCEPTANCE:
-By electronically acknowledging this offer, you confirm your acceptance of the terms outlined above.
-
-Best regards,
-
-Manager, Human Resources
-JetLounge Travels";
     }
 
     // Complete onboarding - move to employees
@@ -348,8 +421,8 @@ JetLounge Travels";
         $candidate = Candidate::find($candidateId);
         if (!$candidate) return;
 
-        if ($candidate->contract_status !== 'signed') {
-            session()->flash('error', 'Contract must be signed before completing onboarding.');
+        if ($candidate->contract_status !== 'approved') {
+            session()->flash('error', 'Contract must be approved before completing onboarding.');
             return;
         }
 
@@ -369,6 +442,107 @@ JetLounge Travels";
         $candidate = Candidate::findOrFail($id);
         $candidate->delete();
         session()->flash('message', 'Candidate deleted successfully!');
+    }
+
+    public $showApprovalModal = false;
+    public $approvalTitle = '';
+    public $approvalClientName = '';
+    public $approvalClientEmail = '';
+    public $approvalType = '';
+    public $approvalStartDate = '';
+    public $approvalEndDate = '';
+    public $approvalValue = '';
+    public $approvalDescription = '';
+    public $approvalFile;
+
+    public function openApprovalModal()
+    {
+        $this->approvalClientName = session('user.name') ?? '';
+        $this->approvalClientEmail = session('user.email') ?? '';
+        $this->showApprovalModal = true;
+    }
+
+    public function closeApprovalModal()
+    {
+        $this->showApprovalModal = false;
+        $this->reset([
+            'approvalTitle', 
+            'approvalClientName', 
+            'approvalClientEmail', 
+            'approvalType', 
+            'approvalStartDate', 
+            'approvalEndDate', 
+            'approvalValue', 
+            'approvalDescription', 
+            'approvalFile'
+        ]);
+    }
+
+    public function submitContractApproval()
+    {
+        $this->validate([
+            'approvalTitle' => 'required|string|max:255',
+            'approvalClientName' => 'required|string|max:255',
+            'approvalClientEmail' => 'required|email|max:255',
+            'approvalType' => 'required|string',
+            'approvalStartDate' => 'required|date',
+            'approvalEndDate' => 'required|date|after_or_equal:approvalStartDate',
+            'approvalValue' => 'required|numeric|min:0',
+            'approvalDescription' => 'nullable|string',
+            'approvalFile' => 'required|file|max:10240|mimes:pdf,doc,docx', // 10MB limit
+        ]);
+
+        try {
+            // Map unsupported types to 'service_agreement' (which is known to work)
+            // and append the actual type to the description/title
+            $validTypes = ['service_agreement', 'vendor_contract'];
+            $apiContractType = in_array($this->approvalType, $validTypes) ? $this->approvalType : 'service_agreement';
+            
+            $finalDescription = $this->approvalDescription ?? '';
+            if ($apiContractType !== $this->approvalType) {
+                // If we mapped it, add a note to description
+                $readableType = ucwords(str_replace('_', ' ', $this->approvalType));
+                $finalDescription = "Actual Contract Type: $readableType\n\n" . $finalDescription;
+            }
+
+            \Log::info('Submitting Contract Approval (Offers)...', [
+                'original_type' => $this->approvalType,
+                'sent_type' => $apiContractType,
+                'title' => $this->approvalTitle
+            ]);
+
+            $response = \Illuminate\Support\Facades\Http::withoutVerifying()
+                ->attach(
+                    'file', 
+                    file_get_contents($this->approvalFile->getRealPath()), 
+                    $this->approvalFile->getClientOriginalName()
+                )
+                ->post('https://legal-admin.jetlougetravels-ph.com/laravel_contract_api.php', [
+                    'contract_title' => $this->approvalTitle,
+                    'client_name' => $this->approvalClientName,
+                    'client_email' => $this->approvalClientEmail,
+                    'contract_type' => $apiContractType,
+                    'start_date' => $this->approvalStartDate,
+                    'end_date' => $this->approvalEndDate,
+                    'contract_value' => $this->approvalValue,
+                    'description' => $finalDescription,
+                    'created_by' => session('user.name') ?? 'HR System',
+                    'status' => 'pending_review'
+                ]);
+
+            \Log::info('Contract Approval Response (Offers): ' . $response->status() . ' - ' . $response->body());
+
+            if ($response->successful()) {
+                session()->flash('message', 'Contract submitted for approval successfully!');
+                $this->closeApprovalModal();
+            } else {
+                \Log::error('Contract Approval API Error: ' . $response->body());
+                session()->flash('error', 'Failed to submit contract (' . $response->status() . '): ' . \Illuminate\Support\Str::limit($response->body(), 200));
+            }
+        } catch (\Exception $e) {
+            \Log::error('Contract Approval connection error: ' . $e->getMessage());
+            session()->flash('error', 'Connection error: ' . $e->getMessage());
+        }
     }
 
     public function exportData()
@@ -403,7 +577,7 @@ JetLounge Travels";
         $stats = [
             'pending' => Candidate::where('interview_result', 'passed')->where('contract_status', 'pending')->count(),
             'sent' => Candidate::where('interview_result', 'passed')->where('contract_status', 'sent')->count(),
-            'signed' => Candidate::where('interview_result', 'passed')->where('contract_status', 'signed')->count(),
+            'approved' => Candidate::where('interview_result', 'passed')->where('contract_status', 'approved')->count(),
             'hired' => Candidate::where('status', 'hired')->count(),
         ];
 

@@ -33,13 +33,19 @@
             </div>
         </div>
         
-        <div>
+        <div class="d-flex gap-2">
+            <button
+                class="btn btn-outline-primary"
+                wire:click="openApprovalModal"
+            >
+                <i class="bi bi-file-earmark-check me-2"></i>Contract Approval
+            </button>
             <button
                 class="btn btn-success"
                 wire:click="export"
                 wire:target="employees"
             >
-                Export
+                <i class="bi bi-download me-2"></i>Export
             </button>
         </div>
     </div>
@@ -124,15 +130,22 @@
                             >
                                 <i class="bi bi-eye"></i>
                             </button>
-                            @if(session('user.position') === 'Super Admin')
                             <button
-                                class="btn btn-sm btn-danger"
-                                wire:click="deleteEmployee({{ $index }})"
-                                wire:confirm="Are you sure you want to delete this employee?"
-                                title="Delete"
+                                class="btn btn-sm btn-outline-warning"
+                                wire:click="openRequestContractModal({{ $index }})"
+                                title="Request Contract"
                             >
-                                <i class="bi bi-trash"></i>
+                                <i class="bi bi-file-earmark-plus"></i>
                             </button>
+                            @if(session('user.position') === 'Super Admin')
+                                <button
+                                    class="btn btn-sm btn-danger"
+                                    wire:click="deleteEmployee({{ $index }})"
+                                    wire:confirm="Are you sure you want to delete this employee?"
+                                    title="Delete"
+                                >
+                                    <i class="bi bi-trash"></i>
+                                </button>
                             @endif
                         </td>
                     </tr>
@@ -364,4 +377,176 @@
     </div>
     @endif
 
+    {{-- Request Contract Modal --}}
+    @if($showRequestContractModal)
+    <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-white border-bottom">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-plus me-2"></i>Request Contract</h5>
+                    <button type="button" class="btn-close" wire:click="closeRequestContractModal"></button>
+                </div>
+                <div class="modal-body p-4 bg-light">
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark small text-uppercase">Requesting Department <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control border-2" wire:model="requestDepartment" placeholder="Enter department">
+                                    @error('requestDepartment') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark small text-uppercase">Requestor Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control border-2" wire:model="requestorName" placeholder="Enter your name">
+                                    @error('requestorName') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-bold text-dark small text-uppercase">Requestor Email <span class="text-danger">*</span></label>
+                                    <input type="email" class="form-control border-2" wire:model="requestorEmail" placeholder="Enter your email">
+                                    @error('requestorEmail') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                 </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-bold text-dark small text-uppercase">Contract Type Requested <span class="text-danger">*</span></label>
+                                    <select class="form-select border-2" wire:model="requestContractType">
+                                        <option value="">Select Contract Type</option>
+                                        @foreach($contractTypes as $type)
+                                            <option value="{{ $type }}">{{ $type }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('requestContractType') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-bold text-dark small text-uppercase">Purpose <span class="text-danger">*</span></label>
+                                    <textarea 
+                                        class="form-control border-2" 
+                                        wire:model="requestPurpose" 
+                                        rows="5" 
+                                        placeholder="Describe the purpose of this contract request..."
+                                        style="resize: none;"
+                                    ></textarea>
+                                    @error('requestPurpose') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info border-0 shadow-sm d-flex align-items-center mb-0">
+                        <i class="bi bi-info-circle-fill me-3 fs-4"></i>
+                        <small>This request will be sent to the Legal Administration system for processing. You will be notified once the contract is ready.</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-top p-4 bg-white">
+                    <button type="button" class="btn btn-outline-secondary px-4 py-2" wire:click="closeRequestContractModal">Cancel</button>
+                    <button type="button" class="btn btn-primary px-4 py-2 fw-bold shadow-sm" wire:click="submitContractRequest" wire:loading.attr="disabled">
+                        <span wire:loading.remove><i class="bi bi-send-fill me-2"></i>Send Request</span>
+                        <span wire:loading><span class="spinner-border spinner-border-sm me-2"></span>Submitting...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Contract Approval Modal --}}
+    @if($showApprovalModal)
+    <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-white border-bottom">
+                    <h5 class="modal-title"><i class="bi bi-file-earmark-lock-fill me-2"></i>Submit Contract for Approval</h5>
+                    <button type="button" class="btn-close" wire:click="closeApprovalModal"></button>
+                </div>
+                <div class="modal-body p-4 bg-light">
+                    <div class="alert alert-info border-0 shadow-sm mb-4">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        Submit a drafted contract to the Legal Department for review and final approval.
+                    </div>
+
+                    <div class="row g-3">
+                        {{-- Contract Info --}}
+                        <div class="col-12">
+                             <label class="form-label fw-bold small text-uppercase text-secondary">Contract Title <span class="text-danger">*</span></label>
+                             <input type="text" class="form-control" wire:model="approvalTitle" placeholder="e.g. Service Agreement 2024">
+                             @error('approvalTitle') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase text-secondary">Client/Requestor Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" wire:model="approvalClientName">
+                            @error('approvalClientName') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase text-secondary">Client/Requestor Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" wire:model="approvalClientEmail">
+                            @error('approvalClientEmail') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase text-secondary">Contract Type <span class="text-danger">*</span></label>
+                            <select class="form-select" wire:model="approvalType">
+                                <option value="">Select Type</option>
+                                <option value="service_agreement">Service Agreement</option>
+                                <option value="employment_contract">Employment Contract</option>
+                                <option value="partnership_agreement">Partnership Agreement</option>
+                                <option value="vendor_contract">Vendor Contract</option>
+                                <option value="non_disclosure_agreement">Non-Disclosure Agreement</option>
+                                <option value="lease_agreement">Lease Agreement</option>
+                                <option value="other">Other</option>
+                            </select>
+                            @error('approvalType') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase text-secondary">Contract Value (PHP) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" class="form-control" wire:model="approvalValue" placeholder="0.00">
+                            @error('approvalValue') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase text-secondary">Start Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" wire:model="approvalStartDate">
+                            @error('approvalStartDate') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase text-secondary">End Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" wire:model="approvalEndDate">
+                            @error('approvalEndDate') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-uppercase text-secondary">Description</label>
+                            <textarea class="form-control" rows="3" wire:model="approvalDescription" placeholder="Optional notes..."></textarea>
+                            @error('approvalDescription') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                        </div>
+
+                        {{-- File Upload --}}
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-uppercase text-secondary">Attach Contract File <span class="text-danger">*</span></label>
+                            <div class="border rounded p-3 bg-white">
+                                <input type="file" class="form-control" wire:model="approvalFile" accept=".pdf,.doc,.docx">
+                                <small class="text-muted mt-2 d-block">
+                                    <i class="bi bi-file-earmark-arrow-up"></i> Accepted Formats: PDF, DOC, DOCX (Max 10MB)
+                                </small>
+                            </div>
+                            @error('approvalFile') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                            <div wire:loading wire:target="approvalFile" class="text-success small mt-2">
+                                <span class="spinner-border spinner-border-sm me-2"></span>Uploading file...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white border-top">
+                    <button type="button" class="btn btn-secondary px-4" wire:click="closeApprovalModal">Cancel</button>
+                    <button type="button" class="btn btn-primary px-4 fw-bold" wire:click="submitContractApproval" wire:loading.attr="disabled" wire:target="submitContractApproval, approvalFile">
+                        <span wire:loading.remove wire:target="submitContractApproval"><i class="bi bi-send-fill me-2"></i>Submit for Approval</span>
+                        <span wire:loading wire:target="submitContractApproval"><span class="spinner-border spinner-border-sm me-2"></span>Submitting...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+@endif
 </div>
+
