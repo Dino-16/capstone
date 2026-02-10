@@ -2,11 +2,14 @@
 
 namespace App\Exports\Onboarding;
 
-use App\Services\ExportService;
-use Illuminate\Support\Collection;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class EmployeesExport
+class EmployeesExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
     protected $employees;
 
@@ -15,9 +18,14 @@ class EmployeesExport
         $this->employees = $employees;
     }
 
-    public function export(): StreamedResponse
+    public function collection()
     {
-        $headers = [
+        return collect($this->employees);
+    }
+
+    public function headings(): array
+    {
+        return [
             'Name',
             'Position', 
             'Department',
@@ -25,15 +33,24 @@ class EmployeesExport
             'HR Documents',
             'Training Modules',
         ];
+    }
 
-        $data = collect($this->employees)->map(function ($employee) use ($headers) {
-            $row = [];
-            foreach ($headers as $header) {
-                $row[$header] = $employee[$header] ?? '';
-            }
-            return $row;
-        });
-        
-        return ExportService::exportToCsv($data, $headers, 'employees_' . date('Y-m-d') . '.csv');
+    public function map($employee): array
+    {
+        return [
+            $employee['Name'] ?? '',
+            $employee['Position'] ?? '',
+            $employee['Department'] ?? '',
+            $employee['Contract Signing'] ?? '',
+            $employee['HR Documents'] ?? '',
+            $employee['Training Modules'] ?? '',
+        ];
+    }
+
+    public function styles(Worksheet $sheet)
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 }

@@ -3,16 +3,23 @@
 namespace App\Exports\Recognition;
 
 use App\Models\Recognition\GiveReward;
-use App\Services\ExportService;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class GiveRewardsExport
+class GiveRewardsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
-    public function export(): StreamedResponse
+    public function collection()
     {
-        $query = GiveReward::with('reward')->orderBy('created_at', 'desc');
-        
-        $headers = [
+        return GiveReward::with('reward')->orderBy('created_at', 'desc')->get();
+    }
+
+    public function headings(): array
+    {
+        return [
             'ID',
             'Employee Name',
             'Employee Email',
@@ -28,42 +35,32 @@ class GiveRewardsExport
             'Created At',
             'Updated At'
         ];
+    }
 
-        $mappings = [
-            'ID' => 'id',
-            'Employee Name' => 'employee_name',
-            'Employee Email' => 'employee_email',
-            'Employee Position' => 'employee_position',
-            'Employee Department' => 'employee_department',
-            'Reward Name' => function($item) {
-                return $item->reward ? $item->reward->name : 'N/A';
-            },
-            'Reward Type' => function($item) {
-                return $item->reward ? $item->reward->type : 'N/A';
-            },
-            'Given By' => 'given_by',
-            'Given Date' => function($item) {
-                return $item->given_date->format('Y-m-d');
-            },
-            'Status' => function($item) {
-                return ucfirst($item->status);
-            },
-            'Reason' => function($item) {
-                return $item->reason ?? 'N/A';
-            },
-            'Notes' => function($item) {
-                return $item->notes ?? 'N/A';
-            },
-            'Created At' => function($item) {
-                return $item->created_at ? $item->created_at->format('Y-m-d H:i:s') : '';
-            },
-            'Updated At' => function($item) {
-                return $item->updated_at ? $item->updated_at->format('Y-m-d H:i:s') : '';
-            },
+    public function map($item): array
+    {
+        return [
+            $item->id,
+            $item->employee_name,
+            $item->employee_email,
+            $item->employee_position,
+            $item->employee_department,
+            $item->reward ? $item->reward->name : 'N/A',
+            $item->reward ? $item->reward->type : 'N/A',
+            $item->given_by,
+            $item->given_date ? $item->given_date->format('M d, Y') : '',
+            ucfirst($item->status),
+            $item->reason ?? 'N/A',
+            $item->notes ?? 'N/A',
+            $item->created_at ? $item->created_at->format('M d, Y h:i A') : '',
+            $item->updated_at ? $item->updated_at->format('M d, Y h:i A') : '',
         ];
+    }
 
-        $data = ExportService::transformQuery($query, $mappings);
-        
-        return ExportService::exportToCsv($data, $headers, 'give_rewards_' . date('Y-m-d') . '.csv');
+    public function styles(Worksheet $sheet)
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 }

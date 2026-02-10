@@ -146,8 +146,7 @@ class Rewards extends Component
 
     public function export()
     {
-        $export = new \App\Exports\Recognition\RewardsExport();
-        return $export->export();
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\Recognition\RewardsExport(), 'rewards.xlsx');
     }
 
         public function loadEligibleEmployees()

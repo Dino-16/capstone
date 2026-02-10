@@ -2,12 +2,15 @@
 
 namespace App\Exports\Performance;
 
-use App\Services\ExportService;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Carbon\Carbon;
-use Illuminate\Support\Collection;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class AttendanceTrackerExport
+class AttendanceTrackerExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
     protected array $attendanceRecords;
 
@@ -16,9 +19,14 @@ class AttendanceTrackerExport
         $this->attendanceRecords = $attendanceRecords;
     }
 
-    public function export(): StreamedResponse
+    public function collection()
     {
-        $headers = [
+        return collect($this->attendanceRecords);
+    }
+
+    public function headings(): array
+    {
+        return [
             'Employee Name',
             'Position',
             'Date',
@@ -28,29 +36,35 @@ class AttendanceTrackerExport
             'Status',
             'Location',
         ];
+    }
 
-        $data = collect($this->attendanceRecords)->map(function ($record) {
-            $name = trim(($record['employee']['first_name'] ?? '') . ' ' . ($record['employee']['last_name'] ?? ''));
-            $position = $record['employee']['position'] ?? '';
-            $date = isset($record['date']) ? Carbon::parse($record['date'])->format('M d, Y') : '';
-            $timeIn = isset($record['clock_in_time']) ? Carbon::parse($record['clock_in_time'])->format('h:i A') : '-';
-            $timeOut = isset($record['clock_out_time']) ? Carbon::parse($record['clock_out_time'])->format('h:i A') : '-';
-            $totalHours = $record['total_hours'] ?? '0.00';
-            $status = ucfirst(str_replace('_', ' ', $record['status'] ?? 'unknown'));
-            $location = $record['location'] ?? 'N/A';
+    public function map($record): array
+    {
+        $name = trim(($record['employee']['first_name'] ?? '') . ' ' . ($record['employee']['last_name'] ?? ''));
+        $position = $record['employee']['position'] ?? '';
+        $date = isset($record['date']) ? Carbon::parse($record['date'])->format('M d, Y') : '';
+        $timeIn = isset($record['clock_in_time']) ? Carbon::parse($record['clock_in_time'])->format('h:i A') : '-';
+        $timeOut = isset($record['clock_out_time']) ? Carbon::parse($record['clock_out_time'])->format('h:i A') : '-';
+        $totalHours = $record['total_hours'] ?? '0.00';
+        $status = ucfirst(str_replace('_', ' ', $record['status'] ?? 'unknown'));
+        $location = $record['location'] ?? 'N/A';
 
-            return [
-                'Employee Name' => $name,
-                'Position' => $position,
-                'Date' => $date,
-                'Time In' => $timeIn,
-                'Time Out' => $timeOut,
-                'Total Hours' => $totalHours,
-                'Status' => $status,
-                'Location' => $location,
-            ];
-        });
+        return [
+            $name,
+            $position,
+            $date,
+            $timeIn,
+            $timeOut,
+            $totalHours,
+            $status,
+            $location,
+        ];
+    }
 
-        return ExportService::exportToCsv($data, $headers, 'attendance_tracker_' . date('Y-m-d') . '.csv');
+    public function styles(Worksheet $sheet)
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 }

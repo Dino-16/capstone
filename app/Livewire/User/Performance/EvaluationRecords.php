@@ -77,8 +77,7 @@ class EvaluationRecords extends Component
 
     public function exportData()
     {
-        $export = new EvaluationRecordsExport();
-        return $export->export();
+        return \Maatwebsite\Excel\Facades\Excel::download(new EvaluationRecordsExport(), 'evaluation_records.xlsx');
     }
 
     public function viewEvaluation($id)

@@ -3,19 +3,26 @@
 namespace App\Exports\Applicants;
 
 use App\Models\Applicants\Candidate;
-use App\Services\ExportService;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class OffersExport
+class OffersExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
-    public function export(): StreamedResponse
+    public function collection()
     {
-        $query = Candidate::query()
-            ->whereIn('status', ['passed', 'hired'])
+        return Candidate::whereIn('status', ['passed', 'hired'])
             ->where('interview_result', 'passed')
-            ->latest();
-        
-        $headers = [
+            ->latest()
+            ->get();
+    }
+
+    public function headings(): array
+    {
+        return [
             'ID',
             'Name',
             'Email',
@@ -26,25 +33,27 @@ class OffersExport
             'Contract Approved At',
             'Status'
         ];
+    }
 
-        $mappings = [
-            'ID' => 'id',
-            'Name' => 'candidate_name',
-            'Email' => 'candidate_email',
-            'Position' => 'applied_position',
-            'Department' => 'department',
-            'Contract Status' => 'contract_status',
-            'Contract Sent At' => function($item) {
-                return $item->contract_sent_at ? $item->contract_sent_at->format('Y-m-d H:i') : 'N/A';
-            },
-            'Contract Approved At' => function($item) {
-                return $item->contract_approved_at ? $item->contract_approved_at->format('Y-m-d H:i') : 'N/A';
-            },
-            'Status' => 'status',
+    public function map($item): array
+    {
+        return [
+            $item->id,
+            $item->candidate_name,
+            $item->candidate_email,
+            $item->applied_position,
+            $item->department,
+            $item->contract_status,
+            $item->contract_sent_at ? $item->contract_sent_at->format('M d, Y h:i A') : 'N/A',
+            $item->contract_approved_at ? $item->contract_approved_at->format('M d, Y h:i A') : 'N/A',
+            $item->status,
         ];
+    }
 
-        $data = ExportService::transformQuery($query, $mappings);
-        
-        return ExportService::exportToCsv($data, $headers, 'offers_' . date('Y-m-d') . '.csv');
+    public function styles(Worksheet $sheet)
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 }

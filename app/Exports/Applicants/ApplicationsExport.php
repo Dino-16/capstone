@@ -4,16 +4,23 @@ namespace App\Exports\Applicants;
 
 use App\Models\Applicants\Application;
 use App\Models\Applicants\FilteredResume;
-use App\Services\ExportService;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class ApplicationsExport
+class ApplicationsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
-    public function export(): StreamedResponse
+    public function collection()
     {
-        $query = Application::query()->latest();
-        
-        $headers = [
+        return Application::latest()->get();
+    }
+
+    public function headings(): array
+    {
+        return [
             'ID',
             'Name',
             'Email',
@@ -25,32 +32,30 @@ class ApplicationsExport
             'Qualification Status',
             'Created At'
         ];
+    }
 
-        $mappings = [
-            'ID' => 'id',
-            'Name' => function($item) {
-                return $item->first_name . ' ' . $item->last_name;
-            },
-            'Email' => 'email',
-            'Phone' => 'phone',
-            'Applied Position' => 'applied_position',
-            'Department' => 'department',
-            'Status' => 'status',
-            'AI Score' => function($item) {
-                 $resume = FilteredResume::where('application_id', $item->id)->first();
-                 return $resume ? $resume->rating_score : 'N/A';
-            },
-            'Qualification Status' => function($item) {
-                 $resume = FilteredResume::where('application_id', $item->id)->first();
-                 return $resume ? $resume->qualification_status : 'N/A';
-            },
-            'Created At' => function($item) {
-                return $item->created_at ? $item->created_at->format('Y-m-d H:i:s') : '';
-            },
-        ];
-
-        $data = ExportService::transformQuery($query, $mappings);
+    public function map($item): array
+    {
+        $resume = FilteredResume::where('application_id', $item->id)->first();
         
-        return ExportService::exportToCsv($data, $headers, 'applications_' . date('Y-m-d') . '.csv');
+        return [
+            $item->id,
+            $item->first_name . ' ' . $item->last_name,
+            $item->email,
+            $item->phone,
+            $item->applied_position,
+            $item->department,
+            $item->status,
+            $resume ? $resume->rating_score : 'N/A',
+            $resume ? $resume->qualification_status : 'N/A',
+            $item->created_at ? $item->created_at->format('M d, Y h:i A') : '',
+        ];
+    }
+
+    public function styles(Worksheet $sheet)
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 }

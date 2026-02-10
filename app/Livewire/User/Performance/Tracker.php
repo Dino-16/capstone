@@ -81,8 +81,7 @@ class Tracker extends Component
     
     public function exportData()
     {
-        $export = new PerformanceTrackerExport($this->filteredEmployees);
-        return $export->export();
+        return \Maatwebsite\Excel\Facades\Excel::download(new PerformanceTrackerExport($this->filteredEmployees), 'performance_tracker.xlsx');
     }
     
     // Attendance search and filter properties
@@ -123,8 +122,7 @@ class Tracker extends Component
     
     public function exportAttendanceData()
     {
-        $export = new AttendanceTrackerExport($this->filteredAttendance);
-        return $export->export();
+        return \Maatwebsite\Excel\Facades\Excel::download(new AttendanceTrackerExport($this->filteredAttendance), 'attendance_tracker.xlsx');
     }
 
     public function mount()

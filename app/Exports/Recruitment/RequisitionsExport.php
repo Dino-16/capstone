@@ -3,51 +3,52 @@
 namespace App\Exports\Recruitment;
 
 use App\Models\Recruitment\Requisition;
-use App\Services\ExportService;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class RequisitionsExport
+class RequisitionsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
-    public function export(): StreamedResponse
+    public function collection()
     {
-        $query = Requisition::query();
-        
-        $headers = [
+        return Requisition::all();
+    }
+
+    public function headings(): array
+    {
+        return [
             'ID',
-            'Title',
+            'Requested By',
             'Department',
             'Position',
-            'Employment Type',
-            'Salary Range',
-            'Location',
-            'Description',
-            'Requirements',
+            'No. of Openings',
             'Status',
             'Created At',
             'Updated At'
         ];
+    }
 
-        $mappings = [
-            'ID' => 'id',
-            'Title' => 'title',
-            'Department' => 'department',
-            'Position' => 'position',
-            'Employment Type' => 'employment_type',
-            'Salary Range' => 'salary_range',
-            'Location' => 'location',
-            'Description' => 'description',
-            'Requirements' => 'requirements',
-            'Status' => 'status',
-            'Created At' => function($item) {
-                return $item->created_at ? $item->created_at->format('Y-m-d H:i:s') : '';
-            },
-            'Updated At' => function($item) {
-                return $item->updated_at ? $item->updated_at->format('Y-m-d H:i:s') : '';
-            },
+    public function map($requisition): array
+    {
+        return [
+            $requisition->id,
+            $requisition->requested_by,
+            $requisition->department,
+            $requisition->position,
+            $requisition->opening,
+            $requisition->status ?? 'Pending', // Default if not set
+            $requisition->created_at ? $requisition->created_at->format('M d, Y h:i A') : '',
+            $requisition->updated_at ? $requisition->updated_at->format('M d, Y h:i A') : '',
         ];
+    }
 
-        $data = ExportService::transformQuery($query, $mappings);
-        
-        return ExportService::exportToCsv($data, $headers, 'requisitions_' . date('Y-m-d') . '.csv');
+    public function styles(Worksheet $sheet)
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 }

@@ -212,8 +212,7 @@ class GiveRewards extends Component
 
     public function export()
     {
-        $export = new GiveRewardsExport();
-        return $export->export();
+        return \Maatwebsite\Excel\Facades\Excel::download(new GiveRewardsExport(), 'give_rewards.xlsx');
     }
 
     public function render()

@@ -3,16 +3,23 @@
 namespace App\Exports\Onboarding;
 
 use App\Models\Onboarding\OrientationSchedule;
-use App\Services\ExportService;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class OrientationSchedulesExport
+class OrientationSchedulesExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
-    public function export(): StreamedResponse
+    public function collection()
     {
-        $query = OrientationSchedule::query();
-        
-        $headers = [
+        return OrientationSchedule::all();
+    }
+
+    public function headings(): array
+    {
+        return [
             'ID',
             'Employee Name',
             'Orientation Date',
@@ -24,32 +31,28 @@ class OrientationSchedulesExport
             'Created At',
             'Updated At'
         ];
+    }
 
-        $mappings = [
-            'ID' => 'id',
-            'Employee Name' => 'employee_name',
-            'Orientation Date' => function($item) {
-                return $item->orientation_date->format('Y-m-d');
-            },
-            'Orientation Time' => function($item) {
-                return $item->orientation_time->format('H:i:s');
-            },
-            'Location' => 'location',
-            'Facilitator' => 'facilitator',
-            'Status' => 'status',
-            'Notes' => function($item) {
-                return $item->notes ?? '';
-            },
-            'Created At' => function($item) {
-                return $item->created_at ? $item->created_at->format('Y-m-d H:i:s') : '';
-            },
-            'Updated At' => function($item) {
-                return $item->updated_at ? $item->updated_at->format('Y-m-d H:i:s') : '';
-            },
+    public function map($item): array
+    {
+        return [
+            $item->id,
+            $item->employee_name,
+            $item->orientation_date ? $item->orientation_date->format('M d, Y') : '',
+            $item->orientation_time ? $item->orientation_time->format('h:i A') : '',
+            $item->location,
+            $item->facilitator,
+            $item->status,
+            $item->notes ?? '',
+            $item->created_at ? $item->created_at->format('M d, Y h:i A') : '',
+            $item->updated_at ? $item->updated_at->format('M d, Y h:i A') : '',
         ];
+    }
 
-        $data = ExportService::transformQuery($query, $mappings);
-        
-        return ExportService::exportToCsv($data, $headers, 'orientation_schedules_' . date('Y-m-d') . '.csv');
+    public function styles(Worksheet $sheet)
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 }

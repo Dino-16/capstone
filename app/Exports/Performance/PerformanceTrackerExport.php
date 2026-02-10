@@ -2,11 +2,14 @@
 
 namespace App\Exports\Performance;
 
-use App\Services\ExportService;
-use Illuminate\Support\Collection;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class PerformanceTrackerExport
+class PerformanceTrackerExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
     protected array $employees;
 
@@ -15,9 +18,14 @@ class PerformanceTrackerExport
         $this->employees = $employees;
     }
 
-    public function export(): StreamedResponse
+    public function collection()
     {
-        $headers = [
+        return collect($this->employees);
+    }
+
+    public function headings(): array
+    {
+        return [
             'Employee Name',
             'Position',
             'Department',
@@ -27,25 +35,31 @@ class PerformanceTrackerExport
             'Pending Evaluations',
             'Next Evaluation',
         ];
+    }
 
-        $data = collect($this->employees)->map(function ($employee) {
-            $nextEval = collect($employee['monthly_evaluations'] ?? [])
-                ->where('status', '!=', 'completed')
-                ->first();
-            $nextEvalMonth = $nextEval ? ($nextEval['month'] ?? 'Unknown') : 'All Caught Up';
+    public function map($employee): array
+    {
+        $nextEval = collect($employee['monthly_evaluations'] ?? [])
+            ->where('status', '!=', 'completed')
+            ->first();
+        $nextEvalMonth = $nextEval ? ($nextEval['month'] ?? 'Unknown') : 'All Caught Up';
 
-            return [
-                'Employee Name' => $employee['name'] ?? '',
-                'Position' => $employee['position'] ?? '',
-                'Department' => $employee['department'] ?? '',
-                'Email' => $employee['email'] ?? '',
-                'Hire Date' => $employee['hire_date'] ?? '',
-                'Completed Evaluations' => $employee['completed_evaluations'] ?? 0,
-                'Pending Evaluations' => $employee['pending_evaluations'] ?? 0,
-                'Next Evaluation' => $nextEvalMonth,
-            ];
-        });
+        return [
+            $employee['name'] ?? '',
+            $employee['position'] ?? '',
+            $employee['department'] ?? '',
+            $employee['email'] ?? '',
+            $employee['hire_date'] ?? '',
+            $employee['completed_evaluations'] ?? 0,
+            $employee['pending_evaluations'] ?? 0,
+            $nextEvalMonth,
+        ];
+    }
 
-        return ExportService::exportToCsv($data, $headers, 'performance_tracker_' . date('Y-m-d') . '.csv');
+    public function styles(Worksheet $sheet)
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 }

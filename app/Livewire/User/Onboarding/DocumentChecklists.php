@@ -293,8 +293,7 @@ public function addEmployee()
 
     public function export()
     {
-        $export = new \App\Exports\Onboarding\DocumentChecklistsExport();
-        return $export->export();
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\Onboarding\DocumentChecklistsExport(), 'document_checklists.xlsx');
     }
 
     public function openMessageModal($employeeId)

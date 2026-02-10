@@ -369,10 +369,10 @@ class Employees extends Component
                 'Date Hired'       => $emp['date_hired'] ?? '---',
             ]);
 
-            return (new EmployeesExport($exportData->toArray()))->export();
+            return \Maatwebsite\Excel\Facades\Excel::download(new EmployeesExport($exportData->toArray()), 'employees.xlsx');
         }
 
-        return response()->streamDownload(fn() => print("Export failed"), "error.xls");
+        return response()->streamDownload(fn() => print("Export failed"), "error.xlsx");
     }
 
     public function editEmployee($index)

@@ -723,8 +723,7 @@ JetLounge Travels HR Team";
 
     public function exportData()
     {
-        $export = new \App\Exports\Applicants\OffersExport();
-        return $export->export();
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\Applicants\OffersExport(), 'offers.xlsx');
     }
 
     public function exportEmployees()

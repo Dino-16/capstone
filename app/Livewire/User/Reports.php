@@ -8,9 +8,9 @@ use App\Exports\Recruitment\JobPostsExport;
 use App\Exports\Onboarding\EmployeesExport;
 use App\Exports\Onboarding\DocumentChecklistsExport;
 use App\Exports\Onboarding\OrientationSchedulesExport;
-use App\Performance\EvaluationRecordsExport;
-use App\Recognition\RewardsExport;
-use App\Recognition\GiveRewardsExport;
+use App\Exports\Performance\EvaluationRecordsExport;
+use App\Exports\Recognition\RewardsExport;
+use App\Exports\Recognition\GiveRewardsExport;
 use App\Models\Report;
 use App\Models\Onboarding\DocumentChecklist;
 use App\Livewire\Traits\RequiresPasswordVerification;
@@ -62,14 +62,12 @@ class Reports extends Component
 
     public function exportRequisition()
     {
-        $export = new RequisitionsExport();
-        return $export->export();
+        return \Maatwebsite\Excel\Facades\Excel::download(new RequisitionsExport(), 'requisitions.xlsx');
     }
     
     public function exportJobPost()
     {
-        $export = new JobPostsExport();
-        return $export->export();
+        return \Maatwebsite\Excel\Facades\Excel::download(new JobPostsExport(), 'job_posts.xlsx');
     }
     
     public function exportEmployee()
@@ -85,38 +83,32 @@ class Reports extends Component
             ];
         })->toArray();
         
-        $export = new EmployeesExport($employees);
-        return $export->export();
+        return \Maatwebsite\Excel\Facades\Excel::download(new EmployeesExport($employees), 'employees.xlsx');
     }
     
     public function exportDocumentChecklist()
     {
-        $export = new DocumentChecklistsExport();
-        return $export->export();
+        return \Maatwebsite\Excel\Facades\Excel::download(new DocumentChecklistsExport(), 'document_checklists.xlsx');
     }
     
     public function exportOrientationSchedule()
     {
-        $export = new OrientationSchedulesExport();
-        return $export->export();
+        return \Maatwebsite\Excel\Facades\Excel::download(new OrientationSchedulesExport(), 'orientation_schedules.xlsx');
     }
     
     public function exportEvaluationRecords()
     {
-        $export = new EvaluationRecordsExport();
-        return $export->export();
+        return \Maatwebsite\Excel\Facades\Excel::download(new EvaluationRecordsExport(), 'evaluation_records.xlsx');
     }
     
     public function exportRewards()
     {
-        $export = new RewardsExport();
-        return $export->export();
+        return \Maatwebsite\Excel\Facades\Excel::download(new RewardsExport(), 'rewards.xlsx');
     }
     
     public function exportGiveRewards()
     {
-        $export = new GiveRewardsExport();
-        return $export->export();
+        return \Maatwebsite\Excel\Facades\Excel::download(new GiveRewardsExport(), 'give_rewards.xlsx');
     }
 
     /**

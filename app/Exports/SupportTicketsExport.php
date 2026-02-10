@@ -3,10 +3,14 @@
 namespace App\Exports;
 
 use App\Models\SupportTicket;
-use App\Services\ExportService;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class SupportTicketsExport
+class SupportTicketsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
     protected $requesterEmail;
 
@@ -15,15 +19,20 @@ class SupportTicketsExport
         $this->requesterEmail = $requesterEmail;
     }
 
-    public function export(): StreamedResponse
+    public function collection()
     {
         $query = SupportTicket::query()->latest();
 
         if ($this->requesterEmail) {
             $query->where('requester_email', $this->requesterEmail);
         }
-        
-        $headers = [
+
+        return $query->get();
+    }
+
+    public function headings(): array
+    {
+        return [
             'ID',
             'Requester Name',
             'Requester Email',
@@ -35,26 +44,28 @@ class SupportTicketsExport
             'Admin Notes',
             'Created At'
         ];
+    }
 
-        $mappings = [
-            'ID' => 'id',
-            'Requester Name' => 'requester_name',
-            'Requester Email' => 'requester_email',
-            'Position' => 'requester_position',
-            'Subject' => 'subject',
-            'Description' => 'description',
-            'Priority' => 'priority',
-            'Status' => 'status',
-            'Admin Notes' => 'admin_notes',
-            'Created At' => function($item) {
-                return $item->created_at ? $item->created_at->format('Y-m-d H:i:s') : '';
-            },
+    public function map($item): array
+    {
+        return [
+            $item->id,
+            $item->requester_name,
+            $item->requester_email,
+            $item->requester_position,
+            $item->subject,
+            $item->description,
+            $item->priority,
+            $item->status,
+            $item->admin_notes,
+            $item->created_at ? $item->created_at->format('M d, Y h:i A') : '',
         ];
+    }
 
-        $data = ExportService::transformQuery($query, $mappings);
-        
-        $filename = ($this->requesterEmail ? 'my_tickets_' : 'all_tickets_') . date('Y-m-d') . '.csv';
-        
-        return ExportService::exportToCsv($data, $headers, $filename);
+    public function styles(Worksheet $sheet)
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 }

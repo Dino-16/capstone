@@ -3,16 +3,23 @@
 namespace App\Exports\Recognition;
 
 use App\Models\Recognition\Reward;
-use App\Services\ExportService;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class RewardsExport
+class RewardsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
-    public function export(): StreamedResponse
+    public function collection()
     {
-        $query = Reward::query();
-        
-        $headers = [
+        return Reward::all();
+    }
+
+    public function headings(): array
+    {
+        return [
             'ID',
             'Name',
             'Type',
@@ -22,26 +29,26 @@ class RewardsExport
             'Created At',
             'Updated At'
         ];
+    }
 
-        $mappings = [
-            'ID' => 'id',
-            'Name' => 'name',
-            'Type' => 'type',
-            'Description' => 'description',
-            'Points Required' => 'points_required',
-            'Is Active' => function($item) {
-                return $item->is_active ? 'Yes' : 'No';
-            },
-            'Created At' => function($item) {
-                return $item->created_at ? $item->created_at->format('Y-m-d H:i:s') : '';
-            },
-            'Updated At' => function($item) {
-                return $item->updated_at ? $item->updated_at->format('Y-m-d H:i:s') : '';
-            },
+    public function map($item): array
+    {
+        return [
+            $item->id,
+            $item->name,
+            $item->type,
+            $item->description,
+            $item->points_required,
+            $item->is_active ? 'Yes' : 'No',
+            $item->created_at ? $item->created_at->format('M d, Y h:i A') : '',
+            $item->updated_at ? $item->updated_at->format('M d, Y h:i A') : '',
         ];
+    }
 
-        $data = ExportService::transformQuery($query, $mappings);
-        
-        return ExportService::exportToCsv($data, $headers, 'rewards_' . date('Y-m-d') . '.csv');
+    public function styles(Worksheet $sheet)
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 }

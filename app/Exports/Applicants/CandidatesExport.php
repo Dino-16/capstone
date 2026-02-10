@@ -3,18 +3,25 @@
 namespace App\Exports\Applicants;
 
 use App\Models\Applicants\Candidate;
-use App\Services\ExportService;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class CandidatesExport
+class CandidatesExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
-    public function export(): StreamedResponse
+    public function collection()
     {
-        $query = Candidate::query()
-            ->whereIn('status', ['scheduled', 'interview_ready'])
-            ->latest();
-        
-        $headers = [
+        return Candidate::whereIn('status', ['scheduled', 'interview_ready'])
+            ->latest()
+            ->get();
+    }
+
+    public function headings(): array
+    {
+        return [
             'ID',
             'Name',
             'Email',
@@ -25,25 +32,27 @@ class CandidatesExport
             'Status',
             'Created At'
         ];
+    }
 
-        $mappings = [
-            'ID' => 'id',
-            'Name' => 'candidate_name',
-            'Email' => 'candidate_email',
-            'Phone' => 'candidate_phone',
-            'Position' => 'applied_position',
-            'Department' => 'department',
-            'Schedule' => function($item) {
-                return $item->interview_schedule ? $item->interview_schedule->format('Y-m-d H:i') : 'Not Scheduled';
-            },
-            'Status' => 'status',
-            'Created At' => function($item) {
-                return $item->created_at ? $item->created_at->format('Y-m-d H:i:s') : '';
-            },
+    public function map($item): array
+    {
+        return [
+            $item->id,
+            $item->candidate_name,
+            $item->candidate_email,
+            $item->candidate_phone,
+            $item->applied_position,
+            $item->department,
+            $item->interview_schedule ? $item->interview_schedule->format('M d, Y h:i A') : 'Not Scheduled',
+            $item->status,
+            $item->created_at ? $item->created_at->format('M d, Y h:i A') : '',
         ];
+    }
 
-        $data = ExportService::transformQuery($query, $mappings);
-        
-        return ExportService::exportToCsv($data, $headers, 'candidates_' . date('Y-m-d') . '.csv');
+    public function styles(Worksheet $sheet)
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 }

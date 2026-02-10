@@ -3,18 +3,25 @@
 namespace App\Exports\Applicants;
 
 use App\Models\Applicants\Candidate;
-use App\Services\ExportService;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class InterviewsExport
+class InterviewsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
-    public function export(): StreamedResponse
+    public function collection()
     {
-        $query = Candidate::query()
-            ->whereIn('status', ['interview_ready', 'interviewed'])
-            ->latest();
-        
-        $headers = [
+        return Candidate::whereIn('status', ['interview_ready', 'interviewed'])
+            ->latest()
+            ->get();
+    }
+
+    public function headings(): array
+    {
+        return [
             'ID',
             'Name',
             'Email',
@@ -25,23 +32,27 @@ class InterviewsExport
             'Interview Score',
             'Result'
         ];
+    }
 
-        $mappings = [
-            'ID' => 'id',
-            'Name' => 'candidate_name',
-            'Email' => 'candidate_email',
-            'Position' => 'applied_position',
-            'AI Rating' => 'rating_score',
-            'Interview Schedule' => function($item) {
-                return $item->interview_schedule ? $item->interview_schedule->format('Y-m-d H:i') : 'N/A';
-            },
-            'Status' => 'status',
-            'Interview Score' => 'interview_total_score',
-            'Result' => 'interview_result',
+    public function map($item): array
+    {
+        return [
+            $item->id,
+            $item->candidate_name,
+            $item->candidate_email,
+            $item->applied_position,
+            $item->rating_score,
+            $item->interview_schedule ? $item->interview_schedule->format('M d, Y h:i A') : 'N/A',
+            $item->status,
+            $item->interview_total_score,
+            $item->interview_result,
         ];
+    }
 
-        $data = ExportService::transformQuery($query, $mappings);
-        
-        return ExportService::exportToCsv($data, $headers, 'interviews_' . date('Y-m-d') . '.csv');
+    public function styles(Worksheet $sheet)
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 }

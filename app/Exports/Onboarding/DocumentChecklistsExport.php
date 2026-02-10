@@ -3,16 +3,23 @@
 namespace App\Exports\Onboarding;
 
 use App\Models\Onboarding\DocumentChecklist;
-use App\Services\ExportService;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class DocumentChecklistsExport
+class DocumentChecklistsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
-    public function export(): StreamedResponse
+    public function collection()
     {
-        $query = DocumentChecklist::query();
-        
-        $headers = [
+        return DocumentChecklist::all();
+    }
+
+    public function headings(): array
+    {
+        return [
             'ID',
             'Employee Name',
             'Document Type',
@@ -23,29 +30,27 @@ class DocumentChecklistsExport
             'Created At',
             'Updated At'
         ];
+    }
 
-        $mappings = [
-            'ID' => 'id',
-            'Employee Name' => 'employee_name',
-            'Document Type' => 'document_type',
-            'Document Name' => 'document_name',
-            'Status' => 'status',
-            'Submitted Date' => function($item) {
-                return $item->submitted_date ? $item->submitted_date->format('Y-m-d') : '';
-            },
-            'Notes' => function($item) {
-                return $item->notes ?? '';
-            },
-            'Created At' => function($item) {
-                return $item->created_at ? $item->created_at->format('Y-m-d H:i:s') : '';
-            },
-            'Updated At' => function($item) {
-                return $item->updated_at ? $item->updated_at->format('Y-m-d H:i:s') : '';
-            },
+    public function map($item): array
+    {
+        return [
+            $item->id,
+            $item->employee_name,
+            $item->document_type,
+            $item->document_name,
+            $item->status,
+            $item->submitted_date ? $item->submitted_date->format('M d, Y') : '',
+            $item->notes ?? '',
+            $item->created_at ? $item->created_at->format('M d, Y h:i A') : '',
+            $item->updated_at ? $item->updated_at->format('M d, Y h:i A') : '',
         ];
+    }
 
-        $data = ExportService::transformQuery($query, $mappings);
-        
-        return ExportService::exportToCsv($data, $headers, 'document_checklists_' . date('Y-m-d') . '.csv');
+    public function styles(Worksheet $sheet)
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 }

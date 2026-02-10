@@ -172,8 +172,7 @@ class FacilityRequest extends Component
             return;
         }
 
-        $export = new FacilityRequestExport($reservations);
-        return $export->export();
+        return \Maatwebsite\Excel\Facades\Excel::download(new FacilityRequestExport($reservations), 'facility_requests.xlsx');
     }
 
     public function openBookingModal()

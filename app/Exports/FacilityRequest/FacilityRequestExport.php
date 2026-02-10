@@ -2,11 +2,14 @@
 
 namespace App\Exports\FacilityRequest;
 
-use App\Services\ExportService;
-use Illuminate\Support\Collection;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class FacilityRequestExport
+class FacilityRequestExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
     protected array $reservations;
 
@@ -15,9 +18,14 @@ class FacilityRequestExport
         $this->reservations = $reservations;
     }
 
-    public function export(): StreamedResponse
+    public function collection()
     {
-        $headers = [
+        return collect($this->reservations);
+    }
+
+    public function headings(): array
+    {
+        return [
             'Facility',
             'Location',
             'Requested By',
@@ -30,23 +38,29 @@ class FacilityRequestExport
             'Priority',
             'Status',
         ];
+    }
 
-        $data = collect($this->reservations)->map(function ($reservation) {
-            return [
-                'Facility' => $reservation['facility_name'] ?? '',
-                'Location' => $reservation['location'] ?? '',
-                'Requested By' => $reservation['full_name'] ?? '',
-                'Email' => $reservation['email'] ?? '',
-                'Booking Date' => $reservation['booking_date'] ?? '',
-                'Start Time' => $reservation['start_time'] ?? '',
-                'End Time' => $reservation['end_time'] ?? '',
-                'Purpose' => $reservation['purpose'] ?? '',
-                'Attendees' => $reservation['expected_attendees'] ?? '',
-                'Priority' => $reservation['priority_level'] ?? '',
-                'Status' => $reservation['status'] ?? '',
-            ];
-        });
+    public function map($reservation): array
+    {
+        return [
+            $reservation['facility_name'] ?? '',
+            $reservation['location'] ?? '',
+            $reservation['full_name'] ?? '',
+            $reservation['email'] ?? '',
+            $reservation['booking_date'] ?? '',
+            $reservation['start_time'] ?? '',
+            $reservation['end_time'] ?? '',
+            $reservation['purpose'] ?? '',
+            $reservation['expected_attendees'] ?? '',
+            $reservation['priority_level'] ?? '',
+            $reservation['status'] ?? '',
+        ];
+    }
 
-        return ExportService::exportToCsv($data, $headers, 'facility_requests_' . date('Y-m-d') . '.csv');
+    public function styles(Worksheet $sheet)
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+        ];
     }
 }
