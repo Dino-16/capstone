@@ -9,7 +9,24 @@ use Carbon\Carbon;
 class OtpVerification extends Component
 {
     public $otpDigits = [];
+    public $otpExpiresAt = null;
 
+    public function mount()
+    {
+        $sessionData = session('otp_session');
+        if ($sessionData && isset($sessionData['otp_expires'])) {
+            $this->otpExpiresAt = Carbon::parse($sessionData['otp_expires'])->timestamp;
+        }
+    }
+
+    public function getOtpRemainingSecondsProperty()
+    {
+        if (!$this->otpExpiresAt) {
+            return 0;
+        }
+        $remaining = $this->otpExpiresAt - Carbon::now()->timestamp;
+        return max(0, $remaining);
+    }
     public function verifyOtp()
     {
         $sessionData = session('otp_session');
@@ -27,7 +44,8 @@ class OtpVerification extends Component
         if ($enteredOtp == $storedOtp && Carbon::now()->lt($expiresAt)) {
             // Login Success
             session([
-                'user' => array_merge($userData, ['authenticated' => true])
+                'user' => array_merge($userData, ['authenticated' => true]),
+                'last_activity_time' => Carbon::now()->timestamp
             ]);
             
             session()->forget('otp_session');
@@ -63,19 +81,23 @@ class OtpVerification extends Component
         if ($sessionData) {
             $otp = rand(100000, 999999);
             $email = $sessionData['user_data']['email'];
+            $newExpiresAt = Carbon::now()->addMinutes(3);
 
             session([
                 'otp_session' => array_merge($sessionData, [
                     'otp' => $otp,
-                    'otp_expires' => Carbon::now()->addMinutes(10)
+                    'otp_expires' => $newExpiresAt
                 ])
             ]);
+
+            // Update the public property for the view
+            $this->otpExpiresAt = $newExpiresAt->timestamp;
 
             try {
                 $result = \App\Services\MailService::sendOtp($email, $otp, 'Resent Login OTP Verification');
                 
                 if ($result['success']) {
-                    session()->flash('status', 'A new OTP has been sent to your email.');
+                    session()->flash('status', 'A new OTP has been sent to your email. Timer has been reset.');
                     
                     \App\Models\Admin\MfaLog::create([
                         'email' => $email,

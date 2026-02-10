@@ -8,6 +8,7 @@ use App\Exports\FacilityRequest\FacilityRequestExport;
 
 class FacilityRequest extends Component
 {
+    use \App\Livewire\Traits\HandlesToasts;
     // Form properties (matching API field names)
     public $facilityType;
     public $requestedBy;
@@ -167,7 +168,7 @@ class FacilityRequest extends Component
         $reservations = $this->filteredReservations;
 
         if (empty($reservations)) {
-            session()->flash('error', 'No data to export.');
+            $this->toast('No data to export.');
             return;
         }
 
@@ -230,9 +231,7 @@ class FacilityRequest extends Component
         if ($response->successful()) {
             $result = $response->json();
             if (isset($result['success']) && $result['success']) {
-                session()->flash('status', $result['message'] ?? 'Booking request submitted successfully.');
-            } else {
-                session()->flash('status', 'Booking request submitted successfully.');
+                $this->toast('Booking request submitted successfully.');
             }
             $this->resetForm();
             $this->showBookingModal = false;
@@ -243,7 +242,7 @@ class FacilityRequest extends Component
             if (isset($result['message'])) {
                 $errorMessage = $result['message'];
             }
-            session()->flash('error', $errorMessage . ' Status: ' . $response->status());
+            $this->toast($errorMessage . ' Status: ' . $response->status());
         }
     }
 
@@ -256,15 +255,11 @@ class FacilityRequest extends Component
         ]);
     }
 
-    public function clearStatus()
-    {
-        // Used by toast component polling
-    }
 
     public function deleteRequest($reservationId)
     {
          // Placeholder for future API integration
-         session()->flash('error', 'Deletion is not currently supported for external API records.');
+         $this->toast('Deletion is not currently supported for external API records.');
     }
 
     public function render()

@@ -10,6 +10,7 @@ use App\Models\Admin\MfaLog;
 class Mfa extends Component
 {
     use WithPagination;
+    use \App\Livewire\Traits\HandlesToasts;
 
     public $isGlobalEnabled = true;
     public $isHrStaffEnabled = true;
@@ -67,13 +68,9 @@ class Mfa extends Component
             'super_admin_enabled' => $this->isSuperAdminEnabled,
         ]);
         
-        session()->flash('status', 'MFA settings updated successfully.');
+        $this->toast('MFA settings updated successfully.');
     }
 
-    public function clearStatus()
-    {
-        session()->forget('status');
-    }
 
     public function render()
     {
@@ -91,7 +88,7 @@ class Mfa extends Component
     public function deleteLog($id)
     {
         MfaLog::find($id)?->delete();
-        session()->flash('status', 'Log entry deleted successfully.');
+        $this->toast('Log entry deleted successfully.');
     }
 
 }

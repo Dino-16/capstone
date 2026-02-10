@@ -51,7 +51,7 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link d-flex align-items-center gap-1 {{ request()->is('careers') || request()->is('login-options') ? 'text-black' : 'text-white' }}" href="{{ route('careers') }}">
+                                <a class="nav-link d-flex align-items-center gap-1 {{ request()->is('https://careers-hr1.jetlougetravels-ph.com/') || request()->is('login-options') ? 'text-black' : 'text-white' }}" href="https://careers-hr1.jetlougetravels-ph.com">
                                     <i class="bi bi-briefcase-fill"></i> Careers
                                 </a>
                             </li>

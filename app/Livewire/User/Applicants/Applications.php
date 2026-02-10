@@ -11,13 +11,19 @@ use App\Models\Recruitment\JobListing;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
+use App\Livewire\Traits\RequiresPasswordVerification;
+use App\Livewire\Traits\HandlesToasts;
 
 class Applications extends Component
 {   
     use WithPagination;
+    use RequiresPasswordVerification;
+    use HandlesToasts;
 
     public $search;
     public $qualificationFilter = '';
+    public $positionFilter = '';
+    public $departmentFilter = '';
     
     // Modal properties for filtered resume
     public $showFilteredResumeModal = false;
@@ -43,18 +49,19 @@ class Applications extends Component
     public $selectedFacility = '';
     public $applicantData = [];
 
-    // Draft tool properties
-    public $showDraftModal = false;
-    public $draftingApplicationId = null;
-    public $draftApplicantName = '';
+    // Shortlist tool properties
+    public $showShortlistModal = false;
+    public $shortlistingApplicationId = null;
+    public $shortlistApplicantName = '';
     public $currentPosition = '';
     public $suggestedPosition = '';
-    public $draftReason = '';
+    public $shortlistReason = '';
     public $availablePositions = [];
 
     // Reset pagination on mount to ensure we see data
     public function mount()
     {
+        $this->initializePasswordVerification();
         $this->resetPage();
     }
 
@@ -74,11 +81,16 @@ class Applications extends Component
         $this->resetPage();
     }
 
-    // Clear Message Status
-    public function clearStatus()
+    public function updatedPositionFilter()
     {
-        session()->forget('status');
+        $this->resetPage();
     }
+
+    public function updatedDepartmentFilter()
+    {
+        $this->resetPage();
+    }
+
 
     // Get AI Rating Description based on score
     private function getRatingDescription($score)
@@ -292,23 +304,23 @@ class Applications extends Component
             ]
         );
 
-        session()->flash('message', 'Filtered resume updated successfully!');
+        $this->toast('Filtered resume updated successfully!');
         $this->closeEditFilteredResumeModal();
     }
 
-    // Draft tool methods - for pivoting candidates to alternative roles
-    public function openDraftModal($applicationId)
+    // Shortlist tool methods - for pivoting candidates to alternative roles
+    public function openShortlistModal($applicationId)
     {
         $application = Application::find($applicationId);
         if (!$application) {
             return;
         }
 
-        $this->draftingApplicationId = $applicationId;
-        $this->draftApplicantName = $application->first_name . ' ' . $application->middle_name . ' ' . $application->last_name;
+        $this->shortlistingApplicationId = $applicationId;
+        $this->shortlistApplicantName = $application->first_name . ' ' . $application->middle_name . ' ' . $application->last_name;
         $this->currentPosition = $application->applied_position;
         $this->suggestedPosition = '';
-        $this->draftReason = '';
+        $this->shortlistReason = '';
 
         // Get available positions from local database (excluding current)
         $localPositions = JobListing::where('position', '!=', $application->applied_position)
@@ -342,17 +354,17 @@ class Applications extends Component
             ->values()
             ->toArray();
 
-        $this->showDraftModal = true;
+        $this->showShortlistModal = true;
     }
 
-    public function closeDraftModal()
+    public function closeShortlistModal()
     {
-        $this->showDraftModal = false;
-        $this->draftingApplicationId = null;
-        $this->draftApplicantName = '';
+        $this->showShortlistModal = false;
+        $this->shortlistingApplicationId = null;
+        $this->shortlistApplicantName = '';
         $this->currentPosition = '';
         $this->suggestedPosition = '';
-        $this->draftReason = '';
+        $this->shortlistReason = '';
         $this->availablePositions = [];
     }
 
@@ -360,10 +372,10 @@ class Applications extends Component
     {
         $this->validate([
             'suggestedPosition' => ['required', 'string'],
-            'draftReason' => ['nullable', 'string', 'max:500'],
+            'shortlistReason' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $application = Application::find($this->draftingApplicationId);
+        $application = Application::find($this->shortlistingApplicationId);
         if (!$application) {
             return;
         }
@@ -372,8 +384,8 @@ class Applications extends Component
         $application->applied_position = $this->suggestedPosition;
         $application->save();
 
-        session()->flash('message', "Applicant pivoted from '{$oldPosition}' to '{$this->suggestedPosition}' successfully!");
-        $this->closeDraftModal();
+        $this->toast("Applicant pivoted from '{$oldPosition}' to '{$this->suggestedPosition}' successfully!");
+        $this->closeShortlistModal();
     }
 
     // Schedule interview methods
@@ -545,7 +557,7 @@ class Applications extends Component
         $application->delete();
 
         $this->closeScheduleModal();
-        session()->flash('message', 'Candidate scheduled successfully and moved to candidates list.');
+        $this->toast('Candidate scheduled successfully and moved to candidates list.');
     }
 
     public function toggleStatus($applicationId)
@@ -554,42 +566,42 @@ class Applications extends Component
         $newStatus = $application->status === 'active' ? 'drafted' : 'active';
         $application->update(['status' => $newStatus]);
         
-        session()->flash('status', 'Application marked as ' . ucfirst($newStatus));
+        $this->toast('Application marked as ' . ucfirst($newStatus));
     }
 
-    public $showDrafts = false; // Toggle for draft view
+    public $showShortlisted = false; // Toggle for shortlisted view
 
-    public function openDrafts()
+    public function openShortlisted()
     {
-        $this->showDrafts = true;
+        $this->showShortlisted = true;
         $this->resetPage();
     }
 
-    public function closeDrafts()
+    public function closeShortlisted()
     {
-        $this->showDrafts = false;
+        $this->showShortlisted = false;
         $this->resetPage();
     }
 
-    public function draft($id)
+    public function shortlist($id)
     {
         $app = Application::findOrFail($id);
-        $app->update(['status' => 'drafted']);
-        session()->flash('status', 'Application moved to drafts.');
+        $app->update(['status' => 'shortlisted']);
+        $this->toast('Application moved to shortlist.');
     }
     
     public function restore($id)
     {
         $app = Application::findOrFail($id);
         $app->update(['status' => 'active']);
-        session()->flash('status', 'Application restored to active list.');
+        $this->toast('Application restored to active list.');
     }
 
     public function delete($id)
     {
-        // Security check: Only Super Admin can delete
-        if (strcasecmp(session('user.position'), 'Super Admin') !== 0) {
-            session()->flash('error', 'Unauthorized: Only Super Admin can delete applications.');
+        // Security check: Only HR Manager and Super Admin can delete
+        if (!in_array(session('user.position'), ['Super Admin', 'HR Manager'])) {
+            $this->toast('Unauthorized: Only HR Manager and Super Admin can delete applications.', 'error');
             return;
         }
 
@@ -601,7 +613,7 @@ class Applications extends Component
         // Delete application record
         $app->delete();
         
-        session()->flash('status', 'Application deleted successfully.');
+        $this->toast('Application deleted successfully.');
     }
 
     public function exportData()
@@ -612,16 +624,30 @@ class Applications extends Component
 
     public function render()
     {
+        // Get unique Departments and Positions for Filters
+        $departments = Application::select('department')
+            ->distinct()
+            ->whereNotNull('department')
+            ->orderBy('department')
+            ->pluck('department');
+            
+        $positions = Application::select('applied_position')
+            ->distinct()
+            ->whereNotNull('applied_position')
+            ->orderBy('applied_position')
+            ->pluck('applied_position');
+
         $query = Application::query()
             ->select('applications.*')
             ->leftJoin('filtered_resumes', 'applications.id', '=', 'filtered_resumes.application_id')
+            ->orderByDesc('filtered_resumes.rating_score')
             ->latest('applications.created_at');
 
         // Status Filter
-        if ($this->showDrafts) {
-            $query->where('applications.status', 'drafted');
+        if ($this->showShortlisted) {
+            $query->where('applications.status', 'shortlisted');
         } else {
-            $query->where('applications.status', '!=', 'drafted');
+            $query->where('applications.status', '!=', 'shortlisted');
         }
 
         // Search Filter
@@ -633,6 +659,16 @@ class Applications extends Component
                 ->orWhere('applications.applied_position', 'like', "%{$this->search}%")
                 ->orWhere('applications.department', 'like', "%{$this->search}%");
             });
+        }
+        
+        // Position Filter
+        if ($this->positionFilter) {
+            $query->where('applications.applied_position', $this->positionFilter);
+        }
+        
+        // Department Filter
+        if ($this->departmentFilter) {
+            $query->where('applications.department', $this->departmentFilter);
         }
 
         // Qualification Filter
@@ -657,6 +693,8 @@ class Applications extends Component
 
         return view('livewire.user.applicants.applications', [
             'applications' => $applications,
+            'departments' => $departments,
+            'positions' => $positions,
         ])->layout('layouts.app');
     }
 }

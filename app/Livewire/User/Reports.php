@@ -16,6 +16,7 @@ use App\Models\Onboarding\DocumentChecklist;
 
 class Reports extends Component
 {
+    use \App\Livewire\Traits\HandlesToasts;
 
     public $reportName;
     public $reportType;
@@ -129,7 +130,7 @@ class Reports extends Component
             'evaluationrecords' => $this->exportEvaluationRecords(),
             'rewards' => $this->exportRewards(),
             'giverewards' => $this->exportGiveRewards(),
-            default => session()->flash('error', 'Unknown report type.'),
+            default => $this->toast('Unknown report type.'),
         };
     }
     
@@ -150,20 +151,20 @@ class Reports extends Component
         $this->reset(['reportName', 'reportType']);
         $this->reports = Report::latest()->get();
         
-        session()->flash('message', 'Report created successfully! Click the download button to generate the file.');
+        $this->toast('Report created successfully! Click the download button to generate the file.');
     }
 
     public function deleteReport($id)
     {
         if (auth()->user()->role !== 'Super Admin') {
-            session()->flash('error', 'Unauthorized action.');
+            $this->toast('Unauthorized action.');
             return;
         }
 
         $report = Report::find($id);
         if ($report) {
             $report->delete();
-            session()->flash('message', 'Report deleted successfully!');
+            $this->toast('Report deleted successfully!');
             $this->reports = Report::latest()->get();
         }
     }

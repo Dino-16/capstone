@@ -9,6 +9,7 @@ use Livewire\WithPagination;
 class Rewards extends Component
 {
     use WithPagination;
+    use \App\Livewire\Traits\HandlesToasts;
 
     public $search = '';
     public $showModal = false;
@@ -83,7 +84,7 @@ class Rewards extends Component
                 'benefits' => $this->benefits,
             ]);
 
-            session()->push('status', 'Reward updated successfully!');
+            $this->toast('Reward updated successfully!');
             $this->showModal = false;
         }
     }
@@ -93,7 +94,7 @@ class Rewards extends Component
         $reward = Reward::findOrFail($id);
         $reward->status = 'draft';
         $reward->save();
-        session()->push('status', 'Reward drafted successfully!');
+        $this->toast('Reward drafted successfully!');
     }
 
     public function restore($id) 
@@ -101,19 +102,33 @@ class Rewards extends Component
         $reward = Reward::findOrFail($id);
         $reward->status = 'active';
         $reward->save();    
-        session()->push('status', 'Reward restored successfully!');
+        $this->toast('Reward restored successfully!');
     }
 
-    public function deleteReward($id)
+    public $showDeleteModal = false;
+    public $rewardIdToDelete = null;
+
+    public function confirmDelete($id)
     {
-        if (auth()->user()->role !== 'Super Admin') {
-            session()->push('status', 'Unauthorized action.');
+        $this->rewardIdToDelete = $id;
+        $this->showDeleteModal = true;
+    }
+
+    public function deleteReward()
+    {
+        if (!in_array(session('user.position'), ['Super Admin', 'HR Manager'])) {
+            $this->toast('Unauthorized action.', 'error');
             return;
         }
 
-        $reward = Reward::findOrFail($id);
-        $reward->delete();
-        session()->push('status', 'Reward deleted successfully!');
+        if ($this->rewardIdToDelete) {
+             $reward = Reward::findOrFail($this->rewardIdToDelete);
+             $reward->delete();
+             $this->toast('Reward deleted successfully!');
+        }
+
+        $this->showDeleteModal = false;
+        $this->rewardIdToDelete = null;
     }
 
     // Drafted Section
@@ -243,11 +258,6 @@ class Rewards extends Component
         }
     }
 
-    // Clear Message Status
-    public function clearStatus()
-    {
-        session()->forget('status');
-    }
 
     public function render()
     {

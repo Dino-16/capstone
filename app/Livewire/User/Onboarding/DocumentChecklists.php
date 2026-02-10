@@ -8,10 +8,13 @@ use Livewire\WithPagination;
 use App\Models\Onboarding\DocumentChecklist;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use App\Livewire\Traits\RequiresPasswordVerification;
 
 class DocumentChecklists extends Component
 {
     use WithPagination;
+    use RequiresPasswordVerification;
+    use \App\Livewire\Traits\HandlesToasts;
 
     #[Url]
     public $search = '';
@@ -20,16 +23,26 @@ class DocumentChecklists extends Component
     public $showModal = false;
     public $showEditModal = false;
     public $showMessageModal = false;
+    public $showViewModal = false; // Added for viewing documents
+    public $viewingChecklist;      // Added for viewing documents
     public $showDrafts = false;
     public $completionFilter = 'All';
     public $editingEmployeeId = null;
     public $employees = [];
     public $filteredEmployees = [];
     public $showEmployeeDropdown = false;
+    
+    #[Url]
+    public $departmentFilter = '';
+    
+    #[Url]
+    public $positionFilter = '';
 
     // Form Properties
     public $employeeName;
     public $email;
+    public $position;
+    public $department;
     public $notes;
     public $selectedDocuments = [];
     public $documents = [];
@@ -51,6 +64,8 @@ class DocumentChecklists extends Component
 
     public function mount()
     {
+        $this->initializePasswordVerification();
+        
         $response = Http::get('http://hr4.jetlougetravels-ph.com/api/employees');
 
         if ($response->successful()) {
@@ -100,6 +115,10 @@ class DocumentChecklists extends Component
         if ($employee) {
             $this->employeeName = $employee['name'] ?? $employee['employee_name'] ?? '';
             $this->email = $employee['email'] ?? null;
+            $this->position = $employee['position'] ?? null;
+            
+            $dept = $employee['department'] ?? null;
+            $this->department = is_array($dept) ? ($dept['name'] ?? $dept['department_name'] ?? null) : $dept;
         }
         
         $this->showEmployeeDropdown = false;
@@ -116,20 +135,32 @@ class DocumentChecklists extends Component
         $this->resetPage();
     }
 
+    public function updatedDepartmentFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedPositionFilter()
+    {
+        $this->resetPage();
+    }
+
     public function openModal()
     {
         $this->resetValidation();
-        $this->reset(['employeeName', 'email', 'notes', 'selectedDocuments', 'showEmployeeDropdown']);
+        $this->reset(['employeeName', 'email', 'position', 'department', 'notes', 'selectedDocuments', 'showEmployeeDropdown']);
         $this->selectedDocuments = []; // Start with empty selection
         $this->showModal = true;
     }
 
-    public function openModalForEmployee($name, $email = null)
+    public function openModalForEmployee($name, $email = null, $position = null, $department = null)
     {
         $this->resetValidation();
         $this->reset(['notes', 'selectedDocuments', 'showEmployeeDropdown']);
         $this->employeeName = $name;
         $this->email = $email;
+        $this->position = $position;
+        $this->department = $department;
         $this->selectedDocuments = []; // Start with empty selection
         $this->showModal = true;
     }
@@ -163,13 +194,15 @@ public function addEmployee()
     DocumentChecklist::create([
         'employee_name' => $this->employeeName,
         'email' => $this->email,
+        'position' => $this->position,
+        'department' => $this->department,
         'documents' => $formattedDocuments,
         'notes' => $this->notes,
         'status' => 'active', // or 'draft'
     ]);
 
-    $this->reset(['showModal', 'employeeName', 'email', 'selectedDocuments', 'notes']);
-    $this->dispatch('notify', 'Employee added successfully!'); 
+    $this->reset(['showModal', 'employeeName', 'email', 'position', 'department', 'selectedDocuments', 'notes']);
+    $this->toast('Employee added successfully!'); 
 }
 
     public function updateEmployee()
@@ -194,7 +227,7 @@ public function addEmployee()
                 'notes' => $this->notes,
             ]);
 
-            session()->flash('status', 'Employee updated successfully.');
+            $this->toast('Employee updated successfully.');
             $this->showEditModal = false;
             $this->reset(['employeeName', 'email', 'notes', 'selectedDocuments', 'editingEmployeeId', 'documents']);
             
@@ -222,14 +255,14 @@ public function addEmployee()
     public function deleteEmployee($employeeId)
     {
         DocumentChecklist::findOrFail($employeeId)->delete();
-        session()->flash('status', 'Employee deleted successfully.');
+        $this->toast('Employee deleted successfully.');
     }
 
     public function draft($employeeId)
     {
         $employee = DocumentChecklist::findOrFail($employeeId);
         $employee->update(['status' => 'draft']);
-        session()->flash('status', 'Employee moved to draft status!');
+        $this->toast('Employee moved to draft status!');
     }
 
     public function restore($employeeId) 
@@ -238,7 +271,7 @@ public function addEmployee()
             $employee = DocumentChecklist::findOrFail($employeeId);
             $employee->update(['status' => 'active']);
             
-            session()->flash('status', 'Employee restored to active status!');
+            $this->toast('Employee restored to active status!');
             
             // Redirect to main view after restore
             $this->showDrafts = false;
@@ -264,10 +297,6 @@ public function addEmployee()
         $this->resetPage();
     }
 
-    public function clearStatus()
-    {
-        session()->forget(['status', 'error']);
-    }
 
     public function export()
     {
@@ -305,7 +334,7 @@ public function addEmployee()
                     ->from(config('mail.from.address'), config('mail.from.name'));
             });
 
-            session()->flash('status', 'Message sent to ' . $this->messageEmployee->employee_name . ' at ' . $this->messageEmployee->email);
+            $this->toast('Message sent to ' . $this->messageEmployee->employee_name . ' at ' . $this->messageEmployee->email);
             $this->showMessageModal = false;
             $this->reset(['messageSubject', 'messageContent', 'messageEmployee']);
             
@@ -314,12 +343,53 @@ public function addEmployee()
         }
     }
 
+    public function viewDocument($docType, $checklistId)
+    {
+        $checklist = DocumentChecklist::findOrFail($checklistId);
+        
+        if ($docType === 'resume') {
+            // Try to find candidate by email
+            $candidate = \App\Models\Applicants\Candidate::where('candidate_email', $checklist->email)->first();
+            
+            if ($candidate && $candidate->resume_url) {
+                 $this->dispatch('open-document', url: route('resume.view', ['filename' => basename($candidate->resume_url)]));
+                 return;
+            }
+        }
+        
+        session()->flash('error', 'Document file not found for ' . ucwords(str_replace('_', ' ', $docType)));
+    }
+
+    public function viewChecklist($id)
+    {
+        $this->viewingChecklist = DocumentChecklist::findOrFail($id);
+        $this->showViewModal = true;
+    }
+
+    public function closeViewModal()
+    {
+        $this->showViewModal = false;
+        $this->viewingChecklist = null;
+    }
+
     public function render()
     {
         $query = DocumentChecklist::query();
 
         if ($this->search) {
-            $query->where('employee_name', 'like', '%' . $this->search . '%');
+            $query->where(function($q) {
+                $q->where('employee_name', 'like', '%' . $this->search . '%')
+                  ->orWhere('position', 'like', '%' . $this->search . '%')
+                  ->orWhere('department', 'like', '%' . $this->search . '%');
+            });
+        }
+
+        if ($this->departmentFilter) {
+            $query->where('department', $this->departmentFilter);
+        }
+
+        if ($this->positionFilter) {
+            $query->where('position', $this->positionFilter);
         }
 
         // Filter by status
@@ -359,6 +429,8 @@ public function addEmployee()
             'documentChecklists' => $documentChecklists,
             'drafts' => $drafts,
             'documentTypes' => $this->documentTypes,
+            'positions' => DocumentChecklist::pluck('position')->filter()->unique()->sort()->values(),
+            'departments' => DocumentChecklist::pluck('department')->filter()->unique()->sort()->values(),
         ])->layout('layouts.app');
     }
 

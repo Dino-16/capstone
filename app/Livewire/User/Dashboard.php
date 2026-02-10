@@ -6,6 +6,7 @@ use Livewire\Component;
 use App\Models\Recruitment\Requisition;
 use App\Models\Recruitment\JobListing;
 use App\Models\Applicants\Application;
+use App\Models\Applicants\Candidate;
 use App\Models\Onboarding\DocumentChecklist;
 use App\Models\Onboarding\Orientation;
 use App\Models\Performance\Evaluation;
@@ -93,11 +94,33 @@ class Dashboard extends Component
                 ->whereYear('created_at', $month->year)->count();
         }
 
+        // Calculate totals for percentage calculation
+        $totalApplications = array_sum($applications);
+        $totalEvaluations = array_sum($evaluations);
+        $totalRewards = array_sum($rewards);
+
+        // Calculate percentages (avoid division by zero)
+        $applicationsPercent = $totalApplications > 0 
+            ? array_map(fn($val) => round(($val / $totalApplications) * 100, 1), $applications) 
+            : array_fill(0, 6, 0);
+        $evaluationsPercent = $totalEvaluations > 0 
+            ? array_map(fn($val) => round(($val / $totalEvaluations) * 100, 1), $evaluations) 
+            : array_fill(0, 6, 0);
+        $rewardsPercent = $totalRewards > 0 
+            ? array_map(fn($val) => round(($val / $totalRewards) * 100, 1), $rewards) 
+            : array_fill(0, 6, 0);
+
         return [
             'months' => $months,
             'applications' => $applications,
             'evaluations' => $evaluations,
             'rewards' => $rewards,
+            'applicationsPercent' => $applicationsPercent,
+            'evaluationsPercent' => $evaluationsPercent,
+            'rewardsPercent' => $rewardsPercent,
+            'totalApplications' => $totalApplications,
+            'totalEvaluations' => $totalEvaluations,
+            'totalRewards' => $totalRewards,
         ];
     }
 
@@ -107,7 +130,7 @@ class Dashboard extends Component
             $response = Http::timeout(10)->get('http://hr4.jetlougetravels-ph.com/api/employees');
             
             if (!$response->successful()) {
-                return ['No Data' => 1];
+                return ['counts' => ['No Data' => 100], 'percentages' => ['No Data' => 100], 'total' => 0];
             }
             
             $responseData = $response->json();
@@ -141,9 +164,24 @@ class Dashboard extends Component
             // Sort by count descending
             arsort($departments);
             
-            return empty($departments) ? ['No Departments' => 1] : $departments;
+            if (empty($departments)) {
+                return ['counts' => ['No Departments' => 100], 'percentages' => ['No Departments' => 100], 'total' => 0];
+            }
+
+            // Calculate total and percentages
+            $total = array_sum($departments);
+            $percentages = [];
+            foreach ($departments as $dept => $count) {
+                $percentages[$dept] = $total > 0 ? round(($count / $total) * 100, 1) : 0;
+            }
+
+            return [
+                'counts' => $departments,
+                'percentages' => $percentages,
+                'total' => $total,
+            ];
         } catch (\Exception $e) {
-            return ['Error Loading Data' => 1];
+            return ['counts' => ['Error Loading Data' => 100], 'percentages' => ['Error Loading Data' => 100], 'total' => 0];
         }
     }
 
@@ -192,4 +230,6 @@ class Dashboard extends Component
             return 0;
         }
     }
+
+
 }

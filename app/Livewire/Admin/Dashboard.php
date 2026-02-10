@@ -6,6 +6,7 @@ use Livewire\Component;
 use App\Models\Recruitment\Requisition;
 use App\Models\Recruitment\JobListing;
 use App\Models\Applicants\Application;
+use App\Models\Applicants\Candidate;
 use App\Models\Onboarding\DocumentChecklist;
 use App\Models\Onboarding\Orientation;
 use App\Models\Performance\Evaluation;
@@ -61,7 +62,13 @@ class Dashboard extends Component
         // Recent Activities
         $recentActivities = $this->getRecentActivities();
 
-        return view('livewire.user.dashboard', [
+        // AI Analytics
+        $aiAnalytics = $this->getAiAnalytics();
+
+        // Applicant Funnel
+        $applicantFunnel = $this->getApplicantFunnel();
+
+        return view('livewire.admin.dashboard', [
             'statusCounts' => $statusCounts,
             'onboardingStats' => $onboardingStats,
             'performanceStats' => $performanceStats,
@@ -69,6 +76,8 @@ class Dashboard extends Component
             'monthlyData' => $monthlyData,
             'departmentData' => $departmentData,
             'recentActivities' => $recentActivities,
+            'aiAnalytics' => $aiAnalytics,
+            'applicantFunnel' => $applicantFunnel,
         ])->layout('layouts.admin');
     }
 
@@ -93,11 +102,33 @@ class Dashboard extends Component
                 ->whereYear('created_at', $month->year)->count();
         }
 
+        // Calculate totals for percentage calculation
+        $totalApplications = array_sum($applications);
+        $totalEvaluations = array_sum($evaluations);
+        $totalRewards = array_sum($rewards);
+
+        // Calculate percentages (avoid division by zero)
+        $applicationsPercent = $totalApplications > 0 
+            ? array_map(fn($val) => round(($val / $totalApplications) * 100, 1), $applications) 
+            : array_fill(0, 6, 0);
+        $evaluationsPercent = $totalEvaluations > 0 
+            ? array_map(fn($val) => round(($val / $totalEvaluations) * 100, 1), $evaluations) 
+            : array_fill(0, 6, 0);
+        $rewardsPercent = $totalRewards > 0 
+            ? array_map(fn($val) => round(($val / $totalRewards) * 100, 1), $rewards) 
+            : array_fill(0, 6, 0);
+
         return [
             'months' => $months,
             'applications' => $applications,
             'evaluations' => $evaluations,
             'rewards' => $rewards,
+            'applicationsPercent' => $applicationsPercent,
+            'evaluationsPercent' => $evaluationsPercent,
+            'rewardsPercent' => $rewardsPercent,
+            'totalApplications' => $totalApplications,
+            'totalEvaluations' => $totalEvaluations,
+            'totalRewards' => $totalRewards,
         ];
     }
 
@@ -107,7 +138,7 @@ class Dashboard extends Component
             $response = Http::timeout(10)->get('http://hr4.jetlougetravels-ph.com/api/employees');
             
             if (!$response->successful()) {
-                return ['No Data' => 1];
+                return ['counts' => ['No Data' => 100], 'percentages' => ['No Data' => 100], 'total' => 0];
             }
             
             $responseData = $response->json();
@@ -141,9 +172,24 @@ class Dashboard extends Component
             // Sort by count descending
             arsort($departments);
             
-            return empty($departments) ? ['No Departments' => 1] : $departments;
+            if (empty($departments)) {
+                return ['counts' => ['No Departments' => 100], 'percentages' => ['No Departments' => 100], 'total' => 0];
+            }
+
+            // Calculate total and percentages
+            $total = array_sum($departments);
+            $percentages = [];
+            foreach ($departments as $dept => $count) {
+                $percentages[$dept] = $total > 0 ? round(($count / $total) * 100, 1) : 0;
+            }
+
+            return [
+                'counts' => $departments,
+                'percentages' => $percentages,
+                'total' => $total,
+            ];
         } catch (\Exception $e) {
-            return ['Error Loading Data' => 1];
+            return ['counts' => ['Error Loading Data' => 100], 'percentages' => ['Error Loading Data' => 100], 'total' => 0];
         }
     }
 
@@ -190,6 +236,94 @@ class Dashboard extends Component
             return 0;
         } catch (\Exception $e) {
             return 0;
+        }
+    }
+
+    private function getAiAnalytics()
+    {
+        // Qualification Distribution
+        $candidates = Candidate::all();
+        
+        $distribution = [
+            'Exceptional' => 0,
+            'Highly Qualified' => 0,
+            'Qualified' => 0,
+            'Moderately Qualified' => 0,
+            'Not Qualified' => 0,
+        ];
+        
+        // Map keys for chart labels
+        $distributionKeys = [
+            'Exceptional' => 'Exceptional (90-100)',
+            'Highly Qualified' => 'Highly Qualified (80-89)',
+            'Qualified' => 'Qualified (70-79)',
+            'Moderately Qualified' => 'Moderately Qualified (60-69)',
+            'Not Qualified' => 'Not Qualified (<60)',
+        ];
+
+        $skillsCount = [];
+
+        foreach ($candidates as $candidate) {
+            $score = $candidate->rating_score;
+            if ($score >= 90) $distribution['Exceptional']++;
+            elseif ($score >= 80) $distribution['Highly Qualified']++;
+            elseif ($score >= 70) $distribution['Qualified']++;
+            elseif ($score >= 60) $distribution['Moderately Qualified']++;
+            else $distribution['Not Qualified']++;
+
+            // Skills
+            if ($candidate->skills) {
+                $skills = is_array($candidate->skills) ? $candidate->skills : json_decode($candidate->skills, true);
+                if (is_array($skills)) {
+                    foreach ($skills as $skill) {
+                        $skillName = trim($skill);
+                        if (!empty($skillName)) {
+                            if (!isset($skillsCount[$skillName])) {
+                                $skillsCount[$skillName] = 0;
+                            }
+                            $skillsCount[$skillName]++;
+                        }
+                    }
+                }
+            }
+        }
+
+        arsort($skillsCount);
+        $topSkills = array_slice($skillsCount, 0, 5);
+
+        return [
+            'average_score' => round($candidates->avg('rating_score') ?? 0, 1),
+            'distribution' => array_combine(array_values($distributionKeys), array_values($distribution)),
+            'top_skills' => $topSkills,
+            'total_candidates' => $candidates->count(),
+        ];
+    }
+
+    public function getApplicantFunnel()
+    {
+        try {
+            return [
+                'total_applications' => Application::count(),
+                'ai_filtered' => Candidate::count(),
+                'interview_stage' => Candidate::whereNotNull('interview_schedule')
+                    ->where('status', '!=', 'hired')
+                    ->where('interview_result', '!=', 'failed')
+                    ->count(),
+                'offer_stage' => Candidate::where('interview_result', 'passed')
+                    ->where('status', '!=', 'hired')
+                    ->count(),
+                'hired' => Candidate::where('status', 'hired')->count(),
+                'rejected' => Candidate::where('interview_result', 'failed')->count(),
+            ];
+        } catch (\Exception $e) {
+            return [
+                'total_applications' => 0,
+                'ai_filtered' => 0,
+                'interview_stage' => 0,
+                'offer_stage' => 0,
+                'hired' => 0,
+                'rejected' => 0,
+            ];
         }
     }
 }

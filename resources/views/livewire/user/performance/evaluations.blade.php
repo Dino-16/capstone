@@ -3,6 +3,8 @@
 @section('breadcrumbs', 'Performance Evaluations')
 
 <div>
+    {{-- PASSWORD GATE --}}
+    @include('components.password-gate')
 
 
     <!-- Toast Notification -->
@@ -95,10 +97,9 @@
                                         <div @class('col-md-3')>
                                             <div @class('mb-3')>
                                                 <label @class('form-label fw-semibold')>Evaluation Type</label>
-                                                <select @class('form-select') wire:model="evaluationType">
-                                                    <option value="Regular">Regular</option>
-                                                    <option value="Probationary">Probationary</option>
-                                                    <option value="Annual">Annual</option>
+                                                <select @class('form-select') wire:model.live="evaluationType">
+                                                    <option value="Peer-to-Peer">Peer-to-Peer Evaluation</option>
+                                                    <option value="Self-Evaluation">Self-Evaluation</option>
                                                 </select>
                                                 @error('evaluationType') <div @class('invalid-feedback')>{{ $message }}</div> @enderror
                                             </div>
@@ -109,6 +110,39 @@
                                                 <input type="text" @class('form-control') wire:model="evaluatorName" placeholder="Enter evaluator name">
                                                 @error('evaluatorName') <div @class('invalid-feedback')>{{ $message }}</div> @enderror
                                             </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {{-- Evaluation Type Info Card --}}
+                                    <div @class('row mt-3')>
+                                        <div @class('col-12')>
+                                            @if($evaluationType === 'Peer-to-Peer')
+                                                <div class="alert alert-info border-0 shadow-sm">
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="bi bi-people-fill fs-3 me-3"></i>
+                                                        <div>
+                                                            <h6 class="mb-1 fw-bold">Peer-to-Peer Evaluation</h6>
+                                                            <small class="text-muted">
+                                                                A colleague or team member evaluates the employee's performance. 
+                                                                This provides valuable feedback from those who work directly with the employee.
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @else
+                                                <div class="alert alert-warning border-0 shadow-sm">
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="bi bi-person-fill-check fs-3 me-3"></i>
+                                                        <div>
+                                                            <h6 class="mb-1 fw-bold">Self-Evaluation</h6>
+                                                            <small class="text-muted">
+                                                                The employee evaluates their own performance. 
+                                                                This promotes self-reflection and helps identify personal growth areas.
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>

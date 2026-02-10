@@ -10,9 +10,12 @@ use App\Exports\Recruitment\RequisitionsExport;
 class Requisitions extends Component
 {   
     use WithPagination;
+    use \App\Livewire\Traits\HandlesToasts;
 
     public $search;
     public $statusFilter = 'All';
+    public $departmentFilter = '';
+    public $positionFilter = '';
 
     // Modal Properties
     public $showEditModal = false;
@@ -29,7 +32,7 @@ class Requisitions extends Component
         $requisition = Requisition::findOrFail($id);
         $requisition->status = 'Accepted';
         $requisition->save();
-        session()->push('status', 'Accepted Successfully!');
+        $this->toast('Accepted Successfully!');
     }
 
     public function export()
@@ -49,22 +52,41 @@ class Requisitions extends Component
         $this->resetPage();
     }
 
-    // Clear Message Status
-    public function clearStatus()
+    public function updatedDepartmentFilter()
     {
-        session()->forget('status');
+        $this->resetPage();
     }
 
-    public function deleteRequisition($id)
+    public function updatedPositionFilter()
     {
-        if (auth()->user()->role !== 'Super Admin') {
-            session()->push('status', 'Unauthorized action.');
+        $this->resetPage();
+    }
+
+
+    public $showDeleteModal = false;
+    public $requisitionIdToDelete = null;
+
+    public function confirmDelete($id)
+    {
+        $this->requisitionIdToDelete = $id;
+        $this->showDeleteModal = true;
+    }
+
+    public function deleteRequisition()
+    {
+        if (!in_array(session('user.position'), ['Super Admin', 'HR Manager'])) {
+            $this->toast('Unauthorized action.', 'error');
             return;
         }
         
-        $requisition = Requisition::findOrFail($id);
-        $requisition->delete();
-        session()->push('status', 'Deleted successfully!');
+        if ($this->requisitionIdToDelete) {
+            $requisition = Requisition::findOrFail($this->requisitionIdToDelete);
+            $requisition->delete();
+            $this->toast('Deleted successfully!');
+        }
+
+        $this->showDeleteModal = false;
+        $this->requisitionIdToDelete = null;
     }
 
     public function viewRequisition($id)
@@ -112,7 +134,7 @@ class Requisitions extends Component
         ]);
 
         $this->showEditModal = false;
-        session()->push('status', 'Updated successfully!');
+        $this->toast('Updated successfully!');
     }
 
     public function render()
@@ -123,8 +145,13 @@ class Requisitions extends Component
             'All'      => Requisition::count(),
         ];
 
-        // Otherwise show normal list
-        $query = Requisition::query()->latest();
+        $departments = Requisition::select('department')->distinct()->orderBy('department')->pluck('department');
+        $positions = Requisition::select('position')->distinct()->orderBy('position')->pluck('position');
+
+        // Prioritize Pending status, then show latest
+        $query = Requisition::query()
+            ->orderByRaw("CASE WHEN status = 'Pending' THEN 0 ELSE 1 END")
+            ->latest();
 
         if ($this->search) {
             $query->where(function ($q) {
@@ -138,9 +165,19 @@ class Requisitions extends Component
             $query->where('status', $this->statusFilter);
         }
 
+        if ($this->departmentFilter) {
+            $query->where('department', $this->departmentFilter);
+        }
+
+        if ($this->positionFilter) {
+            $query->where('position', $this->positionFilter);
+        }
+
         return view('livewire.user.recruitment.requisitions', [
             'statusCounts' => $statusCounts,
             'requisitions' => $query->paginate(10),
+            'departments' => $departments,
+            'positions' => $positions,
         ])->layout('layouts.app');
     }
 }

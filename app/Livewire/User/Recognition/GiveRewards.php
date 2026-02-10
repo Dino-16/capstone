@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Http;
 class GiveRewards extends Component
 {
     use WithPagination;
+    use \App\Livewire\Traits\HandlesToasts;
 
     public $search = '';
     public $showModal = false;
@@ -19,6 +20,9 @@ class GiveRewards extends Component
     public $rewardGivenId = null;
     public $statusFilter = '';
     public $dateFilter = '';
+
+    public $departmentFilter = '';
+    public $positionFilter = '';
 
     // Form fields
     public $rewardId = '';
@@ -68,7 +72,7 @@ class GiveRewards extends Component
         $this->reset([
             'rewardId', 'employeeName', 'employeeEmail', 'employeePosition', 
             'employeeDepartment', 'givenDate', 'givenBy', 'status', 
-            'editing', 'rewardGivenId', 'statusFilter'
+            'editing', 'rewardGivenId', 'statusFilter', 'departmentFilter', 'positionFilter'
         ]);
         $this->givenDate = now()->format('Y-m-d');
         $this->status = 'pending';
@@ -108,6 +112,9 @@ class GiveRewards extends Component
 
         if ($employee) {
             $this->employeeEmail = $employee['email'] ?? '';
+            $this->employeePosition = $employee['position'] ?? '';
+            $dept = $employee['department'] ?? null;
+            $this->employeeDepartment = is_array($dept) ? ($dept['name'] ?? $dept['department_name'] ?? '') : $dept;
         }
 
         $this->showEmployeeDropdown = false;
@@ -147,7 +154,7 @@ class GiveRewards extends Component
             'status' => $this->status,
         ]);
 
-        $this->dispatch('reward-given-added', 'Reward given successfully!');
+        $this->toast('Reward given successfully!');
         $this->showModal = false;
     }
 
@@ -169,24 +176,38 @@ class GiveRewards extends Component
                 'status' => $this->status,
             ]);
 
-            $this->dispatch('reward-given-updated', 'Reward given updated successfully!');
+            $this->toast('Reward given updated successfully!');
             $this->showModal = false;
         }
     }
 
-    public function deleteRewardGiven($id)
+    public $showDeleteModal = false;
+    public $rewardGivenIdToDelete = null;
+
+    public function confirmDelete($id)
     {
-        if (auth()->user()->role !== 'Super Admin') {
-            session()->flash('error', 'Unauthorized action.');
+        $this->rewardGivenIdToDelete = $id;
+        $this->showDeleteModal = true;
+    }
+
+    public function deleteRewardGiven()
+    {
+        if (!in_array(session('user.position'), ['Super Admin', 'HR Manager'])) {
+            $this->toast('Unauthorized action.');
             return;
         }
 
-        $rewardGiven = GiveReward::find($id);
-        
-        if ($rewardGiven) {
-            $rewardGiven->delete();
-            session()->flash('message', 'Reward given deleted successfully!');
+        if ($this->rewardGivenIdToDelete) {
+             $rewardGiven = GiveReward::find($this->rewardGivenIdToDelete);
+            
+             if ($rewardGiven) {
+                 $rewardGiven->delete();
+                 $this->toast('Reward given deleted successfully!');
+             }
         }
+
+        $this->showDeleteModal = false;
+        $this->rewardGivenIdToDelete = null;
     }
 
     public function export()
@@ -215,12 +236,22 @@ class GiveRewards extends Component
             $query->where('status', $this->statusFilter);
         }
 
+        if ($this->departmentFilter) {
+            $query->where('employee_department', $this->departmentFilter);
+        }
+
+        if ($this->positionFilter) {
+            $query->where('employee_position', $this->positionFilter);
+        }
+
         $rewardsGiven = $query->orderBy('created_at', 'desc')->paginate(10);
         $rewards = Reward::where('status', 'active')->get();
 
         return view('livewire.user.recognition.give-rewards', [
             'rewardsGiven' => $rewardsGiven,
-            'rewards' => $rewards
+            'rewards' => $rewards,
+            'positions' => GiveReward::pluck('employee_position')->filter()->unique()->sort()->values(),
+            'departments' => GiveReward::pluck('employee_department')->filter()->unique()->sort()->values(),
         ])->layout('layouts.app');
     }
 }

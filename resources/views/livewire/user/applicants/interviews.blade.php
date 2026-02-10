@@ -25,19 +25,68 @@
                     @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
                 >
                     <i @class('bi bi-funnel-fill me-2')></i>
-                    Filter: {{ $statusFilter ? ($statusFilter === 'interview_ready' ? 'Ready' : ucfirst($statusFilter)) : 'All' }}
+                    Status: {{ $statusFilter ? ($statusFilter === 'interview_ready' ? 'Ready' : ucfirst($statusFilter)) : 'All' }}
                 </button>
 
                 <ul @class('dropdown-menu')>
                     <li>
                         <a @class('dropdown-item') wire:click="$set('statusFilter', '')">All Status</a>
                     </li>
+                    <li><hr class="dropdown-divider"></li>
                     <li>
                         <a @class('dropdown-item') wire:click="$set('statusFilter', 'interview_ready')">Ready</a>
                     </li>
                     <li>
                         <a @class('dropdown-item') wire:click="$set('statusFilter', 'interviewed')">Interviewed</a>
                     </li>
+                </ul>
+            </div>
+
+            {{-- DEPARTMENT FILTER --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-building me-2')></i>
+                    Department: {{ $departmentFilter ?: 'All' }}
+                </button>
+
+                <ul @class('dropdown-menu')>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('departmentFilter', '')">All Departments</a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    @foreach($filters['departments'] as $dept)
+                        <li>
+                            <a @class('dropdown-item') wire:click="$set('departmentFilter', '{{ $dept }}')">{{ $dept }}</a>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+
+            {{-- POSITION FILTER --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-briefcase me-2')></i>
+                    Position: {{ $positionFilter ?: 'All' }}
+                </button>
+
+                <ul @class('dropdown-menu')>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('positionFilter', '')">All Positions</a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    @foreach($filters['positions'] as $pos)
+                        <li>
+                            <a @class('dropdown-item') wire:click="$set('positionFilter', '{{ $pos }}')">{{ $pos }}</a>
+                        </li>
+                    @endforeach
                 </ul>
             </div>
         </div>
@@ -54,6 +103,30 @@
         </div>
     </div>
 
+    {{-- INTERVIEW STAGES GUIDE --}}
+    <div class="row g-3 mb-4">
+        @foreach($interviewStages as $stageKey => $stage)
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100 border-start border-4 border-{{ $stage['color'] }}">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="rounded-circle bg-{{ $stage['color'] }} bg-opacity-10 p-3 me-3">
+                                <i class="bi {{ $stage['icon'] }} text-{{ $stage['color'] }} fs-4"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold">{{ $stage['label'] }}</h6>
+                                <small class="text-muted text-uppercase">Stage {{ $loop->iteration }}</small>
+                            </div>
+                        </div>
+                        <p class="mb-0 text-muted small">
+                            <i class="bi bi-quote me-1"></i>{{ $stage['description'] }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+    </div>
+
     {{-- CANDIDATES FOR INTERVIEW TABLE --}}
     <div @class('p-5 bg-white rounded border rounded-bottom-0 border-bottom-0')>
         <h3><i class="bi bi-clipboard-check me-2"></i>Candidates Ready for Interview</h3>
@@ -66,8 +139,10 @@
             <thead>
                 <tr @class('bg-dark')>
                     <th @class('text-secondary')>Name</th>
+                    <th @class('text-secondary')>Email</th>
+                    <th @class('text-secondary')>Department</th>
                     <th @class('text-secondary')>Position</th>
-                    <th @class('text-secondary')>AI Rating</th>
+                    <th @class('text-secondary')>Interview Stage</th>
                     <th @class('text-secondary')>Interview Schedule</th>
                     <th @class('text-secondary')>Status</th>
                     <th @class('text-secondary')>Interview Score</th>
@@ -81,20 +156,47 @@
                     >
                         <td>
                             <div class="fw-semibold">{{ $candidate->candidate_name }}</div>
-                            <small class="text-muted">{{ $candidate->candidate_email }}</small>
+                        </td>
+                        <td>
+                            <div>{{ $candidate->candidate_email }}</div>
+                        </td>
+                        <td>
+                            <div class="fw-medium">{{ $candidate->department ?? 'N/A' }}</div>
                         </td>
                         <td>
                             <div class="fw-medium">{{ $candidate->applied_position ?? 'N/A' }}</div>
-                            <small class="text-muted">{{ $candidate->department ?? '' }}</small>
                         </td>
                         <td>
-                            @if($candidate->rating_score)
-                                <span class="badge bg-{{ \App\Models\Applicants\Candidate::getRatingBadgeColor($candidate->rating_score) }}">
-                                    {{ number_format($candidate->rating_score, 1) }}
-                                </span>
-                            @else
-                                <span class="text-muted">N/A</span>
-                            @endif
+                            @php
+                                $currentStage = $candidate->interview_stage ?? 'initial';
+                                $stageInfo = $interviewStages[$currentStage] ?? $interviewStages['initial'];
+                            @endphp
+                            <div class="dropdown">
+                                <button 
+                                    class="btn btn-sm btn-{{ $stageInfo['color'] }} dropdown-toggle d-flex align-items-center gap-1" 
+                                    type="button" 
+                                    data-bs-toggle="dropdown"
+                                >
+                                    <i class="bi {{ $stageInfo['icon'] }}"></i>
+                                    {{ $stageInfo['label'] }}
+                                </button>
+                                <ul class="dropdown-menu">
+                                    @foreach($interviewStages as $stageKey => $stage)
+                                        <li>
+                                            <a 
+                                                class="dropdown-item {{ $currentStage === $stageKey ? 'active' : '' }}" 
+                                                href="#"
+                                                wire:click.prevent="updateInterviewStage({{ $candidate->id }}, '{{ $stageKey }}')"
+                                            >
+                                                <i class="bi {{ $stage['icon'] }} me-2 text-{{ $stage['color'] }}"></i>
+                                                {{ $stage['label'] }}
+                                                <br>
+                                                <small class="text-muted">{{ $stage['description'] }}</small>
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
                         </td>
                         <td>
                             @if($candidate->interview_schedule)
@@ -135,6 +237,7 @@
                             @endif
                         </td>
                         <td>
+                            <div class="d-flex gap-2">
                                 <button
                                     type="button"
                                     @class('btn btn-sm btn-primary')
@@ -144,7 +247,17 @@
                                     <i @class('bi bi-play-circle me-1')></i>
                                     {{ $candidate->status === 'interviewed' ? 'Review' : 'Start' }}
                                 </button>
-                                    @if(session('user.position') === 'Super Admin')
+                                
+                                <button
+                                    type="button"
+                                    @class('btn btn-sm btn-outline-primary')
+                                    wire:click="openMessageModal({{ $candidate->id }})"
+                                    title="Message Candidate"
+                                >
+                                    <i @class('bi bi-envelope')></i>
+                                </button>
+
+                                @if(in_array(session('user.position'), ['Super Admin', 'HR Manager']))
                                     <button
                                         type="button"
                                         @class('btn btn-sm btn-danger')
@@ -155,17 +268,18 @@
                                         <i @class('bi bi-trash')></i>
                                     </button>
                                 @endif
+                            </div>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" @class('text-center text-muted py-5')>
+                        <td colspan="9" @class('text-center text-muted py-5')>
                             @if($search)
                                 <i @class('bi bi-search d-block mx-auto fs-1')></i>
                                 <div class="mt-3">No candidates found matching "{{ $search }}".</div>
-                            @elseif($statusFilter)
+                            @elseif($statusFilter || $departmentFilter || $positionFilter)
                                 <i @class('bi bi-funnel d-block mx-auto fs-1')></i>
-                                <div class="mt-3">No {{ $statusFilter === 'interview_ready' ? 'ready' : $statusFilter }} candidates found.</div>
+                                <div class="mt-3">No candidates found matching the selected filters.</div>
                             @else
                                 <i @class('bi bi-clipboard-x d-block mx-auto fs-1')></i>
                                 <div class="mt-3">No candidates ready for interview.</div>
@@ -179,230 +293,51 @@
         {{ $candidates->links() }}
     </div>
 
+
     {{-- INTERVIEW ASSESSMENT MODAL --}}
-    @if($showInterviewModal && $selectedCandidate)
-    <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.7);">
-        <div class="modal-dialog modal-fullscreen">
-            <div class="modal-content">
-                <div class="modal-header bg-white border-bottom">
-                    <h5 class="modal-title">
-                        <i class="bi bi-clipboard-check me-2"></i>
-                        Interview Assessment - {{ $selectedCandidate->candidate_name }}
-                    </h5>
-                    <button type="button" class="btn-close" wire:click="closeInterviewModal"></button>
-                </div>
-                <div class="modal-body" style="overflow-y: auto; max-height: calc(100vh - 180px);">
-                    <div class="container-fluid">
-                        {{-- Candidate Info Header --}}
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <div class="card border-0 bg-light">
-                                    <div class="card-body">
-                                        <div class="row">
-                                            <div class="col-md-3">
-                                                <strong>Position:</strong> {{ $selectedCandidate->applied_position ?? 'N/A' }}
-                                            </div>
-                                            <div class="col-md-3">
-                                                <strong>Department:</strong> {{ $selectedCandidate->department ?? 'N/A' }}
-                                            </div>
-                                            <div class="col-md-3">
-                                                <strong>AI Rating:</strong>
-                                                @if($selectedCandidate->rating_score)
-                                                    <span class="badge bg-{{ \App\Models\Applicants\Candidate::getRatingBadgeColor($selectedCandidate->rating_score) }}">
-                                                        {{ number_format($selectedCandidate->rating_score, 1) }}
-                                                    </span>
-                                                @else
-                                                    N/A
-                                                @endif
-                                            </div>
-                                            <div class="col-md-3">
-                                                <strong>Schedule:</strong>
-                                                @if($selectedCandidate->interview_schedule)
-                                                    {{ $selectedCandidate->interview_schedule->format('M d, Y h:i A') }}
-                                                @else
-                                                    N/A
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            {{-- Interview Questions Section --}}
-                            <div class="col-lg-6">
-                                <div class="card h-100">
-                                    <div class="card-header bg-success text-white">
-                                        <h6 class="mb-0 fw-bold"><i class="bi bi-chat-quote me-2"></i>Interview Questions</h6>
-                                    </div>
-                                    <div class="card-body" style="max-height: 500px; overflow-y: auto;">
-                                        {{-- Rating Guide --}}
-                                        <div class="alert alert-info py-2 mb-3 small">
-                                            <i class="bi bi-info-circle me-2"></i>
-                                            <strong>Measurement (1-10):</strong> 
-                                            1-2: Poor, 3-4: Below Average, 5-6: Satisfactory, 7-8: Good, 9-10: Excellent
-                                        </div>
-                                        @if(count($interviewQuestions) > 0)
-                                            @foreach($interviewQuestions as $index => $question)
-                                                <div class="mb-4 p-3 border rounded bg-light">
-                                                    <label class="form-label fw-semibold text-primary">
-                                                        Question {{ $index + 1 }}
-                                                    </label>
-                                                    <p class="mb-2">{{ $question }}</p>
-                                                    <textarea 
-                                                        class="form-control mb-2" 
-                                                        wire:model="interviewScores.{{ $index }}.answer"
-                                                        rows="2"
-                                                        placeholder="Enter candidate's answer..."
-                                                    ></textarea>
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <label class="form-label mb-0 small">Score (0-10):</label>
-                                                        <input 
-                                                            type="number" 
-                                                            class="form-control form-control-sm" 
-                                                            style="width: 80px;"
-                                                            wire:model="interviewScores.{{ $index }}.score"
-                                                            min="0" 
-                                                            max="10" 
-                                                            step="0.5"
-                                                        >
-                                                    </div>
-                                                </div>
-                                            @endforeach
-                                        @else
-                                            <div class="alert alert-warning">
-                                                No interview questions available for this position.
-                                            </div>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- Practical Examination Section --}}
-                            <div class="col-lg-6">
-                                <div class="card h-100">
-                                    <div class="card-header bg-warning text-dark">
-                                        <h6 class="mb-0 fw-bold"><i class="bi bi-pencil-square me-2"></i>Practical Examination</h6>
-                                    </div>
-                                    <div class="card-body" style="max-height: 500px; overflow-y: auto;">
-                                        {{-- Rating Guide --}}
-                                        <div class="alert alert-info py-2 mb-3 small">
-                                            <i class="bi bi-info-circle me-2"></i>
-                                            <strong>Measurement (1-10):</strong> 
-                                            1-2: Poor, 3-4: Below Average, 5-6: Satisfactory, 7-8: Good, 9-10: Excellent
-                                        </div>
-                                        @if(count($practicalExams) > 0)
-                                            @foreach($practicalExams as $index => $exam)
-                                                <div class="mb-4 p-3 border rounded bg-light">
-                                                    <label class="form-label fw-semibold text-warning">
-                                                        Practical Task {{ $index + 1 }}
-                                                    </label>
-                                                    <p class="mb-2">{{ $exam }}</p>
-                                                    <textarea 
-                                                        class="form-control mb-2" 
-                                                        wire:model="practicalScores.{{ $index }}.response"
-                                                        rows="3"
-                                                        placeholder="Enter candidate's response or solution..."
-                                                    ></textarea>
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <label class="form-label mb-0 small">Score (0-10):</label>
-                                                        <input 
-                                                            type="number" 
-                                                            class="form-control form-control-sm" 
-                                                            style="width: 80px;"
-                                                            wire:model="practicalScores.{{ $index }}.score"
-                                                            min="0" 
-                                                            max="10" 
-                                                            step="0.5"
-                                                        >
-                                                    </div>
-                                                </div>
-                                            @endforeach
-                                        @else
-                                            <div class="alert alert-warning">
-                                                No practical exams available for this position.
-                                            </div>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- Overall Notes --}}
-                        <div class="row mt-4">
-                            <div class="col-12">
-                                <div class="card">
-                                    <div class="card-header bg-secondary text-white">
-                                        <h6 class="mb-0 fw-bold"><i class="bi bi-journal-text me-2"></i>Overall Notes & Observations</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <textarea 
-                                            class="form-control" 
-                                            wire:model="overallNotes"
-                                            rows="4"
-                                            placeholder="Enter any additional observations, notes, or comments about the candidate's performance..."
-                                        ></textarea>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" wire:click="closeInterviewModal">Cancel</button>
-                    <button type="button" class="btn btn-primary btn-lg" wire:click="submitInterview" wire:loading.attr="disabled">
-                        <span wire:loading.remove><i class="bi bi-check2-circle me-1"></i>Submit Assessment</span>
-                        <span wire:loading>Submitting...</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
+    @include('livewire.user.applicants.includes.interview-assessment-modal')
 
     {{-- PASS/FAIL RESULT MODAL --}}
-    @if($showResultModal && $resultCandidate)
-    <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.7);">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-white border-bottom">
-                    <h5 class="modal-title"><i class="bi bi-award me-2"></i>Interview Result</h5>
-                    <button type="button" class="btn-close" wire:click="closeResultModal"></button>
-                </div>
-                <div class="modal-body text-center py-5">
-                    <h4 class="mb-3">{{ $resultCandidate->candidate_name }}</h4>
-                    <p class="text-muted mb-4">{{ $resultCandidate->applied_position }}</p>
-                    
-                    <div class="display-1 fw-bold mb-3 text-{{ $resultCandidate->interview_total_score >= 70 ? 'success' : ($resultCandidate->interview_total_score >= 50 ? 'warning' : 'danger') }}">
-                        {{ number_format($resultCandidate->interview_total_score, 1) }}%
-                    </div>
-                    <p class="text-muted">Interview Score</p>
-                    
-                    <div class="alert alert-info mt-4">
-                        <i class="bi bi-info-circle me-2"></i>
-                        <strong>Pass</strong> will trigger the contract preparation API to the external department.
-                    </div>
-                </div>
-                <div class="modal-footer justify-content-center gap-3">
-                    <button type="button" class="btn btn-danger btn-lg px-5" wire:click="markAsFailed" wire:loading.attr="disabled">
-                        <i class="bi bi-x-circle me-2"></i>FAIL
-                    </button>
-                    <button type="button" class="btn btn-success btn-lg px-5" wire:click="markAsPassed" wire:loading.attr="disabled">
-                        <i class="bi bi-check-circle me-2"></i>PASS
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
+    @include('livewire.user.applicants.includes.interview-result-modal')
+
+    {{-- MESSAGE MODAL --}}
+    @include('livewire.user.applicants.includes.interview-message-modal')
 
     <style>
-        .cursor-pointer {
-            cursor: pointer;
+        .container-max { max-width: 1000px; }
+        .cursor-pointer { cursor: pointer; }
+        .cursor-pointer:hover { background-color: #f8fafc; }
+        
+        .SaaS-input {
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            background-color: #ffffff;
         }
-        .cursor-pointer:hover {
-            background-color: #f8f9fa;
+        .SaaS-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+            outline: none;
         }
+        
+        .shadow-xs { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+        .shadow-primary { box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3), 0 4px 6px -2px rgba(59, 130, 246, 0.1); }
+        .shadow-success { box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3), 0 4px 6px -2px rgba(16, 185, 129, 0.1); }
+        .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+        
+        .transition-all { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .transition-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border-color: #bfdbfe !important; }
+        .scale-110 { transform: scale(1.1); }
+        .fw-black { font-weight: 900; }
+        .tracking-wider { letter-spacing: 0.05em; }
+        .tracking-widest { letter-spacing: 0.1em; }
+        
+        .form-range::-webkit-slider-thumb { background: #3b82f6; }
+        .form-range::-moz-range-thumb { background: #3b82f6; }
+        .btn-xl { font-size: 1.1rem; }
     </style>
 </div>
+
+

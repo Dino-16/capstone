@@ -11,8 +11,6 @@ use App\Data\NCRAddressData;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Smalot\PdfParser\Parser;
-use App\Models\Admin\RecaptchaSetting;
-use App\Models\Admin\RecaptchaLog;
 use OpenAI\Laravel\Facades\OpenAI;
 
 class ApplyNow extends Component
@@ -27,18 +25,14 @@ class ApplyNow extends Component
     public $job, $agreedToTerms = false, $showTerms = false, $showSuccessToast = false;
     public $regions = [], $provinces = [], $cities = [], $barangays = [];
     public $selectedRegion, $selectedProvince, $selectedCity, $selectedBarangay, $houseStreet;
-    public $showRecaptchaModal = true;
-    public $recaptchaVerified = false;
+    
+    // Terms Agreement Gate
+    public $showTermsGate = true;
+    public $termsAccepted = false;
 
     public function mount($id)
     {
         $this->job = JobListing::findOrFail($id);
-        
-        // Check if reCAPTCHA is enabled
-        $setting = RecaptchaSetting::first();
-        if ($setting && !$setting->is_enabled) {
-            $this->showRecaptchaModal = false;
-        }
 
         try {
             $this->regions = Http::withoutVerifying()->get('https://psgc.cloud/api/regions')->json();
@@ -47,36 +41,25 @@ class ApplyNow extends Component
         }
     }
 
-    public function verifyRecaptcha($recaptchaResponse)
+    /**
+     * Accept terms and proceed to form
+     */
+    public function acceptTerms()
     {
-        $secretKey = config('recaptcha.secret_key');
-        
-        try {
-            $response = Http::withoutVerifying()->asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
-                'secret' => $secretKey,
-                'response' => $recaptchaResponse,
-                'remoteip' => request()->ip(),
-            ]);
-            
-            $result = $response->json();
-            
-            // Log the reCAPTCHA attempt
-            RecaptchaLog::create([
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
-                'status' => ($result['success'] ?? false) ? 'success' : 'failed',
-            ]);
-            
-            if ($result['success'] ?? false) {
-                $this->recaptchaVerified = true;
-                $this->showRecaptchaModal = false;
-            } else {
-                $this->addError('recaptcha', 'reCAPTCHA verification failed. Please try again.');
-            }
-        } catch (\Exception $e) {
-            \Log::error('reCAPTCHA verification error: ' . $e->getMessage());
-            $this->addError('recaptcha', 'An error occurred during verification. Please try again.');
+        if (!$this->termsAccepted) {
+            $this->addError('termsAccepted', 'You must accept the terms and conditions to continue.');
+            return;
         }
+
+        $this->showTermsGate = false;
+    }
+
+    /**
+     * Go back from application form
+     */
+    public function goBack()
+    {
+        return redirect()->route('careers');
     }
 
     /**

@@ -10,9 +10,11 @@ use Carbon\Carbon;
 use App\Models\Performance\Evaluation;
 use App\Exports\Performance\PerformanceTrackerExport;
 use App\Exports\Performance\AttendanceTrackerExport;
+use App\Livewire\Traits\RequiresPasswordVerification;
 
 class Tracker extends Component
 {
+
     public $employees = [];
     public $selectedEmployee = null;
     public $email = '';

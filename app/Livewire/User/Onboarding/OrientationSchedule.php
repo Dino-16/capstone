@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Mail;
 class OrientationSchedule extends Component
 {
     use WithPagination;
+    use \App\Livewire\Traits\HandlesToasts;
 
     #[Url]
     public $search = '';
@@ -27,11 +28,17 @@ class OrientationSchedule extends Component
     public $approvedFacilities = [];
     public $selectedFacility = '';
 
-    // Form Properties
+    #[Url]
+    public $departmentFilter = '';
+
+    #[Url]
+    public $positionFilter = '';
+
     // Form Properties
     public $employeeName;
     public $email;
-    public $position; // <--- Added
+    public $position; 
+    public $department; // <--- Added
     public $orientationDate;
     public $location;
     public $facilitator;
@@ -84,6 +91,8 @@ class OrientationSchedule extends Component
             $this->employeeName = $employee['name'] ?? $employee['employee_name'] ?? '';
             $this->email = $employee['email'] ?? null;
             $this->position = $employee['position'] ?? null;
+            $dept = $employee['department'] ?? null;
+            $this->department = is_array($dept) ? ($dept['name'] ?? $dept['department_name'] ?? null) : $dept;
         }
         
         $this->showEmployeeDropdown = false;
@@ -198,7 +207,8 @@ class OrientationSchedule extends Component
             $this->validate([
                 'employeeName' => 'required|string|max:255|unique:orientations,employee_name',
                 'email' => 'nullable|email|max:255',
-                'position' => 'nullable|string|max:255', // <--- Added
+                'position' => 'nullable|string|max:255',
+                'department' => 'nullable|string|max:255', // <--- Added
                 'orientationDate' => 'required|date',
                 'location' => 'required|string|max:255',
                 'facilitator' => 'required|string|max:255',
@@ -210,7 +220,8 @@ class OrientationSchedule extends Component
             Orientation::create([
                 'employee_name' => $this->employeeName,
                 'email' => $this->email,
-                'position' => $this->position, // <--- Added
+                'position' => $this->position,
+                'department' => $this->department, // <--- Added
                 'orientation_date' => $this->orientationDate,
                 'location' => $this->location,
                 'facilitator' => $this->facilitator,
@@ -219,7 +230,7 @@ class OrientationSchedule extends Component
             ]);
 
             // ...
-            $this->reset(['employeeName', 'email', 'position', 'orientationDate', 'location', 'facilitator', 'notes', 'status']);
+            $this->reset(['employeeName', 'email', 'position', 'department', 'orientationDate', 'location', 'facilitator', 'notes', 'status']);
             
         } catch (\Exception $e) {
             // ...
@@ -246,7 +257,8 @@ class OrientationSchedule extends Component
                 'notes' => $this->notes,
                 'status' => $this->status,
                 'email' => $this->email,
-                'position' => $this->position, // <--- Added
+                'position' => $this->position,
+                'department' => $this->department, // <--- Added
             ]);
 
             // ...
@@ -257,15 +269,29 @@ class OrientationSchedule extends Component
         }
     }
 
-    public function deleteOrientation($orientationId)
+    public $showDeleteModal = false;
+    public $orientationIdToDelete = null;
+
+    public function confirmDelete($orientationId)
     {
-        if (auth()->user()->role !== 'Super Admin') {
-            session()->flash('status', 'Unauthorized action.');
+        $this->orientationIdToDelete = $orientationId;
+        $this->showDeleteModal = true;
+    }
+
+    public function deleteOrientation()
+    {
+        if (!in_array(session('user.position'), ['Super Admin', 'HR Manager'])) {
+            $this->toast('Unauthorized action.', 'error');
             return;
         }
 
-        Orientation::findOrFail($orientationId)->delete();
-        session()->flash('status', 'Orientation deleted successfully.');
+        if ($this->orientationIdToDelete) {
+             Orientation::findOrFail($this->orientationIdToDelete)->delete();
+             $this->toast('Orientation deleted successfully.');
+        }
+
+        $this->showDeleteModal = false;
+        $this->orientationIdToDelete = null;
     }
 
     public function openMessageModal($orientationId)
@@ -296,7 +322,7 @@ class OrientationSchedule extends Component
                     ->from(config('mail.from.address'), config('mail.from.name'));
             });
 
-            session()->flash('status', 'Message sent to ' . $this->messageOrientation->employee_name . ' at ' . $this->messageOrientation->email);
+            $this->toast('Message sent to ' . $this->messageOrientation->employee_name . ' at ' . $this->messageOrientation->email);
             $this->showMessageModal = false;
             $this->reset(['messageSubject', 'messageContent', 'messageOrientation']);
             
@@ -328,10 +354,6 @@ class OrientationSchedule extends Component
         }
     }
 
-    public function clearStatus()
-    {
-        session()->forget(['status', 'error']);
-    }
 
     public function export()
     {
@@ -344,13 +366,27 @@ class OrientationSchedule extends Component
         $query = Orientation::query();
 
         if ($this->search) {
-            $query->where('employee_name', 'like', '%' . $this->search . '%')
+            $query->where(function($q) {
+                $q->where('employee_name', 'like', '%' . $this->search . '%')
+                  ->orWhere('position', 'like', '%' . $this->search . '%')
+                  ->orWhere('department', 'like', '%' . $this->search . '%')
                   ->orWhere('location', 'like', '%' . $this->search . '%')
                   ->orWhere('facilitator', 'like', '%' . $this->search . '%');
+            });
+        }
+
+        if ($this->departmentFilter) {
+            $query->where('department', $this->departmentFilter);
+        }
+
+        if ($this->positionFilter) {
+            $query->where('position', $this->positionFilter);
         }
 
         return view('livewire.user.onboarding.orientation-schedule', [
             'orientations' => $query->latest()->paginate($this->perPage),
+            'positions' => Orientation::pluck('position')->filter()->unique()->sort()->values(),
+            'departments' => Orientation::pluck('department')->filter()->unique()->sort()->values(),
         ])->layout('layouts.app');
     }
 }

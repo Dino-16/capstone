@@ -1,4 +1,12 @@
 {{-- Sidebar --}}
+<style>
+    .nav-link[data-bs-toggle="collapse"] .bi-chevron-down {
+        transition: transform 0.3s ease !important;
+    }
+    .nav-link[data-bs-toggle="collapse"][aria-expanded="true"] .bi-chevron-down {
+        transform: rotate(180deg) !important;
+    }
+</style>
 <aside id="sidebar" @class('bg-white border-end p-3 shadow-sm')>
 
     {{-- Profile Section --}}
@@ -39,7 +47,7 @@
             aria-expanded="{{ (request()->is('recruitment-requests') || request()->is('job-postings')) ? 'true' : 'false' }}"
             aria-controls="recruitmentMenu"
             data-bs-toggle="collapse"
-            @class("nav-link text-dark d-flex justify-content-between align-items-center")>
+            @class('nav-link d-flex justify-content-between align-items-center ' . ((request()->is('recruitment-requests') || request()->is('job-postings')) ? 'active' : 'text-dark'))>
                 <span><i @class('bi bi-briefcase-fill me-2')></i> Recruitment</span>
                 <i @class('bi bi-chevron-down small')></i>
             </a>
@@ -69,7 +77,7 @@
             aria-expanded="{{ (request()->is('applications') || request()->is('candidates') || request()->is('interviews') || request()->is('offers')) ? 'true' : 'false' }}"
             aria-controls="applicantsMenu"
             data-bs-toggle="collapse"
-            @class("nav-link text-dark d-flex justify-content-between align-items-center")>
+            @class('nav-link d-flex justify-content-between align-items-center ' . ((request()->is('applications') || request()->is('candidates') || request()->is('interviews') || request()->is('offers')) ? 'active' : 'text-dark'))>
                 <span><i @class('bi bi-people-fill me-2')></i> Applicants</span>
                 <i @class('bi bi-chevron-down small')></i>
             </a>
@@ -90,11 +98,7 @@
                     </li>
 
                     
-        <li @class("nav-item")>
-            <a href="{{ route('facility-request') }}" @class('nav-link text-dark'. (request()->is('facility-request') ? 'active' : ''))>
-                <i @class('bi bi-building me-2')></i> Facility Request
-            </a>
-        </li>
+
 
                     <li @class("nav-item")>
                         <a href="{{ route('interviews') }}"
@@ -115,10 +119,10 @@
         <li @class("nav-item")>
             <a href="#onboardingMenu"
             role="button"
-            aria-expanded="{{ (request()->is('employees') || request()->is('document-checklist') || request()->is('orientation-plan')) ? 'true' : 'false' }}"
+            aria-expanded="{{ (request()->is('employees') || request()->is('document-checklists') || request()->is('orientation-schedule')) ? 'true' : 'false' }}"
             aria-controls="onboardingMenu"
             data-bs-toggle="collapse"
-            @class("nav-link text-dark d-flex justify-content-between align-items-center")>
+            @class('nav-link d-flex justify-content-between align-items-center ' . ((request()->is('employees') || request()->is('document-checklists') || request()->is('orientation-schedule')) ? 'active' : 'text-dark'))>
                 <span><i @class('bi bi-person-badge-fill me-2')></i> Onboarding</span>
                 <i @class('bi bi-chevron-down small')></i>
             </a>
@@ -154,10 +158,10 @@
         <li @class("nav-item")>
             <a href="#performanceMenu"
             role="button"
-            aria-expanded="{{ (request()->is('new-hire-reviews') || request()->is('evaluations') || request()->is('evaluations')) ? 'true' : 'false' }}"
+            aria-expanded="{{ (request()->is('new-hire-reviews') || request()->is('evaluations') || request()->is('tracker') || request()->is('evaluation-records')) ? 'true' : 'false' }}"
             aria-controls="performanceMenu"
             data-bs-toggle="collapse"
-            @class("nav-link text-dark d-flex justify-content-between align-items-center")>
+            @class('nav-link d-flex justify-content-between align-items-center ' . ((request()->is('new-hire-reviews') || request()->is('evaluations') || request()->is('tracker') || request()->is('evaluation-records')) ? 'active' : 'text-dark'))>
                 <span><i @class('bi bi-bar-chart-fill me-2')></i> Performance</span>
                 <i @class('bi bi-chevron-down small')></i>
             </a>
@@ -194,7 +198,7 @@
             aria-expanded="{{ (request()->is('rewards') || request()->is('reward-giving')) ? 'true' : 'false' }}"
             aria-controls="rewardsMenu"
             data-bs-toggle="collapse"
-            @class("nav-link text-dark d-flex justify-content-between align-items-center")>
+            @class('nav-link d-flex justify-content-between align-items-center ' . ((request()->is('rewards') || request()->is('reward-giving')) ? 'active' : 'text-dark'))>
                 <span><i @class('bi bi-gift me-2')></i> Recognition</span>
                 <i @class('bi bi-chevron-down small')></i>
             </a>
@@ -216,26 +220,24 @@
             </div>
         </li>
 
+
+
         <li @class("nav-item")>
             <a href="{{ route('reports') }}" @class('nav-link text-dark'. (request()->is('reports') ? 'active' : ''))>
                 <i @class('bi bi-file-earmark-text me-2')></i> Reports Data
             </a>
         </li>
 
-        {{-- Security Menu (Super Admin only) --}}
-        @if(session('user.position') === 'Super Admin')
-        <li @class("nav-item")>
-            <a href="{{ route('superadmin.tickets.index') }}" @class('nav-link text-dark' . (request()->is('admin/superadmin/tickets') ? 'active' : ''))>
-                <i class="bi bi-ticket-perforated me-2"></i> Ticket Requests
-            </a>
-        </li>
+        {{-- Security Menu (Super Admin & HR Manager) --}}
+        @if(in_array(session('user.position'), ['Super Admin', 'HR Manager']))
+
         <li @class("nav-item")>
             <a href="#securityMenu"
             role="button"
             aria-expanded="{{ (request()->is('admin/superadmin/recaptcha') || request()->is('admin/superadmin/mfa') || request()->is('admin/superadmin/honeypots')) ? 'true' : 'false' }}"
             aria-controls="securityMenu"
             data-bs-toggle="collapse"
-            @class("nav-link text-dark d-flex justify-content-between align-items-center")>
+            @class('nav-link d-flex justify-content-between align-items-center ' . ((request()->is('admin/superadmin/recaptcha') || request()->is('admin/superadmin/mfa') || request()->is('admin/superadmin/honeypots')) ? 'active' : 'text-dark'))>
                 <span><i @class('bi bi-shield-lock me-2')></i> Security Settings</span>
                 <i @class('bi bi-chevron-down small')></i>
             </a>
@@ -265,8 +267,37 @@
         </li>
         @endif
 
-        {{-- HR Manager Support Ticket Link --}}
-        @if(session('user.position') === 'HR Manager')
+        <li @class("nav-item")>
+            <a href="#othersMenu"
+            role="button"
+            aria-expanded="{{ (request()->is('facility-request') || request()->is('admin/superadmin/tickets')) ? 'true' : 'false' }}"
+            aria-controls="othersMenu"
+            data-bs-toggle="collapse"
+            @class('nav-link d-flex justify-content-between align-items-center ' . ((request()->is('facility-request') || request()->is('admin/superadmin/tickets')) ? 'active' : 'text-dark'))>
+                <span><i @class('bi bi-three-dots me-2')></i> Others</span>
+                <i @class('bi bi-chevron-down small')></i>
+            </a>
+
+            <div id="othersMenu" @class('collapse ps-4 ' . ((request()->is('facility-request') || request()->is('admin/superadmin/tickets')) ? 'show' : ''))>
+                <ul @class('nav flex-column')>
+                    <li @class("nav-item")>
+                        <a href="{{ route('facility-request') }}" @class('nav-link text-dark'. (request()->is('facility-request') ? 'active' : ''))>
+                            <i @class('bi bi-building me-2')></i> Facility Request
+                        </a>
+                    </li>
+                    @if(in_array(session('user.position'), ['Super Admin', 'HR Manager']))
+                    <li @class("nav-item")>
+                        <a href="{{ route('superadmin.tickets.index') }}" @class('nav-link text-dark' . (request()->is('admin/superadmin/tickets') ? 'active' : ''))>
+                            <i class="bi bi-ticket-perforated me-2"></i> Ticket Requests
+                        </a>
+                    </li>
+                    @endif
+                </ul>
+            </div>
+        </li>
+
+        {{-- HR Staff Support Ticket Link --}}
+        @if(session('user.position') === 'HR Staff')
         <li class="nav-item">
             <a href="{{ route('admin.tickets.index') }}" @class('nav-link text-dark' . (request()->is('admin/support/*') ? 'active' : ''))>
                 <i class="bi bi-life-preserver me-2"></i> Support Tickets

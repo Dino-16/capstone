@@ -9,17 +9,27 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Exports\Onboarding\EmployeesExport;
 use App\Models\Onboarding\DocumentChecklist;
+use App\Livewire\Traits\RequiresPasswordVerification;
+use App\Livewire\Traits\HandlesToasts;
 
 class Employees extends Component
 {
     use WithPagination;
     use \Livewire\WithFileUploads;
+    use RequiresPasswordVerification;
+    use HandlesToasts;
 
     #[Url]
     public $search = '';
 
     #[Url]
     public $statusFilter = '';
+
+    #[Url]
+    public $departmentFilter = '';
+
+    #[Url]
+    public $positionFilter = '';
     
     public $perPage = 10;
 
@@ -68,6 +78,11 @@ class Employees extends Component
         'Other'
     ];
 
+    public function mount()
+    {
+        $this->initializePasswordVerification();
+    }
+
     /**
      * Resets pagination when search is updated.
      */
@@ -80,6 +95,16 @@ class Employees extends Component
      * Resets pagination when status filter is updated.
      */
     public function updatingStatusFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingDepartmentFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingPositionFilter()
     {
         $this->resetPage();
     }
@@ -114,6 +139,21 @@ class Employees extends Component
         if (!empty($this->statusFilter)) {
             $collection = $collection->filter(function ($emp) {
                 return strtolower($emp['employment_status'] ?? '') === strtolower($this->statusFilter);
+            });
+        }
+
+        // Apply Department Filter
+        if (!empty($this->departmentFilter)) {
+            $collection = $collection->filter(function ($emp) {
+                $deptName = $emp['department']['name'] ?? $emp['department'] ?? '';
+                return strtolower($deptName) === strtolower($this->departmentFilter);
+            });
+        }
+
+        // Apply Position Filter
+        if (!empty($this->positionFilter)) {
+            $collection = $collection->filter(function ($emp) {
+                return strtolower($emp['position'] ?? '') === strtolower($this->positionFilter);
             });
         }
 
@@ -190,8 +230,8 @@ class Employees extends Component
                 ? ($matchingChecklist->getCompletionPercentage() == 100 ? 'Complete' : 'In Progress') 
                 : 'Not Integrated';
 
-            // Add employment status from accounts map or fallback to 'status' field if exists
-            $emp['employment_status'] = $accountStatusMap[$employeeId] ?? $emp['status'] ?? '---';
+            // Add employment status from accounts map or fallback to 'status' or 'employee_status' fields
+            $emp['employment_status'] = $accountStatusMap[$employeeId] ?? $emp['status'] ?? $emp['employee_status'] ?? '---';
 
             return $emp;
         })->toArray();
@@ -294,16 +334,16 @@ class Employees extends Component
             ]);
 
             if ($response->successful()) {
-                session()->flash('message', "Contract request submitted successfully to Legal Admin!");
+                $this->toast("Contract request submitted successfully to Legal Admin!");
                 $this->closeRequestContractModal();
             } else {
                 $errorMsg = $response->json('message') ?? $response->body() ?? 'Unknown Error';
                 \Log::error("Legal API Response Error: " . $errorMsg);
-                session()->flash('error', "Legal API Error: " . Str::limit($errorMsg, 100));
+                $this->toast("Legal API Error: " . (\Illuminate\Support\Str::limit($errorMsg, 100)), 'error');
             }
         } catch (\Exception $e) {
             \Log::error("Legal API Connection Error: " . $e->getMessage());
-            session()->flash('error', "Could not connect to Legal API. Please check your internet connection.");
+            $this->toast("Could not connect to Legal API. Please check your internet connection.", 'error');
         }
     }
 
@@ -369,14 +409,28 @@ class Employees extends Component
         ]);
 
         // Placeholder for future API integration
-        session()->flash('error', 'Update is not currently supported for external API records.');
+        $this->toast('Update is not currently supported for external API records.', 'error');
         $this->closeEditModal();
     }
 
-    public function deleteEmployee($index)
+    public $showDeleteModal = false;
+    public $employeeIndexToDelete = null;
+
+    public function confirmDelete($index)
     {
-        // Placeholder for future API integration
-        session()->flash('error', 'Deletion is not currently supported for external API records.');
+        $this->employeeIndexToDelete = $index;
+        $this->showDeleteModal = true;
+    }
+
+    public function deleteEmployee()
+    {
+        if ($this->employeeIndexToDelete !== null) {
+            // Placeholder for future API integration
+            $this->toast('Deletion is not currently supported for external API records.', 'error');
+        }
+        
+        $this->showDeleteModal = false;
+        $this->employeeIndexToDelete = null;
     }
 
     public $showApprovalModal = false;
@@ -468,22 +522,34 @@ class Employees extends Component
             \Log::info('Contract Approval Response: ' . $response->status() . ' - ' . $response->body());
 
             if ($response->successful()) {
-                session()->flash('message', 'Contract submitted for approval successfully!');
+                $this->toast('Contract submitted for approval successfully!');
                 $this->closeApprovalModal();
             } else {
                 \Log::error('Contract Approval API Error: ' . $response->body());
-                session()->flash('error', 'Failed to submit contract (' . $response->status() . '): ' . \Illuminate\Support\Str::limit($response->body(), 200));
+                $this->toast('Failed to submit contract (' . $response->status() . '): ' . \Illuminate\Support\Str::limit($response->body(), 200), 'error');
             }
         } catch (\Exception $e) {
             \Log::error('Contract Approval connection error: ' . $e->getMessage());
-            session()->flash('error', 'Connection error: ' . $e->getMessage());
+            $this->toast('Connection error: ' . $e->getMessage(), 'error');
         }
     }
 
     public function render()
     {
+        $paginator = $this->getEmployeesPaginator();
+        
+        $response = Http::get('http://hr4.jetlougetravels-ph.com/api/employees', ['per_page' => 1000]);
+        $allRaw = $response->json();
+        $employeesData = isset($allRaw['data']['data']) ? $allRaw['data']['data'] : (isset($allRaw['data']) ? $allRaw['data'] : $allRaw);
+        
+        $positions = collect($employeesData)->pluck('position')->filter()->unique()->sort()->values();
+        $departments = collect($employeesData)->map(fn($e) => $e['department']['name'] ?? $e['department'] ?? null)
+                        ->filter()->unique()->sort()->values();
+
         return view('livewire.user.onboarding.employees', [
-            'employees' => $this->getEmployeesPaginator(),
+            'employees' => $paginator,
+            'positions' => $positions,
+            'departments' => $departments,
         ])->layout('layouts.app');
     }
 }

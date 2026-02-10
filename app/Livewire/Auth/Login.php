@@ -127,7 +127,7 @@ class Login extends Component
                             session([
                                 'otp_session' => [
                                     'otp' => $otp,
-                                    'otp_expires' => Carbon::now()->addMinutes(10), 
+                                    'otp_expires' => Carbon::now()->addMinutes(3), 
                                     'user_data' => [
                                         'id' => $account['id'],
                                         'name' => $account['employee']['first_name'] . ' ' . $account['employee']['last_name'],
@@ -175,7 +175,8 @@ class Login extends Component
                                     'original_position' => $normalizedPosition,
                                     'details' => $account['employee'],
                                     'authenticated' => true
-                                ]
+                                ],
+                                'last_activity_time' => \Carbon\Carbon::now()->timestamp
                             ]);
 
                              \App\Models\Admin\MfaLog::create([

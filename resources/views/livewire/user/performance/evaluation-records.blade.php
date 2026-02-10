@@ -4,6 +4,9 @@
 
 <div @class('pt-2')>
 
+    {{-- PASSWORD GATE --}}
+    @include('components.password-gate')
+
     {{-- SUCCESS TOAST --}}
     <x-toast />
 
@@ -22,6 +25,52 @@
                     wire:model.live.debounce.3s="search"
                     placeholder="Search..."
                 />
+            </div>
+
+            {{-- Department Filter --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-building me-2')></i>
+                    Dept: {{ $departmentFilter ?: 'All' }}
+                </button>
+
+                <ul @class('dropdown-menu') style="max-height: 300px; overflow-y: auto;">
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('departmentFilter', '')">All Departments</a>
+                    </li>
+                    @foreach($departments as $dept)
+                        <li>
+                            <a @class('dropdown-item') wire:click="$set('departmentFilter', '{{ $dept }}')">{{ $dept }}</a>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+
+            {{-- Position Filter --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-person-badge me-2')></i>
+                    Pos: {{ $positionFilter ?: 'All' }}
+                </button>
+
+                <ul @class('dropdown-menu') style="max-height: 300px; overflow-y: auto;">
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('positionFilter', '')">All Positions</a>
+                    </li>
+                    @foreach($positions as $pos)
+                        <li>
+                            <a @class('dropdown-item') wire:click="$set('positionFilter', '{{ $pos }}')">{{ $pos }}</a>
+                        </li>
+                    @endforeach
+                </ul>
             </div>
 
             {{-- FILTER DROPDOWN --}}
@@ -105,6 +154,37 @@
                     </li>
                 </ul>
             </div>
+
+            {{-- EVALUATION TYPE FILTER DROPDOWN --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    id="evalTypeFilterDropdown"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-clipboard-check me-2')></i>
+                    Type: {{ $evaluationTypeFilter ?: 'All' }}
+                </button>
+
+                <ul @class('dropdown-menu') aria-labelledby="evalTypeFilterDropdown">
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('evaluationTypeFilter', '')">
+                            All Types
+                        </a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('evaluationTypeFilter', 'Peer-to-Peer')">
+                            <i class="bi bi-people-fill me-2 text-info"></i>Peer-to-Peer
+                        </a>
+                    </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('evaluationTypeFilter', 'Self-Evaluation')">
+                            <i class="bi bi-person-fill-check me-2 text-warning"></i>Self-Evaluation
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
 
         {{-- RIGHT SIDE --}}
@@ -157,8 +237,9 @@
                 <thead>
                     <tr @class('bg-dark')>
                         <th @class('text-secondary')>Employee</th>
-                        <th @class('text-secondary')>Email</th>
-                        <th @class('text-secondary')>Evaluations</th>
+                        <th @class('text-secondary')>Position</th>
+                        <th @class('text-secondary')>Department</th>
+                        <th @class('text-secondary')>Evaluation Type</th>
                         <th @class('text-secondary')>Evaluation Date</th>
                         <th @class('text-secondary')>Evaluator</th>
                         <th @class('text-secondary')>Score</th>
@@ -171,20 +252,30 @@
                     @forelse($evaluations as $evaluation)
                         <tr wire:key="{{ $evaluation->id }}">
                             <td>
-                                <strong>{{ $evaluation->employee_name }}</strong>
-                            </td>
-                            <td>
-                                {{ $evaluation->email }}
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="badge bg-primary" title="Total Evaluations">
-                                        <i class="bi bi-clipboard-data me-1"></i>{{ $evaluation->employee_evaluation_count ?? 0 }}
-                                    </span>
-                                    <span class="badge bg-success" title="Completed">
-                                        <i class="bi bi-check-circle me-1"></i>{{ $evaluation->employee_completed_count ?? 0 }}
-                                    </span>
+                                <div @class('d-flex flex-column')>
+                                    <strong>{{ $evaluation->employee_name }}</strong>
+                                    <small @class('text-muted')>{{ $evaluation->email }}</small>
                                 </div>
+                            </td>
+                            <td>{{ $evaluation->position ?? '---' }}</td>
+                            <td>{{ $evaluation->department ?? '---' }}</td>
+                            <td>
+                                @if($evaluation->evaluation_type === 'Peer-to-Peer')
+                                    <span class="badge bg-info d-flex align-items-center gap-1" style="width: fit-content;">
+                                        <i class="bi bi-people-fill"></i>
+                                        Peer-to-Peer
+                                    </span>
+                                @elseif($evaluation->evaluation_type === 'Self-Evaluation')
+                                    <span class="badge bg-warning text-dark d-flex align-items-center gap-1" style="width: fit-content;">
+                                        <i class="bi bi-person-fill-check"></i>
+                                        Self-Evaluation
+                                    </span>
+                                @else
+                                    <span class="badge bg-secondary d-flex align-items-center gap-1" style="width: fit-content;">
+                                        <i class="bi bi-clipboard-data"></i>
+                                        {{ $evaluation->evaluation_type ?? 'Standard' }}
+                                    </span>
+                                @endif
                             </td>
                             <td>
                                 {{ $evaluation->evaluation_date->format('M d, Y') }}
@@ -242,7 +333,7 @@
                                         <i @class('bi bi-journal-text')></i>
                                     </button>
                                     
-                                    @if(session('user.position') === 'Super Admin')
+                                    @if(in_array(session('user.position'), ['Super Admin', 'HR Manager']))
                                     <button
                                         @class('btn btn-sm btn-danger')
                                         wire:click="deleteEvaluation({{ $evaluation->id }})"
@@ -400,7 +491,7 @@
                                         <i @class('bi bi-bootstrap-reboot')></i>
                                     </button>
 
-                                    @if(session('user.position') === 'Super Admin')
+                                    @if(in_array(session('user.position'), ['Super Admin', 'HR Manager']))
                                     <button
                                         @class('btn btn-sm btn-danger')
                                         wire:click="deleteEvaluation({{ $draft->id }})"

@@ -10,6 +10,7 @@ use App\Models\Admin\RecaptchaLog;
 class Recaptcha extends Component
 {
     use WithPagination;
+    use \App\Livewire\Traits\HandlesToasts;
 
     public $isEnabled = true;
 
@@ -36,13 +37,9 @@ class Recaptcha extends Component
             RecaptchaSetting::create(['is_enabled' => $this->isEnabled]);
         }
 
-        session()->flash('status', 'reCAPTCHA setting updated successfully.');
+        $this->toast('reCAPTCHA setting updated successfully.');
     }
 
-    public function clearStatus()
-    {
-        session()->forget('status');
-    }
 
     public function render()
     {
@@ -60,7 +57,7 @@ class Recaptcha extends Component
     public function deleteLog($id)
     {
         RecaptchaLog::find($id)?->delete();
-        session()->flash('status', 'Log entry deleted successfully.');
+        $this->toast('Log entry deleted successfully.');
     }
 
 }

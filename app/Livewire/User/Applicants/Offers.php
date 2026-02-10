@@ -9,13 +9,18 @@ use App\Models\Applicants\Candidate;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use App\Livewire\Traits\RequiresPasswordVerification;
 
 class Offers extends Component
 {
     use WithFileUploads, WithPagination;
+    use RequiresPasswordVerification;
+    use \App\Livewire\Traits\HandlesToasts;
 
     public $search;
     public $statusFilter = '';
+    public $departmentFilter = '';
+    public $positionFilter = '';
 
     // View modal properties
     public $showViewModal = false;
@@ -75,6 +80,7 @@ class Offers extends Component
 
     public function mount()
     {
+        $this->initializePasswordVerification();
         // Default email content template
         $this->emailContent = $this->getDefaultEmailTemplate();
     }
@@ -85,6 +91,16 @@ class Offers extends Component
     }
 
     public function updatedStatusFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedDepartmentFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedPositionFilter()
     {
         $this->resetPage();
     }
@@ -139,7 +155,7 @@ class Offers extends Component
         
         $candidate->save();
 
-        session()->flash('message', "Contract status updated to '{$this->newContractStatus}' successfully!");
+        $this->toast("Contract status updated to '{$this->newContractStatus}' successfully!");
         $this->closeContractModal();
     }
 
@@ -196,7 +212,7 @@ class Offers extends Component
             ]);
 
             if ($response->successful()) {
-                session()->flash('message', "Contract request submitted successfully to Legal Admin!");
+                $this->toast("Contract request submitted successfully to Legal Admin!");
                 $this->closeRequestContractModal();
             } else {
                 $errorMsg = $response->json('message') ?? $response->body() ?? 'Unknown Error';
@@ -219,7 +235,7 @@ class Offers extends Component
         $candidate->contract_approved_at = now();
         $candidate->save();
 
-        session()->flash('message', "Contract marked as approved for {$candidate->candidate_name}!");
+        $this->toast("Contract marked as approved for {$candidate->candidate_name}!");
     }
 
     // Email modal for document explainer
@@ -264,7 +280,7 @@ class Offers extends Component
         $candidate->documents_email_sent_at = now();
         $candidate->save();
 
-        session()->flash('message', "Document explainer email sent to {$this->emailCandidateEmail} successfully!");
+        $this->toast("Document explainer email sent to {$this->emailCandidateEmail} successfully!");
         $this->closeEmailModal();
     }
 
@@ -369,7 +385,7 @@ JetLounge Travels HR Team";
         $candidate->contract_sent_at = now();
         $candidate->save();
 
-        session()->flash('message', "Contract email with attachment sent to {$candidate->candidate_email} successfully!");
+        $this->toast("Contract email with attachment sent to {$candidate->candidate_email} successfully!");
         $this->closeContractEmailModal();
     }
 
@@ -455,7 +471,7 @@ JetLounge Travels HR Team";
                 $candidateName = $candidate->candidate_name;
                 $candidate->delete();
 
-                session()->flash('message', "{$candidateName} has been successfully hired and record has been moved to the HR Employee system!");
+                $this->toast("{$candidateName} has been successfully hired and record has been moved to the HR Employee system!");
             } else {
                 $errorBody = $response->json('message') ?? $response->body() ?? 'Unknown API error';
                 \Log::error("Employees API Error: " . $errorBody);
@@ -476,7 +492,7 @@ JetLounge Travels HR Team";
 
         $candidate = Candidate::findOrFail($id);
         $candidate->delete();
-        session()->flash('message', 'Candidate deleted successfully!');
+        $this->toast('Candidate deleted successfully!');
     }
 
     public $showApprovalModal = false;
@@ -568,7 +584,7 @@ JetLounge Travels HR Team";
             \Log::info('Contract Approval Response (Offers): ' . $response->status() . ' - ' . $response->body());
 
             if ($response->successful()) {
-                session()->flash('message', 'Contract submitted for approval successfully!');
+                $this->toast('Contract submitted for approval successfully!');
                 $this->closeApprovalModal();
             } else {
                 \Log::error('Contract Approval API Error: ' . $response->body());
@@ -606,6 +622,14 @@ JetLounge Travels HR Team";
             $query->where('contract_status', $this->statusFilter);
         }
 
+        if ($this->departmentFilter) {
+            $query->where('department', $this->departmentFilter);
+        }
+
+        if ($this->positionFilter) {
+            $query->where('applied_position', $this->positionFilter);
+        }
+
         $candidates = $query->paginate(10);
 
         // Stats
@@ -616,9 +640,16 @@ JetLounge Travels HR Team";
             'hired' => Candidate::where('status', 'hired')->count(),
         ];
 
+        // Get unique departments and positions for filters
+        $filters = [
+            'departments' => Candidate::whereNotNull('department')->distinct()->pluck('department'),
+            'positions' => Candidate::whereNotNull('applied_position')->distinct()->pluck('applied_position'),
+        ];
+
         return view('livewire.user.applicants.offers', [
             'candidates' => $candidates,
             'stats' => $stats,
+            'filters' => $filters,
         ])->layout('layouts.app');
     }
 }

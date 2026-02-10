@@ -21,7 +21,6 @@ class CandidatesExport
             'Phone',
             'Position',
             'Department',
-            'AI Rating',
             'Schedule',
             'Status',
             'Created At'
@@ -34,7 +33,6 @@ class CandidatesExport
             'Phone' => 'candidate_phone',
             'Position' => 'applied_position',
             'Department' => 'department',
-            'AI Rating' => 'rating_score',
             'Schedule' => function($item) {
                 return $item->interview_schedule ? $item->interview_schedule->format('Y-m-d H:i') : 'Not Scheduled';
             },

@@ -10,16 +10,22 @@
             style="z-index: 2000;"
             wire:poll.4s="clearStatus"
         >
-            @foreach((array) session('status') as $message)
+            @foreach((array) session('status') as $status)
+                @php
+                    $message = is_array($status) ? ($status['message'] ?? '') : $status;
+                    $type = is_array($status) ? ($status['type'] ?? 'success') : 'success';
+                    $bgClass = $type === 'error' || $type === 'danger' ? 'text-bg-danger' : 'text-bg-success';
+                    $iconClass = $type === 'error' || $type === 'danger' ? 'bi-exclamation-circle-fill' : 'bi-check-circle-fill';
+                @endphp
                 <div
-                    @class('toast show align-items-center text-bg-success border-0')
+                    @class(['toast show align-items-center border-0', $bgClass])
                     role="alert"
                     aria-live="assertive"
                     aria-atomic="true"
                 >
                     <div @class('d-flex')>
                         <div @class('toast-body px-3')>
-                            <i @class('bi bi-check-circle-fill me-2')></i>{{ $message }}
+                            <i @class(['bi me-2', $iconClass])></i>{{ $message }}
                         </div>
 
                         <button

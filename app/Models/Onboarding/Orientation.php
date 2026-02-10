@@ -13,6 +13,7 @@ class Orientation extends Model
         'employee_name',
         'email',
         'position',
+        'department',
         'orientation_date',
         'location',
         'facilitator',

@@ -1,4 +1,62 @@
 <div>
+    {{-- Google reCAPTCHA Script --}}
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    
+    {{-- reCAPTCHA Modal --}}
+    @if($showRecaptchaModal)
+        <div class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" style="z-index: 9999; background-color: rgba(0,0,0,0.7);">
+            <div class="card border-0 shadow-lg rounded-4" style="min-width: 450px; max-width: 550px;">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <div class="mb-3">
+                            <i class="bi bi-shield-check text-primary" style="font-size: 4rem;"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">Welcome to JetLounge Travels</h4>
+                        <p class="text-muted">Please verify you're not a robot to continue browsing our career opportunities.</p>
+                    </div>
+                    
+                    @error('recaptcha')
+                        <div class="alert alert-danger">{{ $message }}</div>
+                    @enderror
+                    
+                    @if(empty(config('recaptcha.site_key')))
+                        <div class="alert alert-warning">
+                            <strong>Warning:</strong> reCAPTCHA site key is not configured.
+                        </div>
+                    @endif
+                    
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-center">
+                            <div class="g-recaptcha" data-sitekey="{{ config('recaptcha.site_key') }}" style="transform: scale(0.9); transform-origin: 0 0;"></div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="button" 
+                                onclick="verifyHomeRecaptcha()" 
+                                class="btn btn-primary btn-lg"
+                                style="background-color: #213A5C; border: none; transition: background-color 0.3s ease;"
+                                onmouseover="this.style.backgroundColor='#1a2d45';"
+                                onmouseout="this.style.backgroundColor='#213A5C';">
+                            <i class="bi bi-check-circle me-2"></i>Verify and Continue
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            function verifyHomeRecaptcha() {
+                const recaptchaResponse = grecaptcha.getResponse();
+                if (recaptchaResponse) {
+                    @this.verifyRecaptcha(recaptchaResponse);
+                } else {
+                    alert('Please complete the reCAPTCHA verification.');
+                }
+            }
+        </script>
+    @endif
+
     <style>
         .hero-section {
             background-color: #567C8D;

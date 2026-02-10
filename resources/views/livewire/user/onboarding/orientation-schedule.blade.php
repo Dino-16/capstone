@@ -20,6 +20,52 @@
                     placeholder="Search..."
                 />
             </div>
+
+            {{-- Department Filter --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-building me-2')></i>
+                    Dept: {{ $departmentFilter ?: 'All' }}
+                </button>
+
+                <ul @class('dropdown-menu') style="max-height: 300px; overflow-y: auto;">
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('departmentFilter', '')">All Departments</a>
+                    </li>
+                    @foreach($departments as $dept)
+                        <li>
+                            <a @class('dropdown-item') wire:click="$set('departmentFilter', '{{ $dept }}')">{{ $dept }}</a>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+
+            {{-- Position Filter --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-person-badge me-2')></i>
+                    Pos: {{ $positionFilter ?: 'All' }}
+                </button>
+
+                <ul @class('dropdown-menu') style="max-height: 300px; overflow-y: auto;">
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('positionFilter', '')">All Positions</a>
+                    </li>
+                    @foreach($positions as $pos)
+                        <li>
+                            <a @class('dropdown-item') wire:click="$set('positionFilter', '{{ $pos }}')">{{ $pos }}</a>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
         </div>
 
         {{-- RIGHT SIDE --}}
@@ -57,6 +103,7 @@
             <tr @class('bg-dark')>
                 <th @class('text-secondary')>Employee</th>
                 <th @class('text-secondary')>Position</th>
+                <th @class('text-secondary')>Department</th>
                 <th @class('text-secondary')>Date & Time</th>
                 <th @class('text-secondary')>Location</th>
                 <th @class('text-secondary')>Facilitator</th>
@@ -80,7 +127,10 @@
                             </div>
                         </td>
                         <td>
-                            {{ $orientation->position ?? 'N/A' }}
+                            {{ $orientation->position ?? '---' }}
+                        </td>
+                        <td>
+                            {{ $orientation->department ?? '---' }}
                         </td>
                         <td>
                             <strong>{{ $orientation->orientation_date->format('M j, Y') }}</strong>
@@ -115,11 +165,10 @@
                                 >
                                     <i @class('bi bi-envelope')></i>
                                 </button>
-                                @if(session('user.position') === 'Super Admin')
+                                @if(in_array(session('user.position'), ['Super Admin', 'HR Manager']))
                                 <button
                                     @class('btn btn-sm btn-outline-danger')
-                                    wire:click="deleteOrientation({{ $orientation->id }})"
-                                    wire:confirm="Are you sure you want to delete this orientation?"
+                                    wire:click="confirmDelete({{ $orientation->id }})"
                                     title="Delete"
                                 >
                                     <i @class('bi bi-trash')></i>
@@ -130,7 +179,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" @class('text-center text-muted py-5')>
+                        <td colspan="7" @class('text-center text-muted py-5')>
                             @if($search)
                                 <i @class('bi bi-search d-block mx-auto fs-1')></i>
                                 <div class="mt-3">No orientations found matching "{{ $search }}".</div>
@@ -150,6 +199,27 @@
         <div class="d-flex justify-content-center mt-4">
             {{ $orientations->links() }}
         </div>
+    @endif
+
+    {{-- Delete Confirmation Modal --}}
+    @if($showDeleteModal)
+    <div class="modal fade show" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" wire:click="$set('showDeleteModal', false)"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this orientation?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" wire:click="$set('showDeleteModal', false)">Cancel</button>
+                    <button type="button" class="btn btn-danger" wire:click="deleteOrientation">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
     @endif
 
     {{-- Add Orientation Modal --}}

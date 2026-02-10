@@ -12,6 +12,8 @@ class DocumentChecklist extends Model
     protected $fillable = [
         'employee_name',
         'email',
+        'position',
+        'department',
         'documents',
         'status'
     ];

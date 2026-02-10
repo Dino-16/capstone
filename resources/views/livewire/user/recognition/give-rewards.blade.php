@@ -24,39 +24,76 @@
                 />
             </div>
 
-            {{-- FILTER DROPDOWN --}}
+            {{-- STATUS FILTER --}}
             <div @class('dropdown')>
                 <button
                     type="button"
-                    id="filterDropdown"
                     data-bs-toggle="dropdown"
                     @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
                 >
                     <i @class('bi bi-funnel-fill me-2')></i>
-                    Filter: {{ $statusFilter ?: 'All' }}
+                    Status: {{ $statusFilter ?: 'All' }}
                 </button>
 
-                <ul @class('dropdown-menu') aria-labelledby="filterDropdown">
+                <ul @class('dropdown-menu')>
                     <li>
-                        <a @class('dropdown-item') wire:click="$set('statusFilter', '')">
-                            All Statuses
-                        </a>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', '')">All Statuses</a>
                     </li>
                     <li>
-                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'pending')">
-                            Pending
-                        </a>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'pending')">Pending</a>
                     </li>
                     <li>
-                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'approved')">
-                            Approved
-                        </a>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'approved')">Approved</a>
                     </li>
                     <li>
-                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'rejected')">
-                            Rejected
-                        </a>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'rejected')">Rejected</a>
                     </li>
+                </ul>
+            </div>
+
+            {{-- Department Filter --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-building me-2')></i>
+                    Dept: {{ $departmentFilter ?: 'All' }}
+                </button>
+
+                <ul @class('dropdown-menu') style="max-height: 300px; overflow-y: auto;">
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('departmentFilter', '')">All Departments</a>
+                    </li>
+                    @foreach($departments as $dept)
+                        <li>
+                            <a @class('dropdown-item') wire:click="$set('departmentFilter', '{{ $dept }}')">{{ $dept }}</a>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+
+            {{-- Position Filter --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-person-badge me-2')></i>
+                    Pos: {{ $positionFilter ?: 'All' }}
+                </button>
+
+                <ul @class('dropdown-menu') style="max-height: 300px; overflow-y: auto;">
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('positionFilter', '')">All Positions</a>
+                    </li>
+                    @foreach($positions as $pos)
+                        <li>
+                            <a @class('dropdown-item') wire:click="$set('positionFilter', '{{ $pos }}')">{{ $pos }}</a>
+                        </li>
+                    @endforeach
                 </ul>
             </div>
         </div>
@@ -92,6 +129,8 @@
             <thead>
             <tr @class('bg-dark')>
                 <th @class('text-secondary')>Employee</th>
+                <th @class('text-secondary')>Position</th>
+                <th @class('text-secondary')>Department</th>
                 <th @class('text-secondary')>Reward</th>
                 <th @class('text-secondary')>Given By</th>
                 <th @class('text-secondary')>Date</th>
@@ -113,6 +152,8 @@
                                 </div>
                             </div>
                         </td>
+                        <td>{{ $rewardGiven->employee_position ?? '---' }}</td>
+                        <td>{{ $rewardGiven->employee_department ?? '---' }}</td>
                         <td>
                             @if($rewardGiven->reward)
                                 <div @class('d-flex align-items-center')>
@@ -155,11 +196,10 @@
                                         <i @class('bi bi-pencil')></i>
                                     </button>
                                     @endif
-                                    @if(session('user.position') === 'Super Admin')
+                                    @if(in_array(session('user.position'), ['Super Admin', 'HR Manager']))
                                     <button
                                         @class('btn btn-sm btn-outline-danger')
-                                        wire:click="deleteRewardGiven({{ $rewardGiven->id }})"
-                                        wire:confirm="Are you sure you want to delete this reward given?"
+                                        wire:click="confirmDelete({{ $rewardGiven->id }})"
                                         title="Delete"
                                     >
                                         <i @class('bi bi-trash')></i>
@@ -193,6 +233,27 @@
         <div @class('d-flex justify-content-center mt-4')>
             {{ $rewardsGiven->links() }}
         </div>
+    @endif
+
+    {{-- Delete Confirmation Modal --}}
+    @if($showDeleteModal)
+    <div class="modal fade show" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" wire:click="$set('showDeleteModal', false)"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this reward given?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" wire:click="$set('showDeleteModal', false)">Cancel</button>
+                    <button type="button" class="btn btn-danger" wire:click="deleteRewardGiven">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
     @endif
 
     @include('livewire.user.recognition.includes.give-rewards-modal')

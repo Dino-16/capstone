@@ -10,9 +10,12 @@ use Illuminate\Support\Facades\Mail;
 class Candidates extends Component
 {
     use WithPagination;
+    use \App\Livewire\Traits\HandlesToasts;
 
     public $search;
     public $statusFilter = '';
+    public $departmentFilter = '';
+    public $positionFilter = '';
 
     // View modal properties
     public $showViewModal = false;
@@ -44,6 +47,16 @@ class Candidates extends Component
     }
 
     public function updatedStatusFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedDepartmentFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedPositionFilter()
     {
         $this->resetPage();
     }
@@ -98,7 +111,7 @@ class Candidates extends Component
         $candidate->status = 'scheduled';
         $candidate->save();
 
-        session()->flash('message', 'Interview rescheduled successfully!');
+        $this->toast('Interview rescheduled successfully!');
         $this->closeRescheduleModal();
     }
 
@@ -139,7 +152,7 @@ class Candidates extends Component
         // Simulating email send - in production, use Laravel Mail
         // Mail::to($candidate->candidate_email)->send(new SchedulingLinkMail($candidate, $schedulingUrl));
 
-        session()->flash('message', "Scheduling link sent to {$candidate->candidate_email}. Link: {$schedulingUrl}");
+        $this->toast("Scheduling link sent to {$candidate->candidate_email}. Link: {$schedulingUrl}");
         $this->closeSendLinkModal();
     }
 
@@ -157,7 +170,7 @@ class Candidates extends Component
         $candidate->status = 'interview_ready';
         $candidate->save();
 
-        session()->flash('message', "Candidate {$candidate->candidate_name} is ready for interview!");
+        $this->toast("Candidate {$candidate->candidate_name} is ready for interview!");
     }
 
     // Edit candidate
@@ -199,7 +212,7 @@ class Candidates extends Component
             'applied_position' => $this->applied_position,
         ]);
 
-        session()->flash('message', 'Candidate updated successfully!');
+        $this->toast('Candidate updated successfully!');
         $this->closeEditModal();
     }
 
@@ -212,7 +225,7 @@ class Candidates extends Component
 
         $candidate = Candidate::findOrFail($id);
         $candidate->delete();
-        session()->flash('message', 'Candidate deleted successfully!');
+        $this->toast('Candidate deleted successfully!');
     }
 
     public function exportData()
@@ -224,7 +237,7 @@ class Candidates extends Component
     public function render()
     {
         $query = Candidate::query()
-            ->whereIn('status', ['scheduled', 'interview_ready'])
+            ->whereIn('status', ['scheduled', 'interview_ready', 'failed'])
             ->latest();
 
         if ($this->search) {
@@ -232,7 +245,8 @@ class Candidates extends Component
                 $q->where('candidate_name', 'like', "%{$this->search}%")
                 ->orWhere('candidate_email', 'like', "%{$this->search}%")
                 ->orWhere('candidate_phone', 'like', "%{$this->search}%")
-                ->orWhere('applied_position', 'like', "%{$this->search}%");
+                ->orWhere('applied_position', 'like', "%{$this->search}%")
+                ->orWhere('department', 'like', "%{$this->search}%");
             });
         }
 
@@ -240,10 +254,31 @@ class Candidates extends Component
             $query->where('status', $this->statusFilter);
         }
 
+        if ($this->departmentFilter) {
+            $query->where('department', $this->departmentFilter);
+        }
+
+        if ($this->positionFilter) {
+            $query->where('applied_position', $this->positionFilter);
+        }
+
         $candidates = $query->paginate(10);
+
+        // Get unique departments and positions for filters
+        $filters = [
+            'departments' => Candidate::whereIn('status', ['scheduled', 'interview_ready', 'failed'])
+                ->whereNotNull('department')
+                ->distinct()
+                ->pluck('department'),
+            'positions' => Candidate::whereIn('status', ['scheduled', 'interview_ready', 'failed'])
+                ->whereNotNull('applied_position')
+                ->distinct()
+                ->pluck('applied_position'),
+        ];
 
         return view('livewire.user.applicants.candidates', [
             'candidates' => $candidates,
+            'filters' => $filters,
         ])->layout('layouts.app');
     }
 }

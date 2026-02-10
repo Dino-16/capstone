@@ -1,4 +1,67 @@
 <div @class('py-5')>
+    {{-- Google reCAPTCHA Script --}}
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    
+    {{-- reCAPTCHA Modal --}}
+    @if($showRecaptchaModal)
+        <div class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" style="z-index: 9999; background-color: rgba(0,0,0,0.7);">
+            <div class="card border-0 shadow-lg rounded-4" style="min-width: 450px; max-width: 550px;">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <div class="mb-3">
+                            <i class="bi bi-shield-check text-primary" style="font-size: 4rem;"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">Security Verification</h4>
+                        <p class="text-muted">Please verify you're not a robot to view our career opportunities.</p>
+                    </div>
+                    
+                    @error('recaptcha')
+                        <div class="alert alert-danger">{{ $message }}</div>
+                    @enderror
+                    
+                    @if(empty(config('recaptcha.site_key')))
+                        <div class="alert alert-warning">
+                            <strong>Warning:</strong> reCAPTCHA site key is not configured.
+                        </div>
+                    @endif
+                    
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-center">
+                            <div class="g-recaptcha" data-sitekey="{{ config('recaptcha.site_key') }}" style="transform: scale(0.9); transform-origin: 0 0;"></div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="button" 
+                                onclick="verifyCareersRecaptcha()" 
+                                class="btn btn-primary btn-lg"
+                                style="background-color: #213A5C; border: none; transition: background-color 0.3s ease;"
+                                onmouseover="this.style.backgroundColor='#1a2d45';"
+                                onmouseout="this.style.backgroundColor='#213A5C';">
+                            <i class="bi bi-check-circle me-2"></i>Verify and Continue
+                        </button>
+                        <a href="{{ route('home') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Back to Home
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            function verifyCareersRecaptcha() {
+                const recaptchaResponse = grecaptcha.getResponse();
+                if (recaptchaResponse) {
+                    @this.verifyRecaptcha(recaptchaResponse);
+                } else {
+                    alert('Please complete the reCAPTCHA verification.');
+                }
+            }
+        </script>
+    @endif
+
+    {{-- Main Content - Only show after reCAPTCHA verification --}}
+    @if(!$showRecaptchaModal)
     <div @class('d-flex align-items-center justify-content-between flex-column mb-5')>
         <h1 @class('display-3 text-center fw-medium pt-5')>Apply Now and Be Part of Our Team</h1>
         <p @class('display-6 text-center')>Explore thousands of opportunities</p>
@@ -190,4 +253,5 @@
             box-shadow: 0 4px 12px rgba(25, 135, 84, 0.4);
         }
     </style>
+    @endif
 </div>

@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Http;
 
 class Evaluations extends Component
 {
+    use \App\Livewire\Traits\HandlesToasts;
+    use \App\Livewire\Traits\RequiresPasswordVerification;
 
     // Form fields
     public $employeeName = '';
@@ -18,7 +20,7 @@ class Evaluations extends Component
     public $position = '';
     public $department = '';
     public $employmentDate = '';
-    public $evaluationType = 'Regular';
+    public $evaluationType = 'Peer-to-Peer';
     public $overallScore = 50;
     public $jobKnowledge = 50;
     public $workQuality = 50;
@@ -45,7 +47,7 @@ class Evaluations extends Component
         'position' => 'nullable|string|max:255',
         'department' => 'nullable|string|max:255',
         'employmentDate' => 'nullable|date',
-        'evaluationType' => 'required|string|in:Regular,Probationary,Annual',
+        'evaluationType' => 'required|string|in:Peer-to-Peer,Self-Evaluation',
         'overallScore' => 'required|integer|min:0|max:100',
         'jobKnowledge' => 'required|integer|min:0|max:100',
         'workQuality' => 'required|integer|min:0|max:100',
@@ -60,6 +62,7 @@ class Evaluations extends Component
 
     public function mount()
     {
+        $this->initializePasswordVerification();
         // Initialize empty - employees will be fetched on search
         $this->employees = [];
         $this->filteredEmployees = [];
@@ -236,7 +239,7 @@ class Evaluations extends Component
         ]);
 
         \Illuminate\Support\Facades\Cache::forget('pending_evaluations_count');
-        session()->flash('status', 'Evaluation scheduled successfully!');
+        $this->toast('Evaluation scheduled successfully!');
         
         $this->reset([
             'employeeName', 'email', 'evaluationDate', 'evaluatorName',
@@ -249,10 +252,6 @@ class Evaluations extends Component
         $this->status = 'Completed';
     }
 
-    public function clearStatus()
-    {
-        session()->forget(['status', 'error']);
-    }
 
     public function render()
     {

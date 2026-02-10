@@ -1,47 +1,71 @@
 <div @class(['p-5', 'bg-light'])>
-    {{-- Google reCAPTCHA Script - using standard auto-render --}}
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     
-    {{-- reCAPTCHA Modal --}}
-    @if($showRecaptchaModal)
-        <div class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" style="z-index: 9999; background-color: rgba(0,0,0,0.5);">
-            <div class="card border-0 shadow-lg rounded-4" style="min-width: 450px; max-width: 550px;">
-                <div class="card-body p-5">
-                    <div class="text-center mb-4">
-                        <div class="mb-3">
-                            <i class="bi bi-shield-check text-primary" style="font-size: 4rem;"></i>
-                        </div>
-                        <h4 class="fw-bold mb-3">Security Verification</h4>
-                        <p class="text-muted">Please verify you're not a robot to continue with the application form.</p>
+    {{-- Terms & Agreement Gate Modal --}}
+    @if($showTermsGate)
+        <div class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" style="z-index: 9999; background-color: rgba(0,0,0,0.7);">
+            <div class="card border-0 shadow-lg rounded-4" style="min-width: 500px; max-width: 700px; max-height: 90vh;">
+                <div class="card-header bg-primary text-white py-4 rounded-top-4">
+                    <div class="text-center">
+                        <i class="bi bi-file-earmark-text" style="font-size: 3rem;"></i>
+                        <h4 class="fw-bold mb-0 mt-2">Terms & Conditions</h4>
+                        <p class="mb-0 small opacity-75">Please read and accept before proceeding</p>
+                    </div>
+                </div>
+                <div class="card-body p-4" style="max-height: 50vh; overflow-y: auto;">
+                    <div class="bg-light p-4 rounded-3 border mb-4">
+                        <h6 class="fw-bold text-primary"><i class="bi bi-shield-lock me-2"></i>JetLounge Travels Privacy Statement</h6>
+                        <p class="small text-muted mb-3">
+                            JetLounge Travels is committed to protecting the privacy and security of all applicants and employees. 
+                            Any personal information you provide through this recruitment platform is collected, stored, and processed 
+                            solely for legitimate employment and recruitment purposes. We strictly adhere to applicable cyber laws, 
+                            including the <strong>Philippine Data Privacy Act of 2012</strong>, and international data protection standards such as 
+                            the <strong>General Data Protection Regulation (GDPR)</strong>.
+                        </p>
+                        
+                        <h6 class="fw-bold text-primary mt-4"><i class="bi bi-lock me-2"></i>Data Protection</h6>
+                        <p class="small text-muted mb-3">
+                            Your data will only be accessed by authorized HR personnel and will never be disclosed to third parties 
+                            without your explicit consent, unless required by law. We implement industry-standard safeguards, including 
+                            encryption, secure servers, and controlled access, to ensure that your information remains confidential 
+                            and protected against unauthorized use, loss, or alteration.
+                        </p>
+                        
+                        <h6 class="fw-bold text-primary mt-4"><i class="bi bi-clock-history me-2"></i>Data Retention</h6>
+                        <p class="small text-muted mb-3">
+                            By submitting your application, you acknowledge and agree that JetLounge Travels may retain your information 
+                            for the duration of the recruitment process and, if successful, for the period of your employment. If your 
+                            application is not successful, your data will be securely deleted or anonymized after a reasonable retention 
+                            period, in compliance with legal and regulatory requirements.
+                        </p>
+                        
+                        <h6 class="fw-bold text-primary mt-4"><i class="bi bi-person-check me-2"></i>Your Rights</h6>
+                        <p class="small text-muted mb-0">
+                            You have the right to access, correct, or request deletion of your personal data at any time. For concerns 
+                            or inquiries regarding your information, please contact our Data Protection Officer. JetLounge Travels 
+                            respects your rights as a data subject and ensures that all processing activities are transparent, fair, 
+                            and lawful under applicable cyber laws.
+                        </p>
                     </div>
                     
-                    @error('recaptcha')
+                    @error('termsAccepted')
                         <div class="alert alert-danger">{{ $message }}</div>
                     @enderror
                     
-                    {{-- Debug: Show site key status (remove after testing) --}}
-                    @if(empty(config('recaptcha.site_key')))
-                        <div class="alert alert-warning">
-                            <strong>Warning:</strong> reCAPTCHA site key is not configured. 
-                            Please check your .env file and run `php artisan config:cache`
-                        </div>
-                    @endif
-                    
-                    <div class="mb-4">
-                        <div class="d-flex justify-content-center">
-                            {{-- IMPORTANT: Must use config() not env() for production! --}}
-                            <div class="g-recaptcha" data-sitekey="{{ config('recaptcha.site_key') }}" style="transform: scale(0.9); transform-origin: 0 0;"></div>
-                        </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="terms-accepted" wire:model.live="termsAccepted" style="width: 1.25em; height: 1.25em;">
+                        <label class="form-check-label ms-2 fw-semibold" for="terms-accepted">
+                            I have read, understood, and agree to the Terms & Conditions and Privacy Policy.
+                        </label>
                     </div>
-
+                </div>
+                <div class="card-footer bg-white py-4 rounded-bottom-4">
                     <div class="d-grid gap-2">
                         <button type="button" 
-                                onclick="verifyRecaptchaAndSubmit()" 
-                                class="btn btn-primary btn-lg"
-                                style="background-color: #213A5C; border: none; transition: background-color 0.3s ease;"
-                                onmouseover="this.style.backgroundColor='#1a2d45';"
-                                onmouseout="this.style.backgroundColor='#213A5C';">
-                            <i class="bi bi-check-circle me-2"></i>Verify and Continue
+                                wire:click="acceptTerms"
+                                class="btn btn-primary btn-lg {{ !$termsAccepted ? 'disabled' : '' }}"
+                                style="background-color: #213A5C; border: none;"
+                                {{ !$termsAccepted ? 'disabled' : '' }}>
+                            <i class="bi bi-check-circle me-2"></i>Accept and Continue
                         </button>
                         <a href="{{ route('careers') }}" class="btn btn-outline-secondary">
                             <i class="bi bi-arrow-left me-2"></i>Back to Jobs
@@ -50,21 +74,10 @@
                 </div>
             </div>
         </div>
-        
-        <script>
-            function verifyRecaptchaAndSubmit() {
-                const recaptchaResponse = grecaptcha.getResponse();
-                if (recaptchaResponse) {
-                    @this.verifyRecaptcha(recaptchaResponse);
-                } else {
-                    alert('Please complete the reCAPTCHA verification.');
-                }
-            }
-        </script>
     @endif
-
+    
     {{-- SUCCESS TOAST --}}
-    @if($showSuccessToast && !$showRecaptchaModal)
+    @if($showSuccessToast)
         <div class="position-fixed top-0 end-0 p-3" style="z-index: 9999;">
             <div class="card border-0 shadow-lg bg-success text-white rounded-4 animate__animated animate__fadeInRight" 
                  style="min-width: 320px;"
@@ -81,8 +94,8 @@
         </div>
     @endif
 
-    {{-- Main Content - Only show after reCAPTCHA verification --}}
-    @if(!$showRecaptchaModal)
+    {{-- Main Content - Only show after Terms accepted --}}
+    @if(!$showTermsGate)
     <a @class(['nav-link', 'text-secondary', 'mb-4']) href="{{ route('careers') }}">
         <i class="bi bi-arrow-left-circle me-2"></i>Back to Jobs
     </a>

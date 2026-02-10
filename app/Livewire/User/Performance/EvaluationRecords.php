@@ -6,15 +6,22 @@ use App\Models\Performance\Evaluation;
 use App\Exports\Performance\EvaluationRecordsExport;
 use Livewire\Component;
 use Livewire\WithPagination;
+use App\Livewire\Traits\RequiresPasswordVerification;
 
 class EvaluationRecords extends Component
 {
     use WithPagination;
+    use RequiresPasswordVerification;
+    use \App\Livewire\Traits\HandlesToasts;
 
     public $search = '';
     public $statusFilter = '';
     public $scoreFilter = '';
+    public $evaluationTypeFilter = '';
     public $showDrafts = false;
+    
+    public $departmentFilter = '';
+    public $positionFilter = '';
     
     // Modal properties
     public $showEditModal = false;
@@ -33,6 +40,11 @@ class EvaluationRecords extends Component
 
     protected $paginationTheme = 'bootstrap';
 
+    public function mount()
+    {
+        $this->initializePasswordVerification();
+    }
+
     public function updatingSearch()
     {
         $this->resetPage();
@@ -48,6 +60,20 @@ class EvaluationRecords extends Component
         $this->resetPage();
     }
 
+    public function updatingEvaluationTypeFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingDepartmentFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingPositionFilter()
+    {
+        $this->resetPage();
+    }
 
     public function exportData()
     {
@@ -106,19 +132,19 @@ class EvaluationRecords extends Component
                 'status' => $this->status,
             ]);
 
-            session()->flash('message', 'Evaluation updated successfully!');
+            $this->toast('Evaluation updated successfully!');
             $this->showEditModal = false;
             $this->reset(['employeeName', 'email', 'evaluationDate', 'evaluatorName', 'overallScore', 'performanceAreas', 'notes', 'status', 'editingEvaluationId']);
             
         } catch (\Exception $e) {
-            session()->flash('error', 'Error updating evaluation: ' . $e->getMessage());
+            $this->toast('Error updating evaluation: ' . $e->getMessage());
         }
     }
 
     public function deleteEvaluation($id)
     {
         if (auth()->user()->role !== 'Super Admin') {
-            session()->flash('error', 'Unauthorized action.');
+            $this->toast('Unauthorized action.');
             return;
         }
 
@@ -126,7 +152,7 @@ class EvaluationRecords extends Component
         
         if ($evaluation) {
             $evaluation->delete();
-            session()->flash('message', 'Evaluation deleted successfully!');
+            $this->toast('Evaluation deleted successfully!');
         }
     }
 
@@ -136,7 +162,7 @@ class EvaluationRecords extends Component
         $evaluation = Evaluation::findOrFail($id);
         $evaluation->status = 'Draft';
         $evaluation->save();
-        session()->flash('message', 'Evaluation drafted successfully!');
+        $this->toast('Evaluation drafted successfully!');
     }
 
     public function restore($id) 
@@ -144,7 +170,7 @@ class EvaluationRecords extends Component
         $evaluation = Evaluation::findOrFail($id);
         $evaluation->status = 'Ongoing';
         $evaluation->save();    
-        session()->flash('message', 'Draft restored successfully!');
+        $this->toast('Draft restored successfully!');
     }
 
     public function openDraft()
@@ -195,6 +221,18 @@ class EvaluationRecords extends Component
             }
         }
 
+        // Filter by evaluation type
+        if ($this->evaluationTypeFilter) {
+            $query->where('evaluation_type', $this->evaluationTypeFilter);
+        }
+
+        if ($this->departmentFilter) {
+            $query->where('department', $this->departmentFilter);
+        }
+
+        if ($this->positionFilter) {
+            $query->where('position', $this->positionFilter);
+        }
 
         $evaluations = $query->latest('evaluation_date')->paginate(10);
 
@@ -213,22 +251,12 @@ class EvaluationRecords extends Component
             'draft' => Evaluation::where('status', 'Draft')->count(),
         ];
 
-        if ($this->showDrafts) {
-            $drafts = Evaluation::where('status', 'Draft')
-                        ->latest('evaluation_date')
-                        ->paginate(10);
-
-            return view('livewire.user.performance.evaluation-records', [
-                'evaluations' => null,
-                'drafts' => $drafts,
-                'stats' => $stats
-            ])->layout('layouts.app');
-        }
-
         return view('livewire.user.performance.evaluation-records', [
             'evaluations' => $evaluations,
-            'drafts' => null,
-            'stats' => $stats
+            'drafts' => $this->showDrafts ? Evaluation::where('status', 'Draft')->latest('evaluation_date')->paginate(10) : null,
+            'stats' => $stats,
+            'positions' => Evaluation::pluck('position')->filter()->unique()->sort()->values(),
+            'departments' => Evaluation::pluck('department')->filter()->unique()->sort()->values(),
         ])->layout('layouts.app');
     }
 }

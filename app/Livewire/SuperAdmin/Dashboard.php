@@ -11,6 +11,7 @@ use App\Models\Onboarding\Orientation;
 use App\Models\Performance\Evaluation;
 use App\Models\Recognition\Reward;
 use App\Models\Recognition\GiveReward;
+use App\Models\Applicants\Candidate;
 use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -35,6 +36,7 @@ class Dashboard extends Component
         return view('livewire.superadmin.dashboard', [
             'userStats' => $userStats,
             'statusCounts' => $statusCounts,
+            'aiAnalytics' => $this->getAiAnalytics(),
             // ... (keeping other variables if needed, but for now just add userStats)
         ])->layout('layouts.superadmin');
     }
@@ -48,18 +50,25 @@ class Dashboard extends Component
                 $data = $response->json();
                 $systemAccounts = count($data['data']['system_accounts'] ?? []);
                 $essAccounts = count($data['data']['ess_accounts'] ?? []);
+                $total = $systemAccounts + $essAccounts;
+                
+                // Calculate percentages
+                $systemPercent = $total > 0 ? round(($systemAccounts / $total) * 100, 1) : 0;
+                $essPercent = $total > 0 ? round(($essAccounts / $total) * 100, 1) : 0;
                 
                 return [
                     'system' => $systemAccounts,
                     'ess' => $essAccounts,
-                    'total' => $systemAccounts + $essAccounts
+                    'total' => $total,
+                    'systemPercent' => $systemPercent,
+                    'essPercent' => $essPercent,
                 ];
             }
         } catch (\Exception $e) {
             Log::error('Failed to fetch user stats: ' . $e->getMessage());
         }
 
-        return ['system' => 0, 'ess' => 0, 'total' => 0];
+        return ['system' => 0, 'ess' => 0, 'total' => 0, 'systemPercent' => 0, 'essPercent' => 0];
     }
 
 
@@ -179,8 +188,69 @@ class Dashboard extends Component
             }
             
             return 0;
+            return 0;
         } catch (\Exception $e) {
             return 0;
         }
+    }
+
+    private function getAiAnalytics()
+    {
+        // Qualification Distribution
+        $candidates = Candidate::all();
+        
+        $distribution = [
+            'Exceptional' => 0,
+            'Highly Qualified' => 0,
+            'Qualified' => 0,
+            'Moderately Qualified' => 0,
+            'Not Qualified' => 0,
+        ];
+        
+        // Map keys for chart labels
+        $distributionKeys = [
+            'Exceptional' => 'Exceptional (90-100)',
+            'Highly Qualified' => 'Highly Qualified (80-89)',
+            'Qualified' => 'Qualified (70-79)',
+            'Moderately Qualified' => 'Moderately Qualified (60-69)',
+            'Not Qualified' => 'Not Qualified (<60)',
+        ];
+
+        $skillsCount = [];
+
+        foreach ($candidates as $candidate) {
+            $score = $candidate->rating_score;
+            if ($score >= 90) $distribution['Exceptional']++;
+            elseif ($score >= 80) $distribution['Highly Qualified']++;
+            elseif ($score >= 70) $distribution['Qualified']++;
+            elseif ($score >= 60) $distribution['Moderately Qualified']++;
+            else $distribution['Not Qualified']++;
+
+            // Skills
+            if ($candidate->skills) {
+                $skills = is_array($candidate->skills) ? $candidate->skills : json_decode($candidate->skills, true);
+                if (is_array($skills)) {
+                    foreach ($skills as $skill) {
+                        $skillName = trim($skill);
+                        if (!empty($skillName)) {
+                            if (!isset($skillsCount[$skillName])) {
+                                $skillsCount[$skillName] = 0;
+                            }
+                            $skillsCount[$skillName]++;
+                        }
+                    }
+                }
+            }
+        }
+
+        arsort($skillsCount);
+        $topSkills = array_slice($skillsCount, 0, 5);
+
+        return [
+            'average_score' => round($candidates->avg('rating_score') ?? 0, 1),
+            'distribution' => array_combine(array_values($distributionKeys), array_values($distribution)),
+            'top_skills' => $topSkills,
+            'total_candidates' => $candidates->count(),
+        ];
     }
 }

@@ -10,6 +10,7 @@ use App\Models\Admin\HoneypotLog;
 class Honeypots extends Component
 {
     use WithPagination;
+    use \App\Livewire\Traits\HandlesToasts;
 
     public $isEnabled = true;
     public $fieldName = 'secondary_email';
@@ -34,7 +35,7 @@ class Honeypots extends Component
     public function updateFieldName()
     {
         $this->updateSettings();
-        session()->flash('status', 'Honeypot field name updated.');
+        $this->toast('Honeypot field name updated.');
     }
 
     private function updateSettings()
@@ -44,13 +45,9 @@ class Honeypots extends Component
             'field_name' => $this->fieldName,
         ]);
         
-        session()->flash('status', 'Honeypot settings updated successfully.');
+        $this->toast('Honeypot settings updated successfully.');
     }
 
-    public function clearStatus()
-    {
-        session()->forget('status');
-    }
 
     public function render()
     {
@@ -67,7 +64,7 @@ class Honeypots extends Component
     public function deleteLog($id)
     {
         HoneypotLog::find($id)?->delete();
-        session()->flash('status', 'Log entry deleted successfully.');
+        $this->toast('Log entry deleted successfully.');
     }
 
 }

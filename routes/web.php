@@ -47,7 +47,7 @@ Route::middleware('session.guest')->group(function() {
 
 });
 
-Route::middleware('session.auth')->group(function() {
+Route::middleware(['session.auth', 'session.timeout'])->group(function() {
     // Shared Routes (All Roles)
     Route::get('/profile', Profile::class)->name('profile');
     Route::post('/logout', function() {
@@ -59,10 +59,6 @@ Route::middleware('session.auth')->group(function() {
     // Level 3: Super Admin Only
     Route::middleware('role:Super Admin')->group(function() {
         Route::get('/superadmin-dashboard', \App\Livewire\SuperAdmin\Dashboard::class)->name('superadmin.dashboard');
-        Route::get('/recaptcha', \App\Livewire\SuperAdmin\Recaptcha::class)->name('superadmin.recaptcha');
-        Route::get('/mfa', \App\Livewire\SuperAdmin\Mfa::class)->name('superadmin.mfa');
-        Route::get('/honeypots', \App\Livewire\SuperAdmin\Honeypots::class)->name('superadmin.honeypots');
-        Route::get('/support-tickets', \App\Livewire\SuperAdmin\SupportTicket::class)->name('superadmin.tickets.index');
     });
 
     // Level 2 & 3: Admin & Super Admin (HR Manager, Super Admin)
@@ -70,8 +66,13 @@ Route::middleware('session.auth')->group(function() {
         Route::get('/admin-dashboard', \App\Livewire\Admin\Dashboard::class)->name('admin.dashboard');
         Route::get('/reports', Reports::class)->name('reports');
         
-        // Support Tickets (HR Manager)
-        Route::get('/submit-ticket', \App\Livewire\Admin\SubmitTicket::class)->name('admin.tickets.index');
+        // Security Settings
+        Route::get('/recaptcha', \App\Livewire\SuperAdmin\Recaptcha::class)->name('superadmin.recaptcha');
+        Route::get('/mfa', \App\Livewire\SuperAdmin\Mfa::class)->name('superadmin.mfa');
+        Route::get('/honeypots', \App\Livewire\SuperAdmin\Honeypots::class)->name('superadmin.honeypots');
+        
+        // Ticket Requests (Management)
+        Route::get('/support-tickets', \App\Livewire\SuperAdmin\SupportTicket::class)->name('superadmin.tickets.index');
     });
 
     // Level 1, 2, & 3: User & Up (HR Staff, HR Manager, Super Admin)
@@ -92,6 +93,9 @@ Route::middleware('session.auth')->group(function() {
         Route::get('/rewards', Rewards::class)->name('rewards');
         Route::get('/reward-giving', GiveRewards::class)->name('reward-giving');
         Route::get('/facility-request', FacilityRequest::class)->name('facility-request');
+        
+        // Support Tickets (Submit Ticket - Staff)
+        Route::get('/submit-ticket', \App\Livewire\Admin\SubmitTicket::class)->name('admin.tickets.index');
     });
 });
 

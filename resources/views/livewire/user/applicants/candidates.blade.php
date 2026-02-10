@@ -18,6 +18,7 @@
                     placeholder="Search candidates..."
                 />
             </div>
+            {{-- STATUS FILTER --}}
             <div @class('dropdown')>
                 <button
                     type="button"
@@ -25,19 +26,71 @@
                     @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
                 >
                     <i @class('bi bi-funnel-fill me-2')></i>
-                    Filter: {{ $statusFilter ? ucfirst(str_replace('_', ' ', $statusFilter)) : 'All' }}
+                    Status: {{ $statusFilter ? ucfirst(str_replace('_', ' ', $statusFilter)) : 'All' }}
                 </button>
 
                 <ul @class('dropdown-menu')>
                     <li>
                         <a @class('dropdown-item') wire:click="$set('statusFilter', '')">All Status</a>
                     </li>
+                    <li><hr class="dropdown-divider"></li>
                     <li>
                         <a @class('dropdown-item') wire:click="$set('statusFilter', 'scheduled')">Scheduled</a>
                     </li>
                     <li>
                         <a @class('dropdown-item') wire:click="$set('statusFilter', 'interview_ready')">Interview Ready</a>
                     </li>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('statusFilter', 'failed')">Failed</a>
+                    </li>
+                </ul>
+            </div>
+
+            {{-- DEPARTMENT FILTER --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-building me-2')></i>
+                    Department: {{ $departmentFilter ?: 'All' }}
+                </button>
+
+                <ul @class('dropdown-menu')>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('departmentFilter', '')">All Departments</a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    @foreach($filters['departments'] as $dept)
+                        <li>
+                            <a @class('dropdown-item') wire:click="$set('departmentFilter', '{{ $dept }}')">{{ $dept }}</a>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+
+            {{-- POSITION FILTER --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-briefcase me-2')></i>
+                    Position: {{ $positionFilter ?: 'All' }}
+                </button>
+
+                <ul @class('dropdown-menu')>
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('positionFilter', '')">All Positions</a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    @foreach($filters['positions'] as $pos)
+                        <li>
+                            <a @class('dropdown-item') wire:click="$set('positionFilter', '{{ $pos }}')">{{ $pos }}</a>
+                        </li>
+                    @endforeach
                 </ul>
             </div>
         </div>
@@ -67,9 +120,9 @@
                 <thead>
                     <tr @class('bg-dark')>
                         <th @class('text-secondary')>Name</th>
-                        <th @class('text-secondary')>Contact</th>
+                        <th @class('text-secondary')>Email</th>
+                        <th @class('text-secondary')>Department</th>
                         <th @class('text-secondary')>Position</th>
-                        <th @class('text-secondary')>AI Rating</th>
                         <th @class('text-secondary')>Status</th>
                         <th @class('text-secondary')>Interview Schedule</th>
                         <th @class('text-secondary')>Actions</th>
@@ -80,40 +133,35 @@
                         <tr wire:key="{{ $candidate->id }}">
                             <td>
                                 <div class="fw-semibold">{{ $candidate->candidate_name }}</div>
-                                @if($candidate->skills && is_array($candidate->skills) && count($candidate->skills) > 0)
-                                    <small class="text-muted">{{ count($candidate->skills) }} skills</small>
-                                @endif
                             </td>
                             <td>
                                 <div>{{ $candidate->candidate_email }}</div>
-                                <small class="text-muted">{{ $candidate->candidate_phone }}</small>
+                            </td>
+                            <td>
+                                <div class="fw-medium">{{ $candidate->department ?? 'N/A' }}</div>
                             </td>
                             <td>
                                 <div class="fw-medium">{{ $candidate->applied_position ?? 'N/A' }}</div>
-                                <small class="text-muted">{{ $candidate->department ?? '' }}</small>
-                            </td>
-                            <td>
-                                @if($candidate->rating_score)
-                                    <span class="badge bg-{{ \App\Models\Applicants\Candidate::getRatingBadgeColor($candidate->rating_score) }}">
-                                        {{ number_format($candidate->rating_score, 1) }}
-                                    </span>
-                                @else
-                                    <span class="text-muted">N/A</span>
-                                @endif
                             </td>
                             <td>
                                 @php
                                     $statusColors = [
                                         'scheduled' => 'warning',
                                         'interview_ready' => 'success',
+                                        'failed' => 'danger',
                                     ];
                                     $statusLabels = [
                                         'scheduled' => 'Scheduled',
                                         'interview_ready' => 'Interview Ready',
+                                        'failed' => 'Failed',
                                     ];
                                 @endphp
                                 <span class="badge bg-{{ $statusColors[$candidate->status] ?? 'secondary' }}">
-                                    {{ $statusLabels[$candidate->status] ?? ucfirst($candidate->status) }}
+                                    @if($candidate->status === 'failed')
+                                        Failed ({{ ucfirst($candidate->interview_stage) }})
+                                    @else
+                                        {{ $statusLabels[$candidate->status] ?? ucfirst(str_replace('_', ' ', $candidate->status)) }}
+                                    @endif
                                 </span>
                                 @if($candidate->self_scheduled)
                                     <br><small class="text-success"><i class="bi bi-check-circle"></i> Self-scheduled</small>
@@ -135,8 +183,8 @@
                             </td>
                              <td>
                                  <div class="d-flex gap-2 flex-wrap">
-                                    {{-- Edit Candidate --}}
-                                    @if(session('user.position') === 'Super Admin')
+                                    {{-- Delete Candidate --}}
+                                    @if(in_array(session('user.position'), ['Super Admin', 'HR Manager']))
                                         <button
                                             type="button"
                                             @class('btn btn-sm btn-danger')
@@ -212,9 +260,9 @@
                                 @if($search)
                                     <i @class('bi bi-search d-block mx-auto fs-1')></i>
                                     <div class="mt-3">No candidates found matching "{{ $search }}".</div>
-                                @elseif($statusFilter)
-                                    <i @class('bi bi-person-x d-block mx-auto fs-1')></i>
-                                    <div class="mt-3">No {{ str_replace('_', ' ', $statusFilter) }} candidates found.</div>
+                                @elseif($statusFilter || $departmentFilter || $positionFilter)
+                                    <i @class('bi bi-funnel d-block mx-auto fs-1')></i>
+                                    <div class="mt-3">No candidates found matching the selected filters.</div>
                                 @else
                                     <i @class('bi bi-person-x d-block mx-auto fs-1')></i>
                                     <div class="mt-3">No candidates found.</div>
@@ -228,201 +276,16 @@
         </div>
     @endif
 
-    {{-- Edit Candidate Modal --}}
-    @if($showEditModal)
-    <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-white border-bottom">
-                    <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Edit Candidate</h5>
-                    <button type="button" class="btn-close" wire:click="closeEditModal"></button>
-                </div>
-                <div class="modal-body">
-                    <form wire:submit.prevent="updateCandidate">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Name</label>
-                                <input type="text" class="form-control" wire:model="candidate_name">
-                                @error('candidate_name') <span class="text-danger small">{{ $message }}</span> @enderror
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Email</label>
-                                <input type="email" class="form-control" wire:model="candidate_email">
-                                @error('candidate_email') <span class="text-danger small">{{ $message }}</span> @enderror
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Phone</label>
-                                <input type="text" class="form-control" wire:model="candidate_phone">
-                            </div>
-                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Applied Position</label>
-                                <input type="text" class="form-control" wire:model="applied_position">
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" wire:click="closeEditModal">Close</button>
-                    <button type="button" class="btn btn-primary" wire:click="updateCandidate">Save Changes</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
+    {{-- EDIT CANDIDATE MODAL --}}
+    @include('livewire.user.applicants.includes.candidate-edit-modal')
 
-    {{-- View Candidate Modal --}}
-    @if($showViewModal && $selectedCandidate)
-    <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-white border-bottom">
-                    <h5 class="modal-title"><i class="bi bi-person-badge me-2"></i>Candidate Details</h5>
-                    <button type="button" class="btn-close" wire:click="closeViewModal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="fw-bold text-primary mb-3">Personal Information</h6>
-                            <p><strong>Name:</strong> {{ $selectedCandidate->candidate_name }}</p>
-                            <p><strong>Email:</strong> {{ $selectedCandidate->candidate_email }}</p>
-                            <p><strong>Phone:</strong> {{ $selectedCandidate->candidate_phone }}</p>
-                            <p><strong>Age:</strong> {{ $selectedCandidate->candidate_age ?? 'N/A' }}</p>
-                            <p><strong>Gender:</strong> {{ ucfirst($selectedCandidate->candidate_sex ?? 'N/A') }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <h6 class="fw-bold text-primary mb-3">Application Details</h6>
-                            <p><strong>Position:</strong> {{ $selectedCandidate->applied_position ?? 'N/A' }}</p>
-                            <p><strong>Department:</strong> {{ $selectedCandidate->department ?? 'N/A' }}</p>
-                            @if($selectedCandidate->rating_score)
-                                <p>
-                                    <strong>AI Rating:</strong> 
-                                    <span class="badge bg-{{ \App\Models\Applicants\Candidate::getRatingBadgeColor($selectedCandidate->rating_score) }}">
-                                        {{ number_format($selectedCandidate->rating_score, 1) }}
-                                    </span>
-                                </p>
-                                <p class="text-muted small">{{ $selectedCandidate->rating_description }}</p>
-                            @endif
-                        </div>
-                    </div>
+    {{-- VIEW CANDIDATE MODAL --}}
+    @include('livewire.user.applicants.includes.candidate-view-modal')
 
-                    <hr>
+    {{-- RESCHEDULE CANDIDATE MODAL --}}
+    @include('livewire.user.applicants.includes.candidate-reschedule-modal')
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="fw-bold text-primary mb-3">Address</h6>
-                            <p class="mb-1">{{ $selectedCandidate->candidate_house_street ?? '' }}</p>
-                            <p class="mb-1">{{ $selectedCandidate->candidate_barangay ?? '' }}, {{ $selectedCandidate->candidate_city ?? '' }}</p>
-                            <p>{{ $selectedCandidate->candidate_province ?? '' }}, {{ $selectedCandidate->candidate_region ?? '' }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <h6 class="fw-bold text-primary mb-3">Interview Status</h6>
-                            <p><strong>Status:</strong> 
-                                <span class="badge bg-{{ $selectedCandidate->status === 'interview_ready' ? 'success' : 'warning' }}">
-                                    {{ ucfirst(str_replace('_', ' ', $selectedCandidate->status)) }}
-                                </span>
-                            </p>
-                            @if($selectedCandidate->interview_schedule)
-                                <p><strong>Schedule:</strong> {{ $selectedCandidate->interview_schedule->format('M d, Y \a\t h:i A') }}</p>
-                            @endif
-                        </div>
-                    </div>
-
-                    @if($selectedCandidate->skills && is_array($selectedCandidate->skills) && count($selectedCandidate->skills) > 0)
-                        <hr>
-                        <h6 class="fw-bold text-primary mb-3">Skills</h6>
-                        <div class="d-flex flex-wrap gap-2">
-                            @foreach($selectedCandidate->skills as $skill)
-                                <span class="badge bg-light text-dark border">{{ $skill }}</span>
-                            @endforeach
-                        </div>
-                    @endif
-
-                    @if($selectedCandidate->resume_url)
-                        <hr>
-                        <h6 class="fw-bold text-primary mb-3">Resume</h6>
-                        <a href="{{ $selectedCandidate->resume_url }}" target="_blank" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-file-earmark-pdf me-1"></i> View Resume
-                        </a>
-                    @endif
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" wire:click="closeViewModal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    {{-- Reschedule Modal --}}
-    @if($showRescheduleModal)
-    <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-white border-bottom">
-                    <h5 class="modal-title"><i class="bi bi-calendar2-plus me-2"></i>Reschedule Interview</h5>
-                    <button type="button" class="btn-close" wire:click="closeRescheduleModal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">New Interview Date</label>
-                            <input type="date" class="form-control" wire:model="new_interview_date">
-                            @error('new_interview_date') <div class="text-danger small">{{ $message }}</div> @enderror
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">New Interview Time</label>
-                            <input type="time" class="form-control" wire:model="new_interview_time">
-                            @error('new_interview_time') <div class="text-danger small">{{ $message }}</div> @enderror
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" wire:click="closeRescheduleModal">Cancel</button>
-                    <button type="button" class="btn btn-primary" wire:click="rescheduleInterview" wire:loading.attr="disabled">
-                        <span wire:loading.remove>Reschedule</span>
-                        <span wire:loading>Saving...</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    {{-- Send Scheduling Link Modal --}}
-    @if($showSendLinkModal)
-    <div class="modal fade show" tabindex="-1" role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-white border-bottom">
-                    <h5 class="modal-title"><i class="bi bi-send me-2"></i>Send Self-Scheduling Link</h5>
-                    <button type="button" class="btn-close" wire:click="closeSendLinkModal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle-fill me-2"></i>
-                        A self-scheduling link will be sent to the candidate, allowing them to confirm or reschedule their interview slot.
-                    </div>
-                    
-                    <p><strong>Candidate:</strong> {{ $sendLinkCandidateName }}</p>
-                    <p><strong>Email:</strong> {{ $sendLinkCandidateEmail }}</p>
-                    
-                    <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                        Make sure the email address is correct before sending.
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" wire:click="closeSendLinkModal">Cancel</button>
-                    <button type="button" class="btn btn-primary" wire:click="sendSchedulingLink" wire:loading.attr="disabled">
-                        <span wire:loading.remove><i class="bi bi-send me-1"></i>Send Link</span>
-                        <span wire:loading>Sending...</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
+    {{-- SEND SCHEDULING LINK MODAL --}}
+    @include('livewire.user.applicants.includes.candidate-link-modal')
 
 </div>

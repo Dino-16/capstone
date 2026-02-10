@@ -5,6 +5,9 @@
 
 <div @class('pt-2')>
 
+    {{-- PASSWORD GATE --}}
+    @include('components.password-gate')
+
     {{-- Toast --}}
     <x-toast />
 
@@ -22,6 +25,52 @@
                 />
             </div>
 
+            {{-- Department Filter --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-building me-2')></i>
+                    Dept: {{ $departmentFilter ?: 'All' }}
+                </button>
+
+                <ul @class('dropdown-menu') style="max-height: 300px; overflow-y: auto;">
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('departmentFilter', '')">All Departments</a>
+                    </li>
+                    @foreach($departments as $dept)
+                        <li>
+                            <a @class('dropdown-item') wire:click="$set('departmentFilter', '{{ $dept }}')">{{ $dept }}</a>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+
+            {{-- Position Filter --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-person-badge me-2')></i>
+                    Pos: {{ $positionFilter ?: 'All' }}
+                </button>
+
+                <ul @class('dropdown-menu') style="max-height: 300px; overflow-y: auto;">
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('positionFilter', '')">All Positions</a>
+                    </li>
+                    @foreach($positions as $pos)
+                        <li>
+                            <a @class('dropdown-item') wire:click="$set('positionFilter', '{{ $pos }}')">{{ $pos }}</a>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+
             {{-- COMPLETION FILTER DROPDOWN --}}
             <div @class('dropdown')>
                 <button
@@ -31,24 +80,18 @@
                     @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
                 >
                     <i @class('bi bi-funnel-fill me-2')></i>
-                    Completion: {{ $completionFilter }}
+                    Status: {{ $completionFilter }}
                 </button>
 
                 <ul @class('dropdown-menu') aria-labelledby="completionFilterDropdown">
                     <li>
-                        <a @class('dropdown-item') wire:click="$set('completionFilter', 'All')">
-                            All
-                        </a>
+                        <a @class('dropdown-item') wire:click="$set('completionFilter', 'All')">All</a>
                     </li>
                     <li>
-                        <a @class('dropdown-item') wire:click="$set('completionFilter', 'Complete')">
-                            Complete
-                        </a>
+                        <a @class('dropdown-item') wire:click="$set('completionFilter', 'Complete')">Complete</a>
                     </li>
                     <li>
-                        <a @class('dropdown-item') wire:click="$set('completionFilter', 'Incomplete')">
-                            Incomplete
-                        </a>
+                        <a @class('dropdown-item') wire:click="$set('completionFilter', 'Incomplete')">Incomplete</a>
                     </li>
                 </ul>
             </div>
@@ -108,8 +151,9 @@
             <table @class('table')>
                 <thead>
                 <tr @class('bg-dark')>
-                    <th @class('text-secondary')>Employee Name</th>
-                    <th @class('text-secondary')>Email</th>
+                    <th @class('text-secondary')>Employee</th>
+                    <th @class('text-secondary')>Position</th>
+                    <th @class('text-secondary')>Department</th>
                     <th @class('text-secondary')>Documents</th>
                     <th @class('text-secondary')>Completion</th>
                     <th @class('text-secondary')>Actions</th>
@@ -120,26 +164,27 @@
                         <tr wire:key="emp-{{ $document->id }}">
                             <td>
                                 <div @class('d-flex align-items-center')>
+                                    <div @class('rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-2') style="width: 32px; height: 32px;">
+                                        <i @class('bi bi-person text-primary')></i>
+                                    </div>
                                     <div>
                                         <strong>{{ $document->employee_name }}</strong>
+                                        <br><small @class('text-muted')>{{ $document->email }}</small>
                                     </div>
                                 </div>
                             </td>
+                            <td>{{ $document->position ?? '---' }}</td>
+                            <td>{{ $document->department ?? '---' }}</td>
                             <td>
-                                {{ $document->email }}
-                            </td>
-                            <td>
-                                <div @class('d-flex flex-wrap gap-1')>
-                                    @if($document->documents && is_array($document->documents))
-                                        @foreach($document->documents as $docType => $status)
-                                            <span @class('badge bg-primary text-white')>
-                                                {{ ucwords(str_replace('_', ' ', $docType)) }} 
-                                            </span>
-                                            <br>
-                                        @endforeach
-                                    @else
-                                        <span @class('text-muted')>No documents</span>
-                                    @endif
+                                <div @class('d-flex align-items-center')>
+                                    <button 
+                                        class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-2 rounded-pill px-3 shadow-sm hover-elevate" 
+                                        wire:click="viewChecklist({{ $document->id }})"
+                                        title="View Documents"
+                                    >
+                                        <i class="bi bi-eye"></i> 
+                                        <span>View Documents</span>
+                                    </button>
                                 </div>
                             </td>
                             <td>
@@ -233,8 +278,9 @@
             <table @class('table')>
                 <thead>
                 <tr @class('bg-dark')>
-                    <th @class('text-secondary')>Employee Name</th>
-                    <th @class('text-secondary')>Email</th>
+                    <th @class('text-secondary')>Employee</th>
+                    <th @class('text-secondary')>Position</th>
+                    <th @class('text-secondary')>Department</th>
                     <th @class('text-secondary')>Documents</th>
                     <th @class('text-secondary')>Completion</th>
                     <th @class('text-secondary')>Action</th>
@@ -245,35 +291,30 @@
                         <tr>
                             <td>
                                 <div @class('d-flex align-items-center')>
+                                    <div @class('rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-2') style="width: 32px; height: 32px;">
+                                        <i @class('bi bi-person text-primary')></i>
+                                    </div>
                                     <div>
                                         <strong>{{ $draft->employee_name }}</strong>
+                                        <br><small @class('text-muted')>{{ $draft->email }}</small>
                                         @if($draft->notes)
                                             <br><small @class('text-muted')>{{ $draft->notes }}</small>
                                         @endif
                                     </div>
                                 </div>
                             </td>
+                            <td>{{ $draft->position ?? '---' }}</td>
+                            <td>{{ $draft->department ?? '---' }}</td>
                             <td>
-                                @if($draft->email)
-                                    <a href="mailto:{{ $draft->email }}" @class('text-decoration-none')>
-                                        <i @class('bi bi-envelope me-1')></i>{{ $draft->email }}
-                                    </a>
-                                @else
-                                    <span @class('text-muted')>No email</span>
-                                @endif
-                            </td>
-                            <td>
-                                <div @class('d-flex flex-wrap gap-1')>
-                                    @if($draft->documents && is_array($draft->documents))
-                                        @foreach($draft->documents as $docType => $status)
-                                            <span @class('badge bg-primary text-white')>
-                                                {{ ucwords(str_replace('_', ' ', $docType)) }} 
-                                            </span>
-                                            <br>
-                                        @endforeach
-                                    @else
-                                        <span @class('text-muted')>No documents</span>
-                                    @endif
+                                <div @class('d-flex align-items-center')>
+                                    <button 
+                                        class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-2 rounded-pill px-3 shadow-sm hover-elevate" 
+                                        wire:click="viewChecklist({{ $draft->id }})"
+                                        title="View Documents"
+                                    >
+                                        <i class="bi bi-eye"></i> 
+                                        <span>View Documents</span>
+                                    </button>
                                 </div>
                             </td>
                             <td>
@@ -311,6 +352,9 @@
         </div>
     @endif
 
+    {{-- View Documents Modal --}}
+    @include('livewire.user.onboarding.includes.document-view')
+
     {{-- Edit Employee Modal --}}
     @include('livewire.user.onboarding.includes.document-edit')
 
@@ -322,3 +366,12 @@
 
 </div>
 </div>
+<script>
+    document.addEventListener('livewire:initialized', () => {
+        Livewire.on('open-document', (event) => {
+            if (event.url) {
+                window.open(event.url, '_blank');
+            }
+        });
+    });
+</script>

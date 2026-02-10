@@ -11,9 +11,18 @@ use Illuminate\Support\Facades\Http;
 class Interviews extends Component
 {
     use WithPagination;
+    use \App\Livewire\Traits\HandlesToasts;
 
     public $search;
     public $statusFilter = '';
+    public $departmentFilter = '';
+    public $positionFilter = '';
+
+    // Message modal properties
+    public $showMessageModal = false;
+    public $messageSubject = '';
+    public $messageBody = '';
+    public $selectedCandidateForMessage = null;
     
     // Interview modal properties
     public $showInterviewModal = false;
@@ -24,14 +33,44 @@ class Interviews extends Component
     // Scoring properties
     public $interviewScores = [];
     public $practicalScores = [];
+    public $demoScores = []; // Added for demo stage
     public $overallNotes = '';
+    
     public $interviewQuestions = [];
     public $practicalExams = [];
+    public $demoInstructions = []; // Added for demo stage
     
     // Result properties
     public $showResultModal = false;
     public $resultCandidate = null;
     public $interviewResult = '';
+    public $nextStage = null; // To track where to go next
+
+    // Interview Stage definitions
+    // Interview Stage definitions
+    public const INTERVIEW_STAGES = [
+        'initial' => [
+            'label' => 'Initial Interview',
+            'description' => 'Tell me about yourself.',
+            'icon' => 'bi-chat-dots',
+            'color' => 'info',
+            'next' => 'practical'
+        ],
+        'practical' => [
+            'label' => 'Practical Exam',
+            'description' => 'Show me you can do the job.',
+            'icon' => 'bi-pencil-square',
+            'color' => 'warning',
+            'next' => 'demo'
+        ],
+        'demo' => [
+            'label' => 'Demo/Presentation',
+            'description' => 'Convince me with a live demonstration.',
+            'icon' => 'bi-display',
+            'color' => 'success',
+            'next' => 'offer'
+        ],
+    ];
 
     public function updatedSearch()
     {
@@ -39,6 +78,16 @@ class Interviews extends Component
     }
 
     public function updatedStatusFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedDepartmentFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedPositionFilter()
     {
         $this->resetPage();
     }
@@ -52,18 +101,55 @@ class Interviews extends Component
             return;
         }
 
+        // If candidate is already interviewed (submitted but not decided), show Result Modal
+        if ($candidate->status === 'interviewed') {
+            $this->resultCandidate = $candidate;
+            $stage = $candidate->interview_stage ?? 'initial';
+            $this->nextStage = self::INTERVIEW_STAGES[$stage]['next'] ?? null;
+            $this->showResultModal = true;
+            return;
+        }
+
         $this->selectedCandidateId = $candidateId;
         $this->selectedCandidate = $candidate;
         $this->selectedPosition = $candidate->applied_position ?? 'Travel Agent';
         
-        // Load questions and exams for the position
+        // Set initial interview stage if not set
+        if (!$candidate->interview_stage) {
+            $candidate->interview_stage = 'initial';
+            $candidate->save();
+        }
+        
+        $stage = $candidate->interview_stage;
+
+        // Load data based on current stage or load all for reference
         $this->interviewQuestions = $this->getInterviewQuestions($this->selectedPosition);
         $this->practicalExams = $this->getPracticalExams($this->selectedPosition);
+        $this->demoInstructions = $this->getDemoInstructions($this->selectedPosition);
         
-        // Initialize scores
-        $this->interviewScores = array_fill(0, count($this->interviewQuestions), ['answer' => '', 'score' => 0]);
-        $this->practicalScores = array_fill(0, count($this->practicalExams), ['response' => '', 'score' => 0]);
-        $this->overallNotes = '';
+        // Initialize or Load Scores
+        $allScores = $candidate->interview_scores ?? [];
+        $existingScores = $allScores[$stage] ?? [];
+
+        if ($stage === 'initial') {
+            $this->interviewScores = $existingScores['scores'] ?? array_fill(0, count($this->interviewQuestions), ['answer' => '', 'score' => 1.0]);
+        } else {
+             $this->interviewScores = array_fill(0, count($this->interviewQuestions), ['answer' => '', 'score' => 1.0]);
+        }
+
+        if ($stage === 'practical') {
+            $this->practicalScores = $existingScores['scores'] ?? array_fill(0, count($this->practicalExams), ['response' => '', 'score' => 1.0]);
+        } else {
+            $this->practicalScores = array_fill(0, count($this->practicalExams), ['response' => '', 'score' => 1.0]);
+        }
+
+        if ($stage === 'demo') {
+            $this->demoScores = $existingScores['scores'] ?? array_fill(0, count($this->demoInstructions), ['notes' => '', 'score' => 1.0]);
+        } else {
+            $this->demoScores = array_fill(0, count($this->demoInstructions), ['notes' => '', 'score' => 1.0]);
+        }
+        
+        $this->overallNotes = $existingScores['notes'] ?? '';
         
         $this->showInterviewModal = true;
     }
@@ -76,32 +162,39 @@ class Interviews extends Component
         $this->selectedPosition = '';
         $this->interviewScores = [];
         $this->practicalScores = [];
+        $this->demoScores = [];
         $this->overallNotes = '';
         $this->interviewQuestions = [];
         $this->practicalExams = [];
+        $this->demoInstructions = [];
     }
 
     // Calculate total score
-    private function calculateTotalScore()
+    // Calculate score for current stage
+    private function calculateStageScore($stage)
     {
-        $interviewTotal = 0;
-        $practicalTotal = 0;
+        $total = 0;
+        $max = 0;
+        $scores = [];
         
-        foreach ($this->interviewScores as $score) {
-            $interviewTotal += floatval($score['score'] ?? 0);
+        if ($stage === 'initial') {
+            $scores = $this->interviewScores;
+            $max = count($this->interviewQuestions) * 10;
+        } elseif ($stage === 'practical') {
+            $scores = $this->practicalScores;
+            $max = count($this->practicalExams) * 10;
+        } elseif ($stage === 'demo') {
+            $scores = $this->demoScores;
+            $max = count($this->demoInstructions) * 10;
         }
         
-        foreach ($this->practicalScores as $score) {
-            $practicalTotal += floatval($score['score'] ?? 0);
+        foreach ($scores as $item) {
+            $total += floatval($item['score'] ?? 0);
         }
         
-        $maxInterviewScore = count($this->interviewQuestions) * 10;
-        $maxPracticalScore = count($this->practicalExams) * 10;
-        $maxTotal = $maxInterviewScore + $maxPracticalScore;
+        if ($max === 0) return 0;
         
-        if ($maxTotal === 0) return 0;
-        
-        $percentage = (($interviewTotal + $practicalTotal) / $maxTotal) * 100;
+        $percentage = ($total / $max) * 100;
         return round($percentage, 2);
     }
 
@@ -114,22 +207,32 @@ class Interviews extends Component
             return;
         }
 
-        $totalScore = $this->calculateTotalScore();
+        $stage = $candidate->interview_stage ?? 'initial';
+        $score = $this->calculateStageScore($stage);
         
-        // Save interview data
-        $candidate->interview_scores = [
-            'interview_questions' => $this->interviewScores,
-            'practical_exams' => $this->practicalScores,
+        // Retrieve existing scores or initialize
+        $existingScores = $candidate->interview_scores ?? [];
+        
+        // Update scores for current stage
+        $existingScores[$stage] = [
+            'scores' => $stage === 'initial' ? $this->interviewScores : ($stage === 'practical' ? $this->practicalScores : $this->demoScores),
             'notes' => $this->overallNotes,
+            'stage_score' => $score,
+            'timestamp' => now()->toDateTimeString()
         ];
-        $candidate->interview_total_score = $totalScore;
-        $candidate->status = 'interviewed';
+        
+        $candidate->interview_scores = $existingScores;
+        // Keep status as interviewed internally or partial? 
+        // We'll keep it as 'interview_ready' or 'interviewed' but logically we are just at a checkpoint.
+        $candidate->status = 'interviewed'; 
+        $candidate->interview_total_score = $score; // Save current stage score as the "headline" score for now
         $candidate->save();
 
         $this->closeInterviewModal();
         
-        // Open result modal to decide pass/fail
+        // Open result modal to decide pass/fail for THIS stage
         $this->resultCandidate = $candidate;
+        $this->nextStage = self::INTERVIEW_STAGES[$stage]['next'] ?? null;
         $this->showResultModal = true;
     }
 
@@ -138,14 +241,29 @@ class Interviews extends Component
     {
         if (!$this->resultCandidate) return;
 
-        $this->resultCandidate->interview_result = 'passed';
-        $this->resultCandidate->status = 'passed';
-        $this->resultCandidate->save();
+        $currentStage = $this->resultCandidate->interview_stage;
+        $nextStage = self::INTERVIEW_STAGES[$currentStage]['next'] ?? null;
 
-        // Trigger API to external department for contract preparation
-        $this->triggerContractApi($this->resultCandidate);
+        if ($nextStage && $nextStage !== 'offer') {
+            // Proceed to next stage
+            $this->resultCandidate->interview_stage = $nextStage;
+            $this->resultCandidate->status = 'interview_ready'; // Ready for next stage
+            $this->resultCandidate->interview_result = 'passed_' . $currentStage;
+            $this->resultCandidate->save();
+            
+            $nextLabel = self::INTERVIEW_STAGES[$nextStage]['label'];
+            $this->toast("Candidate passed {$currentStage} stage! Proceeding to {$nextLabel}.");
+        } else {
+            // Final stage passed (Demo -> Offer)
+            $this->resultCandidate->interview_result = 'passed';
+            $this->resultCandidate->status = 'passed';
+            $this->resultCandidate->save();
 
-        session()->flash('message', "Candidate {$this->resultCandidate->candidate_name} has PASSED! Contract preparation initiated.");
+            // Trigger API to external department for contract preparation
+            $this->triggerContractApi($this->resultCandidate);
+            $this->toast("Candidate {$this->resultCandidate->candidate_name} has PASSED the final interview! Contract preparation initiated.");
+        }
+
         $this->closeResultModal();
     }
 
@@ -154,11 +272,12 @@ class Interviews extends Component
     {
         if (!$this->resultCandidate) return;
 
-        $this->resultCandidate->interview_result = 'failed';
+        $currentStage = $this->resultCandidate->interview_stage ?? 'initial';
+        $this->resultCandidate->interview_result = 'failed_' . $currentStage;
         $this->resultCandidate->status = 'failed';
         $this->resultCandidate->save();
 
-        session()->flash('message', "Candidate {$this->resultCandidate->candidate_name} has been marked as FAILED.");
+        $this->toast("Candidate {$this->resultCandidate->candidate_name} has been marked as FAILED.");
         $this->closeResultModal();
     }
 
@@ -167,6 +286,73 @@ class Interviews extends Component
         $this->showResultModal = false;
         $this->resultCandidate = null;
         $this->interviewResult = '';
+        $this->nextStage = null;
+    }
+
+    // Messaging functionality
+    public function openMessageModal($candidateId)
+    {
+        $this->selectedCandidateForMessage = Candidate::find($candidateId);
+        if ($this->selectedCandidateForMessage) {
+            $this->messageSubject = "Update regarding your application - " . ($this->selectedCandidateForMessage->applied_position ?? 'Job Position');
+            $this->messageBody = "Dear " . $this->selectedCandidateForMessage->candidate_name . ",\n\n";
+            $this->showMessageModal = true;
+        }
+    }
+
+    public function closeMessageModal()
+    {
+        $this->showMessageModal = false;
+        $this->selectedCandidateForMessage = null;
+        $this->messageSubject = '';
+        $this->messageBody = '';
+    }
+
+    public function sendMessage()
+    {
+        $this->validate([
+            'messageSubject' => 'required|string|max:255',
+            'messageBody' => 'required|string',
+        ]);
+
+        // In a real application, you would send an actual email here
+        // \Illuminate\Support\Facades\Mail::to($this->selectedCandidateForMessage->candidate_email)
+        //     ->send(new \App\Mail\CandidateMessage($this->messageSubject, $this->messageBody));
+
+        $this->toast('Email sent successfully to ' . $this->selectedCandidateForMessage->candidate_email);
+        $this->closeMessageModal();
+    }
+
+    // Update interview stage
+    public function updateInterviewStage($candidateId, $stage)
+    {
+        $candidate = Candidate::find($candidateId);
+        if (!$candidate) {
+            session()->flash('error', 'Candidate not found.');
+            return;
+        }
+
+        if (!array_key_exists($stage, self::INTERVIEW_STAGES)) {
+            session()->flash('error', 'Invalid interview stage.');
+            return;
+        }
+
+        $candidate->interview_stage = $stage;
+        $candidate->save();
+
+        // Update selected candidate if modal is open
+        if ($this->selectedCandidate && $this->selectedCandidate->id === $candidateId) {
+            $this->selectedCandidate = $candidate->fresh();
+        }
+
+        $stageInfo = self::INTERVIEW_STAGES[$stage];
+        $this->toast("Interview stage updated to: {$stageInfo['label']}");
+    }
+
+    // Get interview stages for view
+    public function getInterviewStages()
+    {
+        return self::INTERVIEW_STAGES;
     }
 
     // API call to external department for contract preparation
@@ -234,21 +420,43 @@ class Interviews extends Component
         // Filter by role (position) and type 'question'
         $questions = collect($assessments)
             ->filter(function ($item) use ($position) {
-                $apiRole = trim($item['role'] ?? '');
-                $applicantPos = trim($position);
-                return (strcasecmp($apiRole, $applicantPos) === 0 || 
-                        str_contains(strtolower($applicantPos), strtolower($apiRole)) || 
-                        str_contains(strtolower($apiRole), strtolower($applicantPos))) 
+                $apiRole = strtolower(trim($item['role'] ?? ''));
+                $applicantPos = strtolower(trim($position));
+                
+                // Better fuzzy matching: check if either contains the other, or share common root words
+                return ($apiRole === $applicantPos || 
+                        str_contains($applicantPos, $apiRole) || 
+                        str_contains($apiRole, $applicantPos) ||
+                        (str_contains($apiRole, 'logistic') && str_contains($applicantPos, 'logistic')))
                         && $item['type'] === 'question';
             })
             ->pluck('content')
             ->values()
             ->toArray();
         
+        // Hardcoded Fallback for common roles if API returns nothing
+        if (empty($questions)) {
+            $pos = strtolower($position);
+            if (str_contains($pos, 'logistic')) {
+                $questions = [
+                    "Can you describe your experience with inventory management and tracking systems?",
+                    "How do you handle unexpected delays or issues in the supply chain?",
+                    "What measures do you take to ensure the safety and security of goods during transport and storage?",
+                    "Describe a time when you had to optimize a delivery route or logistics process. What was the outcome?"
+                ];
+            } elseif (str_contains($pos, 'travel agent')) {
+                $questions = [
+                    "What experience do you have in booking international travel and handling complex itineraries?",
+                    "How do you stay updated with the latest travel trends, visa requirements, and destination information?",
+                    "Describe a situation where you had to handle a last-minute travel emergency for a client.",
+                    "How do you balance meeting sales targets with providing personalized customer service?"
+                ];
+            }
+        }
+        
         // Debug: Log filtered questions
         logger("=== Interview Questions for Position: {$position} ===");
         logger('Questions count: ' . count($questions));
-        logger('Questions: ' . json_encode($questions, JSON_PRETTY_PRINT));
         
         return $questions;
     }
@@ -260,23 +468,83 @@ class Interviews extends Component
         // Filter by role (position) and type 'exam'
         $exams = collect($assessments)
             ->filter(function ($item) use ($position) {
-                $apiRole = trim($item['role'] ?? '');
-                $applicantPos = trim($position);
-                return (strcasecmp($apiRole, $applicantPos) === 0 || 
-                        str_contains(strtolower($applicantPos), strtolower($apiRole)) || 
-                        str_contains(strtolower($apiRole), strtolower($applicantPos))) 
+                $apiRole = strtolower(trim($item['role'] ?? ''));
+                $applicantPos = strtolower(trim($position));
+                
+                return ($apiRole === $applicantPos || 
+                        str_contains($applicantPos, $apiRole) || 
+                        str_contains($apiRole, $applicantPos) ||
+                        (str_contains($apiRole, 'logistic') && str_contains($applicantPos, 'logistic')))
                         && $item['type'] === 'exam';
             })
             ->pluck('content')
             ->values()
             ->toArray();
         
+        // Hardcoded Fallback for common roles if API returns nothing
+        if (empty($exams)) {
+            $pos = strtolower($position);
+            if (str_contains($pos, 'logistic')) {
+                $exams = [
+                    "Inventory Audit: Given a sample stock list and physical count sheet, identify discrepancies and suggest corrections.",
+                    "Route Planning: Use the provided map and delivery list to organize a multi-stop delivery route with different time constraints.",
+                    "Documentation Task: Complete a Bill of Lading and a Delivery Receipt based on the provided cargo details."
+                ];
+            } elseif (str_contains($pos, 'travel agent')) {
+                $exams = [
+                    "Booking Simulation: Use the mock booking tool to arrange a round-trip flight and hotel stay for a family of four within a specified budget.",
+                    "Itinerary Creation: Design a 7-day tour for a group interested in historical sites and local cuisine.",
+                    "Scenario Email: Draft a response to a client whose cruise was cancelled, offering three alternative options and explaining the refund policy."
+                ];
+            }
+        }
+        
         // Debug: Log filtered exams
         logger("=== Practical Exams for Position: {$position} ===");
         logger('Exams count: ' . count($exams));
-        logger('Exams: ' . json_encode($exams, JSON_PRETTY_PRINT));
         
         return $exams;
+    }
+
+    private function getDemoInstructions($position)
+    {
+        // Generate demo instructions based on position keywords
+        // Since we don't have an API for this, we create tailored scenarios
+        
+        $pos = strtolower($position);
+        $tasks = [];
+
+        if (str_contains($pos, 'developer') || str_contains($pos, 'programmer') || str_contains($pos, 'engineer')) {
+            $tasks[] = "Live Coding: Create a simple function that processes a list of user data and filters by specific criteria.";
+            $tasks[] = "Debug: Identify the bug in this provided code snippet (interviewer to provide snippet).";
+            $tasks[] = "Architecture: Draw a high-level diagram for a scalable notification system.";
+        } elseif (str_contains($pos, 'designer') || str_contains($pos, 'ui') || str_contains($pos, 'ux')) {
+            $tasks[] = "Portfolio Walkthrough: Explain the design decisions behind your best case study.";
+            $tasks[] = "Whiteboard Challenge: Redesign the checkout flow of a travel website in 15 minutes.";
+            $tasks[] = "Critique: Analyze our current landing page and suggest 3 quick improvements.";
+        } elseif (str_contains($pos, 'manager') || str_contains($pos, 'lead') || str_contains($pos, 'director')) {
+            $tasks[] = "Strategy: Present a 30-60-90 day plan for this role.";
+            $tasks[] = "Conflict Resolution: Roleplay a scenario where two team members are in conflict.";
+            $tasks[] = "Resource Planning: How would you handle a 20% budget cut while maintaining team velocity?";
+        } elseif (str_contains($pos, 'agent') || str_contains($pos, 'support') || str_contains($pos, 'customer')) {
+            $tasks[] = "Mock Call: Handle a furious customer whose flight was cancelled.";
+            $tasks[] = "Sales Pitch: Sell a premium travel package to a hesitant budget traveler.";
+            $tasks[] = "Tool Proficiency: Demonstrate how you would multitask between chat, email, and booking system.";
+        } elseif (str_contains($pos, 'hr') || str_contains($pos, 'recruit')) {
+            $tasks[] = "Mock Interview: unexpected candidate behavior handling.";
+            $tasks[] = "Policy: Explain a new strict office policy to a resistant employee.";
+        } elseif (str_contains($pos, 'logistic') || str_contains($pos, 'warehouse') || str_contains($pos, 'supply')) {
+            $tasks[] = "Inventory Simulation: Demonstrate how you would organize a recently arrived bulk shipment of mixed goods.";
+            $tasks[] = "Problem Solving: A major delivery is delayed by 4 hours. Walk us through your communication and mitigation plan.";
+            $tasks[] = "Safety Audit: Perform a 5-minute mock safety inspection of a designated warehouse area.";
+        } else {
+            // Generic Default
+            $tasks[] = "Role-Specific Presentation: Present a solution to a common problem in your field.";
+            $tasks[] = "Scenario Analysis: How would you prioritize multiple urgent tasks?";
+            $tasks[] = "Cultural Fit: Describe your ideal work environment and team dynamic.";
+        }
+
+        return $tasks;
     }
 
     public function deleteCandidate($id)
@@ -288,7 +556,7 @@ class Interviews extends Component
 
         $candidate = Candidate::findOrFail($id);
         $candidate->delete();
-        session()->flash('message', 'Candidate deleted successfully!');
+        $this->toast('Candidate deleted successfully!');
     }
 
     public function exportData()
@@ -309,6 +577,14 @@ class Interviews extends Component
             $query->whereIn('status', ['interview_ready', 'interviewed']);
         }
         
+        if ($this->departmentFilter) {
+            $query->where('department', $this->departmentFilter);
+        }
+
+        if ($this->positionFilter) {
+            $query->where('applied_position', $this->positionFilter);
+        }
+
         if ($this->search) {
             $query->where(function ($q) {
                 $q->where('candidate_name', 'like', "%{$this->search}%")
@@ -318,11 +594,17 @@ class Interviews extends Component
         }
         
         $candidates = $query->paginate(10);
-        $jobs = JobListing::latest()->get();
+        
+        // Get unique departments and positions for filters
+        $filters = [
+            'departments' => Candidate::whereNotNull('department')->distinct()->pluck('department'),
+            'positions' => Candidate::whereNotNull('applied_position')->distinct()->pluck('applied_position'),
+        ];
         
         return view('livewire.user.applicants.interviews', [
-            'jobs' => $jobs,
             'candidates' => $candidates,
+            'interviewStages' => self::INTERVIEW_STAGES,
+            'filters' => $filters,
         ])->layout('layouts.app');
     }
 }

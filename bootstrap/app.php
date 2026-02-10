@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'session.auth' => \App\Http\Middleware\CheckSessionAuth::class,
             'session.guest' => \App\Http\Middleware\CheckGuestSession::class,
+            'session.timeout' => \App\Http\Middleware\SessionTimeout::class,
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
     })

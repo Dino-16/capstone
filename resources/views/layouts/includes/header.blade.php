@@ -15,7 +15,7 @@
                 ->count() : 0;
             
             $pendingTicketsCount = 0;
-            if($isSuperAdmin) {
+            if($isSuperAdmin || session('user.position') === 'HR Manager') {
                 $pendingTicketsCount = \App\Models\SupportTicket::where('status', 'Pending')->count();
             }
 

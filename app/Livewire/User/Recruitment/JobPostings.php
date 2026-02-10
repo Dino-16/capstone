@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Http;
 class JobPostings extends Component
 {
     use WithPagination;
+    use \App\Livewire\Traits\HandlesToasts;
 
     public $showModal = false;
     public $jobDetail;
@@ -22,6 +23,8 @@ class JobPostings extends Component
     public $jobListSort = 'position_asc';
 
     public $filterMonth;
+    public $departmentFilter = '';
+    public $positionFilter = '';
 
     public $type = 'On-Site';
     public $arrangement = 'Full-Time';
@@ -69,7 +72,7 @@ class JobPostings extends Component
             'expiration_date' => $this->expiration_date, 
         ]);
 
-        session()->push('status', 'Job details updated successfully.');
+        $this->toast('Job details updated successfully.');
         $this->closeModal();
     }
 
@@ -86,15 +89,10 @@ class JobPostings extends Component
             'status'          => 'Active', 
         ]);
 
-        session()->push('status', 'Job successfully published.');
+        $this->toast('Job successfully published.');
         $this->closeModal();
     }
 
-        // Clear Message Status
-    public function clearStatus()
-    {
-        session()->forget('status');
-    }
     
     public function closeModal()
     {
@@ -118,6 +116,16 @@ class JobPostings extends Component
         $this->resetPage();
     }
 
+    public function updatedDepartmentFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedPositionFilter()
+    {
+        $this->resetPage();
+    }
+
     public function export()
     {
         $export = new JobPostsExport();
@@ -125,14 +133,40 @@ class JobPostings extends Component
     }
 
 
-    public function deactivateJob($jobId)
+    public $showDeleteModal = false;
+    public $jobIdToDelete = null;
+
+    public function confirmDelete($jobId)
     {
-        $job = JobListing::findOrFail($jobId);
-        $positionName = $job->position;
-        $job->delete();
-        
-        session()->push('status', 'Job "' . $positionName . '" has been removed.');
+        $this->jobIdToDelete = $jobId;
+        $this->showDeleteModal = true;
     }
+
+    public function deactivateJob()
+    {
+        if (!in_array(session('user.position'), ['Super Admin', 'HR Manager'])) {
+            $this->toast('Unauthorized action.', 'error');
+            return;
+        }
+
+        if ($this->jobIdToDelete) {
+            $job = JobListing::findOrFail($this->jobIdToDelete);
+            $positionName = $job->position;
+            $job->delete();
+    
+            // Update requisition opening if exists
+            $requisition = Requisition::where('position', $positionName)->first();
+            if ($requisition) {
+                $requisition->increment('opening');
+            }
+    
+            $this->toast('Job post removed successfully!');
+        }
+
+        $this->showDeleteModal = false;
+        $this->jobIdToDelete = null;
+    }
+
 
     public function editJob($jobId)
     {
@@ -157,7 +191,7 @@ class JobPostings extends Component
             'expiration_date' => $this->expiration_date,
         ]);
 
-        session()->push('status', 'Job "' . $this->jobDetail->position . '" updated successfully.');
+        $this->toast('Job "' . $this->jobDetail->position . '" updated successfully.');
         $this->closeModal();
     }
 
@@ -172,7 +206,7 @@ class JobPostings extends Component
                 'status' => 'Active',
                 'expiration_date' => now()->addDays(30), // Default 30 days
             ]);
-            session()->push('status', 'Job "' . $positionData['position_name'] . '" is already listed and has been activated.');
+            $this->toast('Job "' . $positionData['position_name'] . '" is already listed and has been activated.');
         } else {
             // Create new job listing from API data
             JobListing::create([
@@ -186,7 +220,7 @@ class JobPostings extends Component
                 'status' => 'Active',
                 'expiration_date' => now()->addDays(30), // Default 30 days expiration
             ]);
-            session()->push('status', 'Job "' . $positionData['position_name'] . '" has been activated successfully!');
+            $this->toast('Job "' . $positionData['position_name'] . '" has been activated successfully!');
         }
     }
 
@@ -232,7 +266,19 @@ class JobPostings extends Component
             $query->whereMonth('expiration_date', $this->filterMonth);
         }
 
-        $jobs = $query->where('status', 'Active')->latest()->paginate(10);
+        if ($this->departmentFilter) {
+            $query->where('department', $this->departmentFilter);
+        }
+
+        if ($this->positionFilter) {
+            $query->where('position', $this->positionFilter);
+        }
+        
+        // Get distinct departments and positions for filters
+        $departments = JobListing::where('status', 'Active')->select('department')->distinct()->orderBy('department')->pluck('department');
+        $positions = JobListing::where('status', 'Active')->select('position')->distinct()->orderBy('position')->pluck('position');
+
+        $jobs = $query->where('status', 'Active')->orderBy('expiration_date', 'desc')->paginate(10);
 
         // Get all jobs for the sidebar card with its own sort
         $sidebarJobsQuery = JobListing::query();
@@ -257,6 +303,8 @@ class JobPostings extends Component
             'sidebarJobs'  => $sidebarJobs,
             'apiPositions' => $this->apiPositions,
             'debugApiData' => $this->debugApiData,
+            'departments'  => $departments,
+            'positions'    => $positions,
         ])->layout('layouts.app');
     }
 }

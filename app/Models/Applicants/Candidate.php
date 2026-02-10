@@ -38,6 +38,7 @@ class Candidate extends Model
         'interview_total_score',
         'interview_result',
         'interview_notes',
+        'interview_stage',
         'contract_status',
         'contract_sent_at',
         'contract_approved_at',
@@ -141,5 +142,57 @@ class Candidate extends Model
     public function isInOfferingStage(): bool
     {
         return $this->interview_result === 'passed' && in_array($this->contract_status, ['pending', 'sent', 'approved']);
+    }
+
+    /**
+     * Get interview stage label
+     */
+    public static function getInterviewStageLabel(string $stage): string
+    {
+        $labels = [
+            'initial' => 'Initial Interview',
+            'practical' => 'Practical Exam',
+            'demo' => 'Demo/Presentation',
+        ];
+        return $labels[$stage] ?? ucfirst($stage);
+    }
+
+    /**
+     * Get interview stage description
+     */
+    public static function getInterviewStageDescription(string $stage): string
+    {
+        $descriptions = [
+            'initial' => 'Tell me about yourself.',
+            'practical' => 'Show me you can do the job.',
+            'demo' => 'Convince me (and maybe others) with a live demonstration.',
+        ];
+        return $descriptions[$stage] ?? '';
+    }
+
+    /**
+     * Get interview stage badge color
+     */
+    public static function getInterviewStageBadgeColor(string $stage): string
+    {
+        $colors = [
+            'initial' => 'info',
+            'practical' => 'warning',
+            'demo' => 'success',
+        ];
+        return $colors[$stage] ?? 'secondary';
+    }
+
+    /**
+     * Get interview stage icon
+     */
+    public static function getInterviewStageIcon(string $stage): string
+    {
+        $icons = [
+            'initial' => 'bi-chat-dots',
+            'practical' => 'bi-pencil-square',
+            'demo' => 'bi-display',
+        ];
+        return $icons[$stage] ?? 'bi-question-circle';
     }
 }

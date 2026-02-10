@@ -50,6 +50,15 @@
 
             <x-input-error @class('text-center') :field="('email')" />
             
+            {{-- Session Expired Notification --}}
+            @if(session()->has('session_expired'))
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <i class="bi bi-clock-history me-2"></i>
+                    <strong>Session Expired!</strong> {{ session('session_expired') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
+
             @if(session()->has('test'))
                 <div class="alert alert-info">
                     {{ session('test') }}

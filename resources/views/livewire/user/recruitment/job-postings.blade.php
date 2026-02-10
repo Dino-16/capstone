@@ -30,8 +30,8 @@
                             data-bs-toggle="dropdown"
                             @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
                         >
-                            <i @class('bi bi-funnel-fill me-2')></i>
-                            Filter: {{ $filterMonth ? \Carbon\Carbon::create()->month($filterMonth)->format('F') : 'All Months' }}
+                            <i @class('bi bi-calendar-event me-2')></i>
+                            Month: {{ $filterMonth ? \Carbon\Carbon::create()->month($filterMonth)->format('F') : 'All Months' }}
                         </button>
 
                         <ul @class('dropdown-menu') aria-labelledby="monthFilterDropdown" style="max-height: 300px; overflow-y: auto;">
@@ -44,6 +44,60 @@
                                 <li>
                                     <a @class('dropdown-item') wire:click="$set('filterMonth', {{ $m }})">
                                         {{ \Carbon\Carbon::create()->month($m)->format('F') }}
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+
+                    {{-- DEPARTMENT FILTER DROPDOWN --}}
+                    <div @class('dropdown')>
+                        <button
+                            type="button"
+                            id="deptFilterDropdown"
+                            data-bs-toggle="dropdown"
+                            @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                        >
+                            <i @class('bi bi-building me-2')></i>
+                            Department: {{ $departmentFilter ?: 'All' }}
+                        </button>
+
+                        <ul @class('dropdown-menu') aria-labelledby="deptFilterDropdown" style="max-height: 300px; overflow-y: auto;">
+                            <li>
+                                <a @class('dropdown-item') wire:click="$set('departmentFilter', '')">All Departments</a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            @foreach($departments as $dept)
+                                <li>
+                                    <a @class('dropdown-item') wire:click="$set('departmentFilter', '{{ $dept }}')">
+                                        {{ $dept }}
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+
+                    {{-- POSITION FILTER DROPDOWN --}}
+                    <div @class('dropdown')>
+                        <button
+                            type="button"
+                            id="posFilterDropdown"
+                            data-bs-toggle="dropdown"
+                            @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                        >
+                            <i @class('bi bi-person-workspace me-2')></i>
+                            Position: {{ $positionFilter ?: 'All' }}
+                        </button>
+
+                        <ul @class('dropdown-menu') aria-labelledby="posFilterDropdown" style="max-height: 300px; overflow-y: auto;">
+                            <li>
+                                <a @class('dropdown-item') wire:click="$set('positionFilter', '')">All Positions</a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            @foreach($positions as $pos)
+                                <li>
+                                    <a @class('dropdown-item') wire:click="$set('positionFilter', '{{ $pos }}')">
+                                        {{ $pos }}
                                     </a>
                                 </li>
                             @endforeach
@@ -98,11 +152,10 @@
                                             <i class="bi bi-pencil"></i>
                                         </button>
                                         @endif
-                                        @if(session('user.position') === 'Super Admin')
-                                        <button wire:click="deactivateJob({{ $job->id }})" 
+                                        @if(in_array(session('user.position'), ['Super Admin', 'HR Manager']))
+                                        <button wire:click="confirmDelete({{ $job->id }})" 
                                             class="btn btn-sm btn-outline-danger"
-                                            title="Remove"
-                                            onclick="return confirm('Are you sure you want to remove this job?')">
+                                            title="Remove">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                         @endif
@@ -131,113 +184,107 @@
             </div>
         </div>
         <div @class('col-md-4')>
-            <div @class('d-grid gap-3')>
-                <!-- Accepted Requisitions -->
-                <div @class('bg-white rounded border')>
-                    <div @class('p-3 border-bottom card-header')>
+            <!-- Lists of Jobs from API -->
+            <div @class('bg-white rounded border h-100 d-flex flex-column')>
+                <div @class('p-3 border-bottom')>
+                    <div @class('d-flex justify-content-between align-items-start')>
                         <div>
-                            <h5 @class('mb-1 fw-bold')>Accepted Requisitions</h5>
-                            <small @class('text-muted')>{{ $requisitions->count() }} requisitions ready for posting</small>
+                            <h5 @class('mb-1 fw-bold')>Lists of Jobs</h5>
+                            <small @class('text-muted')>{{ count($apiPositions ?? []) }} jobs available</small>
                         </div>
-                    </div>
-                    <div @class('p-3') style='max-height: 300px; overflow-y: auto;'>
-                        @forelse($requisitions as $req)
-                            <div @class('d-flex justify-content-between align-items-center p-2 rounded hover-bg-light cursor-pointer') wire:click="createJobFromRequisition({{ $req->id }})">
-                                <p @class('mb-0 fw-semibold text-truncate')>{{ $req->position }}</p>
-                                <p @class('mb-0 text-muted small')>{{ $req->department }}</p>
+                        <div @class('d-flex align-items-center gap-2')>
+                            <div @class('input-group input-group-sm') style='width: 120px;'>
+                                <span @class('input-group-text')>
+                                    <i @class('bi bi-sort-alpha-down')></i>
+                                </span>
+                                <select wire:model.live='jobListSort' @class('form-select form-select-sm')>
+                                    <option value='position_asc'>A-Z</option>
+                                    <option value='position_desc'>Z-A</option>
+                                </select>
                             </div>
-                        @empty
-                            <div @class('text-center py-4')>
-                                <div @class('bg-light bg-opacity-50 rounded-circle p-3 mx-auto mb-2') style='width: 48px; height: 48px;'>
-                                    <i @class('bi bi-clipboard-x text-muted')></i>
-                                </div>
-                                <p @class('text-muted mb-0 small')>No accepted requisitions</p>
-                            </div>
-                        @endforelse
+                            <button wire:click='clearJobListFilter' @class('btn btn-sm btn-outline-secondary')>
+                                <i @class('bi bi-arrow-clockwise')></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
-
-                <!-- Lists of Jobs from API -->
-                <div @class('bg-white rounded border')>
-                    <div @class('p-3 border-bottom')>
-                        <div @class('d-flex justify-content-between align-items-start')>
-                            <div>
-                                <h5 @class('mb-1 fw-bold')>Lists of Jobs</h5>
-                                <small @class('text-muted')>{{ count($apiPositions ?? []) }} jobs available</small>
-                            </div>
-                            <div @class('d-flex align-items-center gap-2')>
-                                <div @class('input-group input-group-sm') style='width: 120px;'>
-                                    <span @class('input-group-text')>
-                                        <i @class('bi bi-sort-alpha-down')></i>
-                                    </span>
-                                    <select wire:model.live='jobListSort' @class('form-select form-select-sm')>
-                                        <option value='position_asc'>A-Z</option>
-                                        <option value='position_desc'>Z-A</option>
-                                    </select>
-                                </div>
-                                <button wire:click='clearJobListFilter' @class('btn btn-sm btn-outline-secondary')>
-                                    <i @class('bi bi-arrow-clockwise')></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div @class('p-3') style='max-height: 400px; overflow-y: auto;'>
-                        @php
-                            $positions = collect($apiPositions ?? []);
-                            if ($jobListSort === 'position_desc') {
-                                $positions = $positions->sortByDesc('position_name');
-                            } else {
-                                $positions = $positions->sortBy('position_name');
-                            }
-                            
-                            // Get list of already activated positions
-                            $activatedPositions = \App\Models\Recruitment\JobListing::where('status', 'Active')
-                                ->pluck('position')
-                                ->toArray();
-                        @endphp
+                <div @class('p-3 flex-grow-1 overflow-auto')>
+                    @php
+                        $positions = collect($apiPositions ?? []);
+                        if ($jobListSort === 'position_desc') {
+                            $positions = $positions->sortByDesc('position_name');
+                        } else {
+                            $positions = $positions->sortBy('position_name');
+                        }
                         
-                        @forelse($positions as $position)
-                            @php
-                                $isActivated = in_array($position['position_name'], $activatedPositions);
-                            @endphp
-                            <div @class('d-flex justify-content-between align-items-center p-2 rounded border-bottom')>
-                                <div @class('flex-grow-1')>
-                                    <p @class('mb-1 fw-semibold text-truncate')>{{ $position['position_name'] }}</p>
-                                    <p @class('mb-0 text-muted small')>{{ $position['department'] ?? 'N/A' }}</p>
-                                </div>
-                                @if($isActivated)
-                                    <button 
-                                        @class('btn btn-sm btn-secondary ms-2')
-                                        disabled
-                                    >
-                                        Activated
-                                    </button>
-                                @else
-                                    @php
-                                        $positionJson = json_encode($position);
-                                    @endphp
-                                    <button 
-                                        @class('btn btn-sm btn-outline-primary ms-2')
-                                        wire:click="activateApiPosition({{ $positionJson }})"
-                                        wire:loading.attr="disabled"
-                                        wire:target="activateApiPosition({{ $positionJson }})"
-                                    >
-                                        <span wire:loading.remove wire:target="activateApiPosition({{ $positionJson }})">Activate</span>
-                                        <span wire:loading wire:target="activateApiPosition({{ $positionJson }})" class="spinner-border spinner-border-sm"></span>
-                                    </button>
-                                @endif
+                        // Get list of already activated positions
+                        $activatedPositions = \App\Models\Recruitment\JobListing::where('status', 'Active')
+                            ->pluck('position')
+                            ->toArray();
+                    @endphp
+                    
+                    @forelse($positions as $position)
+                        @php
+                            $isActivated = in_array($position['position_name'], $activatedPositions);
+                        @endphp
+                        <div @class('d-flex justify-content-between align-items-center p-2 rounded border-bottom')>
+                            <div @class('flex-grow-1')>
+                                <p @class('mb-1 fw-semibold text-truncate')>{{ $position['position_name'] }}</p>
+                                <p @class('mb-0 text-muted small')>{{ $position['department'] ?? 'N/A' }}</p>
                             </div>
-                        @empty
-                            <div @class('text-center py-4')>
-                                <i @class('bi bi-briefcase fs-1 text-muted d-block mb-2')></i>
-                                <p @class('text-muted mb-0 small')>No positions from API</p>
-                            </div>
-                        @endforelse
-                    </div>
+                            @if($isActivated)
+                                <button 
+                                    @class('btn btn-sm btn-secondary ms-2')
+                                    disabled
+                                >
+                                    Activated
+                                </button>
+                            @else
+                                @php
+                                    $positionJson = json_encode($position);
+                                @endphp
+                                <button 
+                                    @class('btn btn-sm btn-outline-primary ms-2')
+                                    wire:click="activateApiPosition({{ $positionJson }})"
+                                    wire:loading.attr="disabled"
+                                    wire:target="activateApiPosition({{ $positionJson }})"
+                                >
+                                    <span wire:loading.remove wire:target="activateApiPosition({{ $positionJson }})">Activate</span>
+                                    <span wire:loading wire:target="activateApiPosition({{ $positionJson }})" class="spinner-border spinner-border-sm"></span>
+                                </button>
+                            @endif
+                        </div>
+                    @empty
+                        <div @class('text-center py-4')>
+                            <i @class('bi bi-briefcase fs-1 text-muted d-block mb-2')></i>
+                            <p @class('text-muted mb-0 small')>No positions from API</p>
+                        </div>
+                    @endforelse
                 </div>
             </div>
         </div>
     </div>
+
+    {{-- Delete Confirmation Modal --}}
+    @if($showDeleteModal)
+    <div class="modal fade show" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" wire:click="$set('showDeleteModal', false)"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to remove this job posting?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" wire:click="$set('showDeleteModal', false)">Cancel</button>
+                    <button type="button" class="btn btn-danger" wire:click="deactivateJob">Remove</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 
     {{-- Modal --}}
     @include('livewire.user.recruitment.includes.job-details')
