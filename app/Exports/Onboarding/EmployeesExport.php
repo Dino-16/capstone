@@ -34,6 +34,6 @@ class EmployeesExport
             return $row;
         });
         
-        return ExportService::exportToXls($data, $headers, 'employees_' . date('Y-m-d') . '.xls');
+        return ExportService::exportToCsv($data, $headers, 'employees_' . date('Y-m-d') . '.csv');
     }
 }

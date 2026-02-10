@@ -79,7 +79,7 @@
 
     {{-- Logs Table --}}
     <div class="card shadow-sm border-0">
-        <div class="card-header bg-white py-3">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
             <h6 class="m-0 font-weight-bold text-primary">Verification Logs</h6>
         </div>
         <div class="card-body p-0">
@@ -112,8 +112,7 @@
                                 </td>
                                 <td class="small">{{ $log->created_at->format('M d, Y h:i A') }}</td>
                                 <td class="text-end pe-4">
-                                    <button wire:click="deleteLog({{ $log->id }})" 
-                                            wire:confirm="Are you sure you want to delete this log?"
+                                    <button wire:click="confirmDeleteLog({{ $log->id }})" 
                                             class="btn btn-sm btn-outline-danger">
                                         <i class="bi bi-trash"></i>
                                     </button>
@@ -136,3 +135,26 @@
         </div>
     </div>
 </div>
+
+{{-- Delete Single Log Confirmation Modal --}}
+@if($showDeleteModal)
+<div class="modal fade show" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.5); z-index: 1055;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" wire:click="$set('showDeleteModal', false)"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this log entry?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" wire:click="$set('showDeleteModal', false)">Cancel</button>
+                <button type="button" class="btn btn-danger" wire:click="deleteLog">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
+

@@ -45,7 +45,7 @@
                     @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
                 >
                     <i @class('bi bi-building me-2')></i>
-                    Dept: {{ $departmentFilter ?: 'All' }}
+                    Department: {{ $departmentFilter ?: 'All' }}
                 </button>
 
                 <ul @class('dropdown-menu') style="max-height: 300px; overflow-y: auto;">
@@ -68,7 +68,7 @@
                     @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
                 >
                     <i @class('bi bi-person-badge me-2')></i>
-                    Pos: {{ $positionFilter ?: 'All' }}
+                    Position: {{ $positionFilter ?: 'All' }}
                 </button>
 
                 <ul @class('dropdown-menu') style="max-height: 300px; overflow-y: auto;">

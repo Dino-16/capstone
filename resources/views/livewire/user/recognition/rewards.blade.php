@@ -8,7 +8,8 @@
     <x-toast />
 
     {{-- STATUS CARDS --}}
-    @include('livewire.user.recognition.includes.rewards-cards')
+    {{-- STATUS CARDS --}}
+    {{-- @include('livewire.user.recognition.includes.rewards-cards') --}}
 
     {{-- HEADER ACTIONS --}}
     <div @class('d-flex justify-content-between align-items-center')>
@@ -73,29 +74,29 @@
                 </button>
 
                 @if(!$showDrafts)
-                    <button
+                    {{-- <button
                         @class('btn btn-danger')
                         wire:click="openDraft"
                     >
                         Open Drafts
-                    </button>
+                    </button> --}}
                 @else
-                    <button
+                    {{-- <button
                         @class('btn btn-danger')
                         wire:click="openDraft"
                         disabled
                     >
                         Open Drafts
-                    </button>
+                    </button> --}}
                 @endif
             </div>
         </div>
     </div>
 
     @if($showDrafts)
-        <div @class('mb-3')>
+        {{-- <div @class('mb-3')>
             <button @class('btn btn-default') wire:click="showAll"><i class="bi bi-arrow-left-circle-fill me-1"></i>Back to All</button>
-        </div>
+        </div> --}}
     @endif
 
     {{-- MAIN TABLE --}}
@@ -143,7 +144,7 @@
                                         </button>
                                         @endif
                                         <button
-                                            @class('btn btn-sm btn-outline-danger')
+                                            @class('btn btn-sm btn-outline-danger d-none')
                                             wire:click="draft({{ $reward->id }})"
                                             title="Move to Draft"
                                         >

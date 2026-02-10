@@ -48,6 +48,6 @@ class RequisitionsExport
 
         $data = ExportService::transformQuery($query, $mappings);
         
-        return ExportService::exportToXls($data, $headers, 'requisitions_' . date('Y-m-d') . '.xls');
+        return ExportService::exportToCsv($data, $headers, 'requisitions_' . date('Y-m-d') . '.csv');
     }
 }

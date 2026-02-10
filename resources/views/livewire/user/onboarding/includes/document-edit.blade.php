@@ -110,16 +110,18 @@
                                 </div>
                             </div>
                         </div>
-                        <small @class('text-muted')>Check documents to include them. </small>
+                        <small @class('text-muted')>
+                            Check the documents that have been submitted by the employee.
+                        </small>
                     </div>
 
                     <div @class('mb-3')>
-                        <div @class(['alert', 'alert-success' => count($selectedDocuments) === 6, 'alert-warning' => count($selectedDocuments) !== 6])>
-                            <strong>Status: </strong>
-                            @if(count($selectedDocuments) === 6)
-                                <span @class('fw-bold')>Complete</span> - All documents selected
+                        <div @class(['alert', 'alert-info'])>
+                            <strong>Checklist Progress: </strong>
+                            @if(count($selectedDocuments) === count($documentTypes))
+                                <span @class('fw-bold')>All Documents Submitted</span> - {{ count($selectedDocuments) }}/{{ count($documentTypes) }} complete
                             @else
-                                <span @class('fw-bold')>Incomplete</span> - {{ count($selectedDocuments) }}/6 documents selected
+                                <span @class('fw-bold')>In Progress</span> - {{ count($selectedDocuments) }}/{{ count($documentTypes) }} documents submitted
                             @endif
                         </div>
                     </div>

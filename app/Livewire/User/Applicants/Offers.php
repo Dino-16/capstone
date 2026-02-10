@@ -22,6 +22,38 @@ class Offers extends Component
     public $departmentFilter = '';
     public $positionFilter = '';
 
+    public $employees = [];
+    public $employeeSearch = '';
+    public $employeeDepartmentFilter = '';
+    public $employeePositionFilter = '';
+    public $requestEmployeeData = null;
+    public $contractEmailEmployeeData = null;
+
+    public function getFilteredEmployeesProperty()
+    {
+        $filtered = collect($this->employees);
+
+        if ($this->employeeSearch) {
+            $search = strtolower($this->employeeSearch);
+            $filtered = $filtered->filter(function ($item) use ($search) {
+                return str_contains(strtolower($item['name']), $search) ||
+                       str_contains(strtolower($item['email']), $search) ||
+                       str_contains(strtolower($item['position']), $search) ||
+                       str_contains(strtolower($item['department']), $search);
+            });
+        }
+
+        if ($this->employeeDepartmentFilter) {
+            $filtered = $filtered->where('department', $this->employeeDepartmentFilter);
+        }
+
+        if ($this->employeePositionFilter) {
+            $filtered = $filtered->where('position', $this->employeePositionFilter);
+        }
+
+        return $filtered->values()->toArray();
+    }
+
     // View modal properties
     public $showViewModal = false;
     public $selectedCandidate = null;
@@ -57,6 +89,21 @@ class Offers extends Component
     public $requestContractType = '';
     public $requestPurpose = '';
 
+    public function updatedEmployeeSearch()
+    {
+        $this->resetPage('employeesPage');
+    }
+
+    public function updatedEmployeeDepartmentFilter()
+    {
+        $this->resetPage('employeesPage');
+    }
+
+    public function updatedEmployeePositionFilter()
+    {
+        $this->resetPage('employeesPage');
+    }
+
     public $departments = [
         'HR Department',
         'IT Department',
@@ -78,11 +125,43 @@ class Offers extends Component
         'Other'
     ];
 
+    public function loadEmployees()
+    {
+        try {
+            // Fetch employees from API
+            $response = Http::withoutVerifying()->get('http://hr4.jetlougetravels-ph.com/api/employees', [
+                'per_page' => 1000
+            ]);
+
+            if ($response->successful()) {
+                $json = $response->json();
+                $employeesData = $json['data'] ?? $json;
+
+                $this->employees = collect($employeesData)->map(function ($employee) {
+                    $dateHired = isset($employee['date_hired']) ? \Carbon\Carbon::parse($employee['date_hired']) : (isset($employee['created_at']) ? \Carbon\Carbon::parse($employee['created_at']) : now());
+                    
+                    return [
+                        'id' => $employee['id'],
+                        'name' => $employee['full_name'] ?? ($employee['first_name'] . ' ' . $employee['last_name']),
+                        'email' => $employee['email'] ?? 'N/A',
+                        'position' => $employee['position'] ?? 'N/A',
+                        'department' => $employee['department']['name'] ?? ($employee['department'] ?? 'N/A'),
+                        'date_hired' => $dateHired,
+                        'end_contract' => $dateHired->copy()->addMonths(6),
+                    ];
+                })->toArray();
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error loading employees in Offers: ' . $e->getMessage());
+        }
+    }
+
     public function mount()
     {
         $this->initializePasswordVerification();
         // Default email content template
         $this->emailContent = $this->getDefaultEmailTemplate();
+        $this->loadEmployees();
     }
 
     public function updatedSearch()
@@ -182,6 +261,21 @@ class Offers extends Component
         $this->requestorName = '';
         $this->requestContractType = '';
         $this->requestPurpose = '';
+        $this->requestEmployeeData = null;
+    }
+
+    public function openEmployeeRequestContractModal($employeeId)
+    {
+        $employee = collect($this->employees)->firstWhere('id', $employeeId);
+        if (!$employee) return;
+
+        $this->requestEmployeeData = $employee;
+        $this->requestDepartment = session('user.department') ?? 'HR Department';
+        $this->requestorName = session('user.name') ?? '';
+        $this->requestorEmail = session('user.email') ?? '';
+        $this->requestContractType = 'Employment Contract'; // Or Renewal
+        $this->requestPurpose = "Requesting contract renewal/regularization for employee {$employee['name']} ({$employee['position']}).";
+        $this->showRequestContractModal = true;
     }
 
     public function submitContractRequest()
@@ -194,8 +288,23 @@ class Offers extends Component
             'requestPurpose' => 'required|string',
         ]);
 
-        $candidate = Candidate::find($this->requestCandidateId);
-        if (!$candidate) return;
+        $name = '';
+        $email = '';
+        $position = '';
+
+        if ($this->requestCandidateId) {
+            $candidate = Candidate::find($this->requestCandidateId);
+            if (!$candidate) return;
+            $name = $candidate->candidate_name;
+            $email = $candidate->candidate_email;
+            $position = $candidate->applied_position;
+        } elseif ($this->requestEmployeeData) {
+            $name = $this->requestEmployeeData['name'];
+            $email = $this->requestEmployeeData['email'];
+            $position = $this->requestEmployeeData['position'];
+        } else {
+            return;
+        }
 
         try {
             // Trying HTTP instead of HTTPS and switching back to asForm() based on curl findings
@@ -206,9 +315,9 @@ class Offers extends Component
                 'requestor_email' => $this->requestorEmail,
                 'contract_type_requested' => $this->requestContractType,
                 'purpose' => $this->requestPurpose,
-                'candidate_name' => $candidate->candidate_name,
-                'candidate_email' => $candidate->candidate_email,
-                'position' => $candidate->applied_position,
+                'candidate_name' => $name,
+                'candidate_email' => $email,
+                'position' => $position,
             ]);
 
             if ($response->successful()) {
@@ -356,6 +465,18 @@ JetLounge Travels HR Team";
         $this->contractEmailSubject = 'Employment Contract - JetLounge Travels';
         $this->contractEmailContent = '';
         $this->contractFile = null;
+        $this->contractEmailEmployeeData = null;
+    }
+
+    public function openEmployeeContractEmailModal($employeeId)
+    {
+        $employee = collect($this->employees)->firstWhere('id', $employeeId);
+        if (!$employee) return;
+
+        $this->contractEmailEmployeeData = $employee;
+        $this->contractEmailSubject = "Employment Contract Renewal - {$employee['name']} ({$employee['position']})";
+        $this->contractEmailContent = "Dear {$employee['name']},\n\nPlease find the attached contract for your review and signature.\n\nBest regards,\nHR Department";
+        $this->showContractEmailModal = true;
     }
 
     public function sendContractEmail()
@@ -366,26 +487,30 @@ JetLounge Travels HR Team";
             'contractFile' => ['required', 'file', 'mimes:pdf,doc,docx', 'max:10240'], // 10MB max
         ]);
 
-        $candidate = Candidate::find($this->contractEmailCandidateId);
-        if (!$candidate) return;
+        $email = '';
 
-        // In production:
-        // Mail::send([], [], function($message) use ($candidate) {
-        //     $message->to($candidate->candidate_email)
-        //             ->subject($this->contractEmailSubject)
-        //             ->setBody($this->contractEmailContent)
-        //             ->attach($this->contractFile->getRealPath(), [
-        //                 'as' => $this->contractFile->getClientOriginalName(),
-        //                 'mime' => $this->contractFile->getMimeType(),
-        //             ]);
-        // });
+        if ($this->contractEmailCandidateId) {
+            $candidate = Candidate::find($this->contractEmailCandidateId);
+            if (!$candidate) return;
 
-        // Mark contract as sent
-        $candidate->contract_status = 'sent';
-        $candidate->contract_sent_at = now();
-        $candidate->save();
+            $email = $candidate->candidate_email;
 
-        $this->toast("Contract email with attachment sent to {$candidate->candidate_email} successfully!");
+            // In production: send email...
+
+            // Mark contract as sent
+            $candidate->contract_status = 'sent';
+            $candidate->contract_sent_at = now();
+            $candidate->save();
+        } elseif ($this->contractEmailEmployeeData) {
+            $email = $this->contractEmailEmployeeData['email'];
+            
+            // In production: send email...
+            // Note: Currently no API endpoint to update employee contract status
+        } else {
+            return;
+        }
+
+        $this->toast("Contract email with attachment sent to {$email} successfully!");
         $this->closeContractEmailModal();
     }
 
@@ -602,6 +727,11 @@ JetLounge Travels HR Team";
         return $export->export();
     }
 
+    public function exportEmployees()
+    {
+        return (new \App\Exports\Applicants\EmployeeContractExport($this->filteredEmployees))->download('employee_contracts.xlsx');
+    }
+
     public function render()
     {
         // Get candidates who passed interview (in offering stage)
@@ -646,10 +776,26 @@ JetLounge Travels HR Team";
             'positions' => Candidate::whereNotNull('applied_position')->distinct()->pluck('applied_position'),
         ];
 
+        // Paginate filtered employees
+        $filteredCollection = collect($this->filteredEmployees);
+        $perPage = 10;
+        $page = $this->getPage('employeesPage');
+        
+        $paginatedEmployees = new \Illuminate\Pagination\LengthAwarePaginator(
+            $filteredCollection->forPage($page, $perPage),
+            $filteredCollection->count(),
+            $perPage,
+            $page,
+            ['path' => \Illuminate\Support\Facades\Request::url(), 'pageName' => 'employeesPage']
+        );
+
         return view('livewire.user.applicants.offers', [
             'candidates' => $candidates,
             'stats' => $stats,
             'filters' => $filters,
+            'paginatedEmployees' => $paginatedEmployees, // Pass paginator with unique name
+            'employeeDepartments' => collect($this->employees)->pluck('department')->unique()->values(),
+            'employeePositions' => collect($this->employees)->pluck('position')->unique()->values(),
         ])->layout('layouts.app');
     }
 }

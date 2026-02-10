@@ -46,6 +46,6 @@ class PerformanceTrackerExport
             ];
         });
 
-        return ExportService::exportToXls($data, $headers, 'performance_tracker_' . date('Y-m-d') . '.xls');
+        return ExportService::exportToCsv($data, $headers, 'performance_tracker_' . date('Y-m-d') . '.csv');
     }
 }

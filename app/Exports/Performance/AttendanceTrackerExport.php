@@ -51,6 +51,6 @@ class AttendanceTrackerExport
             ];
         });
 
-        return ExportService::exportToXls($data, $headers, 'attendance_tracker_' . date('Y-m-d') . '.xls');
+        return ExportService::exportToCsv($data, $headers, 'attendance_tracker_' . date('Y-m-d') . '.csv');
     }
 }

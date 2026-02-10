@@ -47,6 +47,6 @@ class FacilityRequestExport
             ];
         });
 
-        return ExportService::exportToXls($data, $headers, 'facility_requests_' . date('Y-m-d') . '.xls');
+        return ExportService::exportToCsv($data, $headers, 'facility_requests_' . date('Y-m-d') . '.csv');
     }
 }

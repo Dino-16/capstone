@@ -11,71 +11,86 @@
     {{-- Toast --}}
     <x-toast />
 
+    @php
+        $isSuperAdminUser = strtolower(trim(session('user.position', ''))) === 'super admin';
+        $colClass = $isSuperAdminUser ? 'col-lg-3' : 'col-lg-4';
+    @endphp
+
     <div class="row g-4 mb-4">
         {{-- Global Setting --}}
         <!-- Global Setting Card -->
-        <div class="col-md-3">
-            <div class="card shadow-sm h-100">
-                <div class="card-body d-flex flex-column justify-content-between">
-                    <div>
-                        <h5 class="card-title fw-bold mb-2">Global MFA Switch</h5>
-                        <p class="text-muted small">Enable or disable MFA for the entire system.</p>
+        <div class="col-md-6 {{ $colClass }}">
+            <div class="card shadow-sm h-100 border-0 border-top border-4 border-secondary">
+                <div class="card-body d-flex flex-column">
+                    <div class="mb-3">
+                        <h5 class="card-title fw-bold mb-2 text-secondary">Global MFA</h5>
+                        <p class="text-muted small mb-0">Enable/disable system-wide MFA.</p>
                     </div>
-                    <div class="form-check form-switch mt-3">
-                        <input class="form-check-input" type="checkbox" role="switch" wire:click="toggleGlobal" {{ $isGlobalEnabled ? 'checked' : '' }} style="width: 3em; height: 1.5em;">
-                        <label class="form-check-label ms-2 fw-bold">{{ $isGlobalEnabled ? 'Enabled' : 'Disabled' }}</label>
+                    <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+                        <span class="fw-bold {{ $isGlobalEnabled ? 'text-success' : 'text-secondary' }}">{{ $isGlobalEnabled ? 'Enabled' : 'Disabled' }}</span>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" role="switch" wire:click="toggleGlobal" {{ $isGlobalEnabled ? 'checked' : '' }} style="cursor: pointer; transform: scale(1.2);">
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- HR Staff Setting Card -->
-        <div class="col-md-3">
-            <div class="card shadow-sm h-100 border-start border-warning border-4">
-                <div class="card-body d-flex flex-column justify-content-between">
-                    <div>
+        <div class="col-md-6 {{ $colClass }}">
+            <div class="card shadow-sm h-100 border-0 border-top border-4 border-warning">
+                <div class="card-body d-flex flex-column">
+                    <div class="mb-3">
                         <h5 class="card-title fw-bold mb-2 text-warning">HR Staff Access</h5>
-                        <p class="text-muted small">Require MFA for HR Staff logins.</p>
+                        <p class="text-muted small mb-0">Require MFA for HR Staff.</p>
                     </div>
-                    <div class="form-check form-switch mt-3">
-                        <input class="form-check-input" type="checkbox" role="switch" wire:click="toggleHrStaff" {{ $isHrStaffEnabled ? 'checked' : '' }} {{ !$isGlobalEnabled ? 'disabled' : '' }} style="width: 3em; height: 1.5em;">
-                        <label class="form-check-label ms-2 fw-bold">{{ $isHrStaffEnabled ? 'Required' : 'Optional' }}</label>
+                    <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+                        <span class="fw-bold {{ $isHrStaffEnabled ? 'text-success' : 'text-secondary' }}">{{ $isHrStaffEnabled ? 'Required' : 'Optional' }}</span>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" role="switch" wire:click="toggleHrStaff" {{ $isHrStaffEnabled ? 'checked' : '' }} {{ !$isGlobalEnabled ? 'disabled' : '' }} style="cursor: pointer; transform: scale(1.2);">
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- HR Manager Setting Card -->
-        <div class="col-md-3">
-            <div class="card shadow-sm h-100 border-start border-primary border-4">
-                <div class="card-body d-flex flex-column justify-content-between">
-                    <div>
+        <div class="col-md-6 {{ $colClass }}">
+            <div class="card shadow-sm h-100 border-0 border-top border-4 border-primary">
+                <div class="card-body d-flex flex-column">
+                    <div class="mb-3">
                         <h5 class="card-title fw-bold mb-2 text-primary">HR Manager Access</h5>
-                         <p class="text-muted small">Require MFA for HR Manager logins.</p>
+                         <p class="text-muted small mb-0">Require MFA for HR Managers.</p>
                     </div>
-                    <div class="form-check form-switch mt-3">
-                        <input class="form-check-input" type="checkbox" role="switch" wire:click="toggleHrManager" {{ $isHrManagerEnabled ? 'checked' : '' }} {{ !$isGlobalEnabled ? 'disabled' : '' }} style="width: 3em; height: 1.5em;">
-                         <label class="form-check-label ms-2 fw-bold">{{ $isHrManagerEnabled ? 'Required' : 'Optional' }}</label>
+                    <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+                         <span class="fw-bold {{ $isHrManagerEnabled ? 'text-success' : 'text-secondary' }}">{{ $isHrManagerEnabled ? 'Required' : 'Optional' }}</span>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" role="switch" wire:click="toggleHrManager" {{ $isHrManagerEnabled ? 'checked' : '' }} {{ !$isGlobalEnabled ? 'disabled' : '' }} style="cursor: pointer; transform: scale(1.2);">
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Super Admin Setting Card -->
-        <div class="col-md-3">
-            <div class="card shadow-sm h-100 border-start border-danger border-4">
-                <div class="card-body d-flex flex-column justify-content-between">
-                    <div>
+        <!-- Super Admin Setting Card (Only visible to Super Admins) -->
+        @if($isSuperAdminUser)
+        <div class="col-md-6 {{ $colClass }}">
+            <div class="card shadow-sm h-100 border-0 border-top border-4 border-danger">
+                <div class="card-body d-flex flex-column">
+                    <div class="mb-3">
                         <h5 class="card-title fw-bold mb-2 text-danger">Super Admin Access</h5>
-                         <p class="text-muted small">Require MFA for Super Admin logins.</p>
+                         <p class="text-muted small mb-0">Require MFA for Super Admins.</p>
                     </div>
-                    <div class="form-check form-switch mt-3">
-                        <input class="form-check-input" type="checkbox" role="switch" wire:click="toggleSuperAdmin" {{ $isSuperAdminEnabled ? 'checked' : '' }} {{ !$isGlobalEnabled ? 'disabled' : '' }} style="width: 3em; height: 1.5em;">
-                         <label class="form-check-label ms-2 fw-bold">{{ $isSuperAdminEnabled ? 'Required' : 'Optional' }}</label>
+                    <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+                         <span class="fw-bold {{ $isSuperAdminEnabled ? 'text-success' : 'text-secondary' }}">{{ $isSuperAdminEnabled ? 'Required' : 'Optional' }}</span>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" role="switch" wire:click="toggleSuperAdmin" {{ $isSuperAdminEnabled ? 'checked' : '' }} {{ !$isGlobalEnabled ? 'disabled' : '' }} style="cursor: pointer; transform: scale(1.2);">
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+        @endif
     </div>
 
 
@@ -132,7 +147,7 @@
 
     {{-- Logs Table --}}
     <div class="card shadow-sm border-0">
-        <div class="card-header bg-white py-3">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
             <h6 class="m-0 font-weight-bold text-primary">Authentication Logs</h6>
         </div>
         <div class="card-body p-0">
@@ -174,8 +189,7 @@
                                 </td>
                                 <td class="small">{{ $log->created_at->format('M d, Y h:i:s A') }}</td>
                                 <td class="text-end pe-4">
-                                    <button wire:click="deleteLog({{ $log->id }})" 
-                                            wire:confirm="Are you sure you want to delete this log?"
+                                    <button wire:click="confirmDeleteLog({{ $log->id }})" 
                                             class="btn btn-sm btn-outline-danger">
                                         <i class="bi bi-trash"></i>
                                     </button>
@@ -198,3 +212,26 @@
         </div>
     </div>
 </div>
+
+{{-- Delete Single Log Confirmation Modal --}}
+@if($showDeleteModal)
+<div class="modal fade show" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.5); z-index: 1055;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" wire:click="$set('showDeleteModal', false)"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this log entry?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" wire:click="$set('showDeleteModal', false)">Cancel</button>
+                <button type="button" class="btn btn-danger" wire:click="deleteLog">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
+

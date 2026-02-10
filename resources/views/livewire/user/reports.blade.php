@@ -4,6 +4,9 @@
 
 <div @class('pt-2')>
 
+    {{-- PASSWORD GATE --}}
+    @include('components.password-gate')
+
     {{-- SUCCESS TOAST --}}
     <x-toast />
 
@@ -75,7 +78,7 @@
                         <p class="text-muted small mb-3">{{ $info['description'] }}</p>
                         <div class="d-flex justify-content-between align-items-center">
                             <span class="badge bg-{{ $info['color'] }} bg-opacity-10 text-{{ $info['color'] }}">
-                                <i class="bi bi-file-earmark-excel me-1"></i>Excel
+                                <i class="bi bi-filetype-csv me-1"></i>CSV
                             </span>
                             <button class="btn btn-sm btn-outline-{{ $info['color'] }}" wire:loading.attr="disabled">
                                 <span wire:loading.remove wire:target="quickGenerate('{{ $type }}')">
@@ -326,7 +329,7 @@
 
                     <div class="alert alert-light border mb-0">
                         <i class="bi bi-lightbulb text-warning me-2"></i>
-                        <small>All reports export to <strong>Excel (.xlsx)</strong> format for easy analysis and sharing.</small>
+                        <small>All reports export to <strong>CSV (.csv)</strong> format for easy analysis and sharing.</small>
                     </div>
                 </div>
             </div>

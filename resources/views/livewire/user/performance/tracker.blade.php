@@ -21,6 +21,51 @@
                                 placeholder="Search employees..."
                             />
                         </div>
+                        
+                        {{-- DEPARTMENT FILTER --}}
+                        <div @class('dropdown')>
+                            <button
+                                type="button"
+                                data-bs-toggle="dropdown"
+                                @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                            >
+                                <i @class('bi bi-building me-2')></i>
+                                Department: {{ $departmentFilter ?: 'All' }}
+                            </button>
+
+                            <ul @class('dropdown-menu') style="max-height: 300px; overflow-y: auto;">
+                                <li>
+                                    <a @class('dropdown-item') wire:click="$set('departmentFilter', '')">All Departments</a>
+                                </li>
+                                @foreach($departments as $dept)
+                                    <li>
+                                        <a @class('dropdown-item') wire:click="$set('departmentFilter', '{{ $dept }}')">{{ $dept }}</a>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+
+                        {{-- POSITION FILTER --}}
+                        <div @class('dropdown')>
+                            <button
+                                type="button"
+                                data-bs-toggle="dropdown"
+                                @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                            >
+                                <i @class('bi bi-person-badge me-2')></i>
+                                Position: {{ $positionFilter ?: 'All' }}
+                            </button>
+
+                            <ul @class('dropdown-menu') style="max-height: 300px; overflow-y: auto;">
+                                <li>
+                                    <a @class('dropdown-item') wire:click="$set('positionFilter', '')">All Positions</a>
+                                </li>
+                                @foreach($positions as $pos)
+                                    <li>
+                                        <a @class('dropdown-item') wire:click="$set('positionFilter', '{{ $pos }}')">{{ $pos }}</a>
+                                    </li>
+                                @endforeach
+                            </ul>
 
                         {{-- NEXT EVALUATION FILTER --}}
                         <div @class('dropdown')>
@@ -101,6 +146,8 @@
                         <thead>
                             <tr @class('bg-dark')>
                                 <th @class('text-secondary')>Employee</th>
+                                <th @class('text-secondary')>Position</th>
+                                <th @class('text-secondary')>Department</th>
                                 <th @class('text-secondary')>Hire Date</th>
                                 <th @class('text-secondary')>Evaluation Status</th>
                                 <th @class('text-secondary')>Next Evaluation</th>
@@ -117,10 +164,12 @@
                                             </div>
                                             <div>
                                                 <div class="fw-bold">{{ $employee['name'] }}</div>
-                                                <div class="small text-muted">{{ $employee['position'] }}</div>
+                                                <div class="small text-muted">{{ $employee['email'] }}</div>
                                             </div>
                                         </div>
                                     </td>
+                                    <td>{{ $employee['position'] }}</td>
+                                    <td>{{ $employee['department'] }}</td>
                                     <td>{{ $employee['hire_date'] }}</td>
                                     <td>
                                         <div class="d-flex gap-2">

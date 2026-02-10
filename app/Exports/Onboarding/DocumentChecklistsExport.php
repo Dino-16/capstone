@@ -46,6 +46,6 @@ class DocumentChecklistsExport
 
         $data = ExportService::transformQuery($query, $mappings);
         
-        return ExportService::exportToXls($data, $headers, 'document_checklists_' . date('Y-m-d') . '.xls');
+        return ExportService::exportToCsv($data, $headers, 'document_checklists_' . date('Y-m-d') . '.csv');
     }
 }

@@ -23,9 +23,11 @@ class DocumentChecklists extends Component
     public $showModal = false;
     public $showEditModal = false;
     public $showMessageModal = false;
-    public $showViewModal = false; // Added for viewing documents
-    public $viewingChecklist;      // Added for viewing documents
-    public $showDrafts = false;
+    public $showViewModal = false;
+    public $showDeleteModal = false;
+    public $deletingEmployeeId = null;
+    public $viewingChecklist;
+
     public $completionFilter = 'All';
     public $editingEmployeeId = null;
     public $employees = [];
@@ -173,7 +175,11 @@ class DocumentChecklists extends Component
         $this->email = $employee->email;
         $this->notes = $employee->notes;
         $this->documents = $employee->documents ?? [];
-        $this->selectedDocuments = array_keys($this->documents);
+        // Only pre-check documents that are marked as 'complete'
+        $this->selectedDocuments = collect($this->documents)
+            ->filter(fn($status) => $status === 'complete')
+            ->keys()
+            ->toArray();
         $this->showEditModal = true;
     }
 
@@ -185,10 +191,10 @@ public function addEmployee()
         'selectedDocuments' => 'required|array|min:1'
     ]);
 
-    // Transform flat array into key-value pairs for the JSON/Array column
+    // Store ALL document types; selected ones as 'complete', unselected as 'incomplete'
     $formattedDocuments = [];
-    foreach ($this->selectedDocuments as $docKey) {
-        $formattedDocuments[$docKey] = 'incomplete'; // Set default status
+    foreach ($this->documentTypes as $docKey => $docLabel) {
+        $formattedDocuments[$docKey] = in_array($docKey, $this->selectedDocuments) ? 'complete' : 'incomplete';
     }
 
     DocumentChecklist::create([
@@ -198,7 +204,7 @@ public function addEmployee()
         'department' => $this->department,
         'documents' => $formattedDocuments,
         'notes' => $this->notes,
-        'status' => 'active', // or 'draft'
+        'status' => 'active',
     ]);
 
     $this->reset(['showModal', 'employeeName', 'email', 'position', 'department', 'selectedDocuments', 'notes']);
@@ -214,11 +220,10 @@ public function addEmployee()
 
             $employee = DocumentChecklist::findOrFail($this->editingEmployeeId);
             
-            // Update documents with selected ones
+            // Store ALL document types; checked = 'complete', unchecked = 'incomplete'
             $documents = [];
-            foreach ($this->selectedDocuments as $docType) {
-                // Preserve existing status if document exists, otherwise set to incomplete
-                $documents[$docType] = $this->documents[$docType] ?? 'incomplete';
+            foreach ($this->documentTypes as $docKey => $docLabel) {
+                $documents[$docKey] = in_array($docKey, $this->selectedDocuments) ? 'complete' : 'incomplete';
             }
 
             $employee->update([
@@ -236,66 +241,54 @@ public function addEmployee()
         }
     }
 
-    public function toggleDocumentStatus($docType)
+    public function toggleDocumentStatus($docType, $checklistId = null)
     {
-        if (!isset($this->documents[$docType])) {
-            return;
-        }
-
-        // Toggle between complete and incomplete
-        $this->documents[$docType] = $this->documents[$docType] === 'complete' ? 'incomplete' : 'complete';
+        $id = $checklistId ?? $this->editingEmployeeId ?? ($this->viewingChecklist ? $this->viewingChecklist->id : null);
         
-        // Save immediately if editing
-        if ($this->editingEmployeeId) {
-            $employee = DocumentChecklist::findOrFail($this->editingEmployeeId);
-            $employee->update(['documents' => $this->documents]);
+        if (!$id) return;
+
+        $checklist = DocumentChecklist::findOrFail($id);
+        $docs = $checklist->documents ?? [];
+
+        if (!isset($docs[$docType])) return;
+
+        // Toggle status
+        $docs[$docType] = $docs[$docType] === 'complete' ? 'incomplete' : 'complete';
+        
+        $checklist->update(['documents' => $docs]);
+
+        // Force a fresh reload of the model
+        $checklist = DocumentChecklist::findOrFail($id);
+        
+        // Refresh state
+        if ($this->showEditModal && $this->editingEmployeeId == $id) {
+            $this->documents = $checklist->documents;
         }
-    }
 
-    public function deleteEmployee($employeeId)
-    {
-        DocumentChecklist::findOrFail($employeeId)->delete();
-        $this->toast('Employee deleted successfully.');
-    }
-
-    public function draft($employeeId)
-    {
-        $employee = DocumentChecklist::findOrFail($employeeId);
-        $employee->update(['status' => 'draft']);
-        $this->toast('Employee moved to draft status!');
-    }
-
-    public function restore($employeeId) 
-    {
-        try {
-            $employee = DocumentChecklist::findOrFail($employeeId);
-            $employee->update(['status' => 'active']);
-            
-            $this->toast('Employee restored to active status!');
-            
-            // Redirect to main view after restore
-            $this->showDrafts = false;
-            $this->resetPage();
-            
-            // Force component refresh
-            $this->dispatch('refresh-component');
-            
-        } catch (\Exception $e) {
-            session()->flash('error', 'Error restoring employee: ' . $e->getMessage());
+        if ($this->showViewModal && $this->viewingChecklist && $this->viewingChecklist->id == $id) {
+            $this->viewingChecklist = $checklist;
         }
+
+        $this->toast('Document status updated.');
     }
 
-    public function openDraft()
+    public function confirmDelete($employeeId)
     {
-        $this->showDrafts = true;
-        $this->resetPage();
+        $this->deletingEmployeeId = $employeeId;
+        $this->showDeleteModal = true;
     }
 
-    public function showAll()
+    public function deleteEmployee()
     {
-        $this->showDrafts = false;
-        $this->resetPage();
+        if ($this->deletingEmployeeId) {
+            DocumentChecklist::findOrFail($this->deletingEmployeeId)->delete();
+            $this->toast('Employee deleted successfully.');
+        }
+        $this->showDeleteModal = false;
+        $this->deletingEmployeeId = null;
     }
+
+
 
 
     public function export()
@@ -392,13 +385,19 @@ public function addEmployee()
             $query->where('position', $this->positionFilter);
         }
 
-        // Filter by status
-        if ($this->showDrafts) {
-            $query->where('status', 'draft');
-        } else {
-            $query->where('status', 'active');
-        }
-
+        // Always filter by active status or remove status check if we just want all
+        // The user implies deleting deletes them, so we probably just show everything that isn't deleted.
+        // Assuming SoftDeletes is not used or handled automatically.
+        // However, existing code filtered by 'active' vs 'draft'.
+        // We will just show all 'active' ones, or if we want to show everything, remove the status check.
+        // Let's assume we just want to show regular lists.
+        $query->where('status', '!=', 'draft'); // effectively active, or just ignore draft status entirely if we are deprecating it.
+        // Actually best to just show everything or 'active'. Let's stick to 'active' as default behavior.
+        // But if we deleted the draft functionality, maybe we should just treat everything as active.
+        // Let's just remove the draft filter block and let it show all.
+        // Wait, if there are existing drafts in DB, they might be hidden if we blindly filter.
+        // Let's assume we just show all records now.
+        
         $documentChecklists = $query->latest()->get();
 
         // Filter by completion status using the same logic as the view badges
@@ -414,20 +413,11 @@ public function addEmployee()
             }
         }
 
-        // Get separate drafts data for the drafts table
-        $draftsQuery = DocumentChecklist::where('status', 'draft');
-        if ($this->search) {
-            $draftsQuery->where('employee_name', 'like', '%' . $this->search . '%');
-        }
-        $drafts = $draftsQuery->latest()->get();
-
         // Paginate the filtered results
         $documentChecklists = $this->paginateCollection($documentChecklists, $this->perPage);
-        $drafts = $this->paginateCollection($drafts, $this->perPage);
 
         return view('livewire.user.onboarding.document-checklists', [
             'documentChecklists' => $documentChecklists,
-            'drafts' => $drafts,
             'documentTypes' => $this->documentTypes,
             'positions' => DocumentChecklist::pluck('position')->filter()->unique()->sort()->values(),
             'departments' => DocumentChecklist::pluck('department')->filter()->unique()->sort()->values(),

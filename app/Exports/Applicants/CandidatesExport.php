@@ -44,6 +44,6 @@ class CandidatesExport
 
         $data = ExportService::transformQuery($query, $mappings);
         
-        return ExportService::exportToXls($data, $headers, 'candidates_' . date('Y-m-d') . '.xls');
+        return ExportService::exportToCsv($data, $headers, 'candidates_' . date('Y-m-d') . '.csv');
     }
 }

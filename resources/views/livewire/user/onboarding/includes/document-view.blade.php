@@ -7,7 +7,7 @@
                 <h5 class="modal-title fw-bold">
                     <i class="bi bi-file-earmark-text me-2 text-primary"></i>Checklist Details
                 </h5>
-                <button type="button" class="btn-close" wire:click="$activatePasswordVerification('showViewModal', false)"></button>
+                <button type="button" class="btn-close" wire:click="closeViewModal"></button>
             </div>
             
             <div class="modal-body p-4">
@@ -35,7 +35,7 @@
                     </div>
                 </div>
 
-                <h6 class="fw-bold mb-3">Required Documents</h6>
+                <h6 class="fw-bold mb-3">Documents</h6>
                 <div class="list-group list-group-flush border rounded overflow-hidden">
                     @php 
                         $docTypes = [
@@ -48,26 +48,23 @@
                         ];
                     @endphp
                     @foreach($viewingChecklist->documents ?? [] as $type => $status)
-                        <div class="list-group-item d-flex justify-content-between align-items-center p-3">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-{{ $status === 'complete' ? 'success' : 'light' }} bg-opacity-10 p-2 rounded me-3">
-                                    <i class="bi bi-file-earmark-{{ $status === 'complete' ? 'check text-success' : 'text text-secondary' }} fs-5"></i>
+                        <div class="list-group-item d-flex justify-content-between align-items-center p-3" wire:key="doc-{{ $type }}">
+                            <div class="d-flex align-items-center flex-grow-1">
+                                <div class="bg-light bg-opacity-10 p-2 rounded me-3 text-primary">
+                                    <i class="bi bi-file-earmark-text fs-5"></i>
                                 </div>
-                                <div>
-                                    <div class="fw-bold mb-0 text-capitalize">{{ $docTypes[$type] ?? str_replace('_', ' ', $type) }}</div>
-                                    <small class="text-{{ $status === 'complete' ? 'success' : 'warning' }}">
-                                        {{ ucfirst($status) }}
-                                    </small>
+                                <div class="fw-bold text-capitalize">
+                                    {{ $docTypes[$type] ?? str_replace('_', ' ', $type) }}
+                                    <div wire:loading wire:target="toggleDocumentStatus('{{ $type }}')" class="spinner-border spinner-border-sm text-primary ms-2" role="status"></div>
                                 </div>
                             </div>
-                            @if($type === 'resume' && $status === 'complete')
-                                <button 
-                                    class="btn btn-sm btn-outline-primary"
-                                    wire:click="viewDocument('{{ $type }}', {{ $viewingChecklist->id }})"
-                                >
-                                    <i class="bi bi-eye"></i> View File
-                                </button>
-                            @endif
+                            <div class="d-flex gap-2 align-items-center">
+                                @if($status === 'complete')
+                                    <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Complete</span>
+                                @else
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Incomplete</span>
+                                @endif
+                            </div>
                         </div>
                     @endforeach
                 </div>
@@ -83,7 +80,7 @@
             </div>
 
             <div class="modal-footer bg-light border-top">
-                <button type="button" class="btn btn-primary px-4" wire:click="$activatePasswordVerification('showViewModal', false)">Done</button>
+                <button type="button" class="btn btn-primary px-4" wire:click="closeViewModal">Done</button>
             </div>
         </div>
     </div>

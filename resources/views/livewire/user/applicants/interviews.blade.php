@@ -103,30 +103,6 @@
         </div>
     </div>
 
-    {{-- INTERVIEW STAGES GUIDE --}}
-    <div class="row g-3 mb-4">
-        @foreach($interviewStages as $stageKey => $stage)
-            <div class="col-md-4">
-                <div class="card border-0 shadow-sm h-100 border-start border-4 border-{{ $stage['color'] }}">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center mb-2">
-                            <div class="rounded-circle bg-{{ $stage['color'] }} bg-opacity-10 p-3 me-3">
-                                <i class="bi {{ $stage['icon'] }} text-{{ $stage['color'] }} fs-4"></i>
-                            </div>
-                            <div>
-                                <h6 class="mb-0 fw-bold">{{ $stage['label'] }}</h6>
-                                <small class="text-muted text-uppercase">Stage {{ $loop->iteration }}</small>
-                            </div>
-                        </div>
-                        <p class="mb-0 text-muted small">
-                            <i class="bi bi-quote me-1"></i>{{ $stage['description'] }}
-                        </p>
-                    </div>
-                </div>
-            </div>
-        @endforeach
-    </div>
-
     {{-- CANDIDATES FOR INTERVIEW TABLE --}}
     <div @class('p-5 bg-white rounded border rounded-bottom-0 border-bottom-0')>
         <h3><i class="bi bi-clipboard-check me-2"></i>Candidates Ready for Interview</h3>

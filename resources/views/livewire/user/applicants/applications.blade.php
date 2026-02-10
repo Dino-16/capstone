@@ -358,8 +358,7 @@
     {{-- Schedule Interview Modal --}}
     @include('livewire.user.applicants.includes.application-promote-modal')
 
-</div>
-    <style>
+<style>
     .scrollable {
         max-height: 200px;
         overflow-y: auto;

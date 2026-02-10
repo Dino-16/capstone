@@ -11,88 +11,8 @@
     <x-toast />
 
     {{-- STATS CARDS --}}
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card p-3 shadow-sm border-0 h-100">
-                {{-- Icon --}}
-                <div class="mb-2">
-                    <i class="bi bi-hourglass-split text-warning fs-3"></i>
-                </div>
-
-                <div class="ps-2">
-                    {{-- Count --}}
-                    <div class="fw-semibold fs-4">
-                        {{ $stats['pending'] ?? 0 }}
-                    </div>
-
-                    {{-- Label --}}
-                    <div class="text-muted small">
-                        Contract Pending
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card p-3 shadow-sm border-0 h-100">
-                {{-- Icon --}}
-                <div class="mb-2">
-                    <i class="bi bi-send-fill text-info fs-3"></i>
-                </div>
-
-                <div class="ps-2">
-                    {{-- Count --}}
-                    <div class="fw-semibold fs-4">
-                        {{ $stats['sent'] ?? 0 }}
-                    </div>
-
-                    {{-- Label --}}
-                    <div class="text-muted small">
-                        Contract Sent
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card p-3 shadow-sm border-0 h-100">
-                {{-- Icon --}}
-                <div class="mb-2">
-                    <i class="bi bi-check-circle-fill text-success fs-3"></i>
-                </div>
-
-                <div class="ps-2">
-                    {{-- Count --}}
-                    <div class="fw-semibold fs-4">
-                        {{ $stats['approved'] ?? 0 }}
-                    </div>
-
-                    {{-- Label --}}
-                    <div class="text-muted small">
-                        Contract Approved
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card p-3 shadow-sm border-0 h-100">
-                {{-- Icon --}}
-                <div class="mb-2">
-                    <i class="bi bi-person-check-fill text-primary fs-3"></i>
-                </div>
-
-                <div class="ps-2">
-                    {{-- Count --}}
-                    <div class="fw-semibold fs-4">
-                        {{ $stats['hired'] ?? 0 }}
-                    </div>
-
-                    {{-- Label --}}
-                    <div class="text-muted small">
-                        Hired
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    {{-- STATS CARDS --}}
+    {{-- Removed --}}
 
     <div @class('d-flex justify-content-between align-items-center mb-4')>
         {{-- LEFT SIDE --}}
@@ -407,6 +327,146 @@
             </tbody>
         </table>
         {{ $candidates->links() }}
+    </div>
+
+    {{-- EMPLOYEES CONTRACT STATUS TABLE --}}
+    {{-- EMPLOYEES CONTRACT STATUS TABLE --}}
+    <div class="d-flex justify-content-between align-items-center mb-4 mt-5">
+        <div class="d-flex align-items-center gap-3">
+            {{-- Search --}}
+            <div>
+                <x-search-input
+                    wire:model.live="employeeSearch" 
+                    placeholder="Search employees..."
+                />
+            </div>
+            
+            {{-- Department Filter --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-building me-2')></i>
+                    Department: {{ $employeeDepartmentFilter ?: 'All' }}
+                </button>
+                <ul @class('dropdown-menu') style="max-height: 300px; overflow-y: auto;">
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('employeeDepartmentFilter', '')">All Departments</a>
+                    </li>
+                    @foreach($employeeDepartments as $dept)
+                        <li>
+                            <a @class('dropdown-item') wire:click="$set('employeeDepartmentFilter', '{{ $dept }}')">{{ $dept }}</a>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+
+            {{-- Position Filter --}}
+            <div @class('dropdown')>
+                <button
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                >
+                    <i @class('bi bi-person-badge me-2')></i>
+                    Position: {{ $employeePositionFilter ?: 'All' }}
+                </button>
+                <ul @class('dropdown-menu') style="max-height: 300px; overflow-y: auto;">
+                    <li>
+                        <a @class('dropdown-item') wire:click="$set('employeePositionFilter', '')">All Positions</a>
+                    </li>
+                    @foreach($employeePositions as $pos)
+                        <li>
+                            <a @class('dropdown-item') wire:click="$set('employeePositionFilter', '{{ $pos }}')">{{ $pos }}</a>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+
+        <button 
+            type="button" 
+            @class('btn btn-success')
+            wire:click="exportEmployees"
+        >
+            <i @class('bi bi-download me-2')></i>Export
+        </button>
+    </div>
+
+    <div @class('p-5 bg-white rounded border rounded-bottom-0 border-bottom-0')>
+        <h3><i class="bi bi-people me-2"></i>Employee Contract Status</h3>
+        <p @class('text-secondary mb-0')>
+            Review contract status for active employees.
+        </p>
+    </div>
+    <div @class('table-responsive border rounded bg-white px-5 rounded-top-0 border-top-0')>
+        <table @class('table table-hover')>
+            <thead>
+                <tr @class('bg-dark')>
+                    <th @class('text-secondary')>Name</th>
+                    <th @class('text-secondary')>Email</th>
+                    <th @class('text-secondary')>Department</th>
+                    <th @class('text-secondary')>Position</th>
+                    <th @class('text-secondary')>End Contract</th>
+                    <th @class('text-secondary')>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($paginatedEmployees as $employee)
+                    <tr wire:key="emp-{{ $employee['id'] }}">
+                        <td>
+                            <div class="fw-semibold">{{ $employee['name'] }}</div>
+                        </td>
+                        <td>{{ $employee['email'] }}</td>
+                        <td>{{ $employee['department'] }}</td>
+                        <td>{{ $employee['position'] }}</td>
+                        <td>
+                            @if($employee['end_contract'])
+                                {{ $employee['end_contract']->format('M d, Y') }}
+                                <br>
+                                <small class="text-muted">
+                                    Runs out {{ $employee['end_contract']->diffForHumans() }}
+                                </small>
+                            @else
+                                <span class="text-muted">N/A</span>
+                            @endif
+                        </td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                <button
+                                    type="button"
+                                    @class('btn btn-sm btn-outline-warning')
+                                    wire:click="openEmployeeRequestContractModal({{ $employee['id'] }})"
+                                    title="Request Contract Renewal"
+                                >
+                                    <i @class('bi bi-file-earmark-plus-fill me-1')></i>Request
+                                </button>
+                                <button
+                                    type="button"
+                                    @class('btn btn-sm btn-outline-info')
+                                    wire:click="openEmployeeContractEmailModal({{ $employee['id'] }})"
+                                    title="Send Contract Email"
+                                >
+                                    <i @class('bi bi-send-plus-fill me-1')></i>Contract
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-people fs-1 d-block mb-3"></i>
+                            No employees found.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+        <div class="px-4 py-3 border-top">
+            {{ $paginatedEmployees->links() }}
+        </div>
     </div>
 
     {{-- VIEW CANDIDATE MODAL --}}

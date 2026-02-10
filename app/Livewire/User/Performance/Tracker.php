@@ -32,6 +32,8 @@ class Tracker extends Component
     // Search and filter properties
     public $search = '';
     public $nextEvaluationFilter = '';
+    public $departmentFilter = '';
+    public $positionFilter = '';
     
     // Computed filtered employees
     public function getFilteredEmployeesProperty()
@@ -62,6 +64,16 @@ class Tracker extends Component
                 
                 return $nextEval['status'] === $this->nextEvaluationFilter;
             });
+        }
+        
+        // Apply department filter
+        if (!empty($this->departmentFilter)) {
+            $filtered = $filtered->where('department', $this->departmentFilter);
+        }
+
+        // Apply position filter
+        if (!empty($this->positionFilter)) {
+            $filtered = $filtered->where('position', $this->positionFilter);
         }
         
         return $filtered->values()->toArray();
@@ -316,6 +328,12 @@ class Tracker extends Component
     
     public function render()
     {
-        return view('livewire.user.performance.tracker')->layout('layouts.app');
+        $departments = collect($this->employees)->pluck('department')->unique()->filter()->values();
+        $positions = collect($this->employees)->pluck('position')->unique()->filter()->values();
+
+        return view('livewire.user.performance.tracker', [
+            'departments' => $departments,
+            'positions' => $positions,
+        ])->layout('layouts.app');
     }
 }

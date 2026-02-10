@@ -11,7 +11,8 @@
     <x-toast />
 
     {{-- STATUS CARDS --}}
-    @include('livewire.user.performance.includes.record-card')
+    {{-- STATUS CARDS --}}
+    {{-- @include('livewire.user.performance.includes.record-card') --}}
 
     {{-- HEADER ACTIONS --}}
     <div @class('d-flex justify-content-between align-items-center')>
@@ -35,7 +36,7 @@
                     @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
                 >
                     <i @class('bi bi-building me-2')></i>
-                    Dept: {{ $departmentFilter ?: 'All' }}
+                    Department: {{ $departmentFilter ?: 'All' }}
                 </button>
 
                 <ul @class('dropdown-menu') style="max-height: 300px; overflow-y: auto;">
@@ -58,7 +59,7 @@
                     @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
                 >
                     <i @class('bi bi-person-badge me-2')></i>
-                    Pos: {{ $positionFilter ?: 'All' }}
+                    Position: {{ $positionFilter ?: 'All' }}
                 </button>
 
                 <ul @class('dropdown-menu') style="max-height: 300px; overflow-y: auto;">
@@ -199,29 +200,29 @@
                 </button>
 
                 @if(!$showDrafts)
-                    <button
+                    {{-- <button
                         @class('btn btn-danger')
                         wire:click="openDraft"
                     >
                         Open Drafts
-                    </button>
+                    </button> --}}
                 @else
-                    <button
+                    {{-- <button
                         @class('btn btn-danger')
                         wire:click="openDraft"
                         disabled
                     >
                         Open Drafts
-                    </button>
+                    </button> --}}
                 @endif
             </div>
         </div>
     </div>
 
     @if($showDrafts)
-        <div @class('mb-3')>
+        {{-- <div @class('mb-3')>
             <button @class('btn btn-default') wire:click="showAll"><i class="bi bi-arrow-left-circle-fill me-1"></i>Back to All</button>
-        </div>
+        </div> --}}
     @endif
 
     {{-- MAIN TABLE --}}
@@ -326,7 +327,7 @@
                                     </button>
 
                                     <button
-                                        @class('btn btn-sm btn-outline-danger')
+                                        @class('btn btn-sm btn-outline-danger d-none')
                                         wire:click="draft({{ $evaluation->id }})"
                                         title="Move to Draft"
                                     >

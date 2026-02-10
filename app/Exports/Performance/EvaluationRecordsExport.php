@@ -71,6 +71,6 @@ class EvaluationRecordsExport
 
         $data = ExportService::transformQuery($query, $mappings);
         
-        return ExportService::exportToXls($data, $headers, 'evaluation_records_' . date('Y-m-d') . '.xls');
+        return ExportService::exportToCsv($data, $headers, 'evaluation_records_' . date('Y-m-d') . '.csv');
     }
 }

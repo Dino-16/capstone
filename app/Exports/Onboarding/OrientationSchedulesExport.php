@@ -50,6 +50,6 @@ class OrientationSchedulesExport
 
         $data = ExportService::transformQuery($query, $mappings);
         
-        return ExportService::exportToXls($data, $headers, 'orientation_schedules_' . date('Y-m-d') . '.xls');
+        return ExportService::exportToCsv($data, $headers, 'orientation_schedules_' . date('Y-m-d') . '.csv');
     }
 }

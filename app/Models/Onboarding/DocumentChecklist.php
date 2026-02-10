@@ -36,17 +36,25 @@ class DocumentChecklist extends Model
         $this->save();
     }
 
-    public function getCompletionPercentage()
+    public function getCompleteCount()
     {
         $documents = $this->documents ?? [];
-        if (empty($documents)) return 0;
-        
-        $total = count($documents);
-        $completeCount = collect($documents)->filter(function($status) {
+        return collect($documents)->filter(function($status) {
             return $status === 'complete';
         })->count();
+    }
+
+    public function getTotalCount()
+    {
+        return count($this->documents ?? []);
+    }
+
+    public function getCompletionPercentage()
+    {
+        $total = $this->getTotalCount();
+        if ($total === 0) return 0;
         
-        return ($completeCount / $total) * 100;
+        return ($this->getCompleteCount() / $total) * 100;
     }
 
     public function initializeDocuments()

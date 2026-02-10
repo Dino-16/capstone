@@ -45,6 +45,6 @@ class OffersExport
 
         $data = ExportService::transformQuery($query, $mappings);
         
-        return ExportService::exportToXls($data, $headers, 'offers_' . date('Y-m-d') . '.xls');
+        return ExportService::exportToCsv($data, $headers, 'offers_' . date('Y-m-d') . '.csv');
     }
 }

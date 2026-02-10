@@ -64,6 +64,6 @@ class GiveRewardsExport
 
         $data = ExportService::transformQuery($query, $mappings);
         
-        return ExportService::exportToXls($data, $headers, 'give_rewards_' . date('Y-m-d') . '.xls');
+        return ExportService::exportToCsv($data, $headers, 'give_rewards_' . date('Y-m-d') . '.csv');
     }
 }

@@ -14,6 +14,10 @@ class Recaptcha extends Component
 
     public $isEnabled = true;
 
+    public $showDeleteModal = false;
+    public $deletingLogId = null;
+    public $showDeleteAllModal = false;
+
     public function mount()
     {
         $setting = RecaptchaSetting::first();
@@ -54,10 +58,32 @@ class Recaptcha extends Component
             'stats' => $stats
         ])->layout('layouts.app'); // Assuming this uses the main admin layout
     }
-    public function deleteLog($id)
+    public function confirmDeleteLog($id)
     {
-        RecaptchaLog::find($id)?->delete();
-        $this->toast('Log entry deleted successfully.');
+        $this->deletingLogId = $id;
+        $this->showDeleteModal = true;
+    }
+
+    public function deleteLog()
+    {
+        if ($this->deletingLogId) {
+            RecaptchaLog::find($this->deletingLogId)?->delete();
+            $this->toast('Log entry deleted successfully.');
+        }
+        $this->showDeleteModal = false;
+        $this->deletingLogId = null;
+    }
+
+    public function confirmDeleteAll()
+    {
+        $this->showDeleteAllModal = true;
+    }
+
+    public function deleteAllLogs()
+    {
+        RecaptchaLog::truncate();
+        $this->toast('All log entries deleted successfully.');
+        $this->showDeleteAllModal = false;
     }
 
 }

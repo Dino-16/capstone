@@ -13,10 +13,12 @@ use App\Recognition\RewardsExport;
 use App\Recognition\GiveRewardsExport;
 use App\Models\Report;
 use App\Models\Onboarding\DocumentChecklist;
+use App\Livewire\Traits\RequiresPasswordVerification;
 
 class Reports extends Component
 {
     use \App\Livewire\Traits\HandlesToasts;
+    use RequiresPasswordVerification;
 
     public $reportName;
     public $reportType;
@@ -37,6 +39,7 @@ class Reports extends Component
 
     public function mount()
     {
+        $this->initializePasswordVerification();
         $this->reports = Report::latest()->get();
     }
 

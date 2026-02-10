@@ -52,6 +52,6 @@ class JobPostsExport
 
         $data = ExportService::transformQuery($query, $mappings);
         
-        return ExportService::exportToXls($data, $headers, 'job_posts_' . date('Y-m-d') . '.xls');
+        return ExportService::exportToCsv($data, $headers, 'job_posts_' . date('Y-m-d') . '.csv');
     }
 }

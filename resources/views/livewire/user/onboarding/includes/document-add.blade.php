@@ -91,7 +91,6 @@
                             </div>
                         </div>
                         @error('selectedDocuments') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
-                        <small class="text-muted">Select which documents to add for this employee ({{ count($selectedDocuments) }}/6 selected)</small>
                     </div>
 
                     <div class="mb-3">

@@ -42,6 +42,6 @@ class InterviewsExport
 
         $data = ExportService::transformQuery($query, $mappings);
         
-        return ExportService::exportToXls($data, $headers, 'interviews_' . date('Y-m-d') . '.xls');
+        return ExportService::exportToCsv($data, $headers, 'interviews_' . date('Y-m-d') . '.csv');
     }
 }

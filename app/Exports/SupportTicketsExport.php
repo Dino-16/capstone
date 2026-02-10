@@ -53,8 +53,8 @@ class SupportTicketsExport
 
         $data = ExportService::transformQuery($query, $mappings);
         
-        $filename = ($this->requesterEmail ? 'my_tickets_' : 'all_tickets_') . date('Y-m-d') . '.xls';
+        $filename = ($this->requesterEmail ? 'my_tickets_' : 'all_tickets_') . date('Y-m-d') . '.csv';
         
-        return ExportService::exportToXls($data, $headers, $filename);
+        return ExportService::exportToCsv($data, $headers, $filename);
     }
 }

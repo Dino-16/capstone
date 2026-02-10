@@ -51,6 +51,6 @@ class ApplicationsExport
 
         $data = ExportService::transformQuery($query, $mappings);
         
-        return ExportService::exportToXls($data, $headers, 'applications_' . date('Y-m-d') . '.xls');
+        return ExportService::exportToCsv($data, $headers, 'applications_' . date('Y-m-d') . '.csv');
     }
 }
