@@ -2,63 +2,44 @@
 
 namespace App\Exports\Recruitment;
 
+use App\Exports\Traits\CsvExportable;
 use App\Models\Recruitment\JobListing;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class JobPostsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class JobPostsExport
 {
-    public function collection()
-    {
-        return JobListing::where('status', 'Active')->get();
-    }
+    use CsvExportable;
 
     public function headings(): array
     {
         return [
-            'ID',
             'Position',
             'Department',
-            'Employment Type',
-            'Work Arrangement',
-            'Location',
-            'Expiration Date',
-            'Status',
             'Description',
             'Qualifications',
-            'Posted Date',
+            'Type',
+            'Arrangement',
+            'Status',
+            'Expiration Date',
             'Created At',
-            'Updated At'
+            'Updated At',
         ];
     }
 
-    public function map($listing): array
+    public function rows(): array
     {
-        return [
-            $listing->id,
-            $listing->position,
-            $listing->department,
-            $listing->type,
-            $listing->arrangement,
-            $listing->location,
-            $listing->expiration_date ? $listing->expiration_date->format('M d, Y') : 'N/A',
-            $listing->status,
-            strip_tags($listing->description), // Clean HTML if any
-            strip_tags($listing->qualifications),
-            $listing->created_at ? $listing->created_at->format('M d, Y') : '',
-            $listing->created_at ? $listing->created_at->format('M d, Y h:i A') : '',
-            $listing->updated_at ? $listing->updated_at->format('M d, Y h:i A') : '',
-        ];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            1 => ['font' => ['bold' => true]],
-        ];
+        return JobListing::where('status', 'Active')->get()->map(function ($job) {
+            return [
+                $job->position,
+                $job->department ?? 'N/A',
+                strip_tags($job->description ?? ''),
+                strip_tags($job->qualifications ?? ''),
+                $job->type ?? 'N/A',
+                $job->arrangement ?? 'N/A',
+                $job->status,
+                $job->expiration_date ?? 'N/A',
+                $job->created_at?->format('Y-m-d H:i:s'),
+                $job->updated_at?->format('Y-m-d H:i:s'),
+            ];
+        })->toArray();
     }
 }

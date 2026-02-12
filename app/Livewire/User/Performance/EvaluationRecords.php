@@ -8,6 +8,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use App\Livewire\Traits\RequiresPasswordVerification;
 
+
 class EvaluationRecords extends Component
 {
     use WithPagination;
@@ -77,7 +78,7 @@ class EvaluationRecords extends Component
 
     public function exportData()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new EvaluationRecordsExport(), 'evaluation_records.xlsx');
+        return (new EvaluationRecordsExport())->download('evaluation_records.csv');
     }
 
     public function viewEvaluation($id)

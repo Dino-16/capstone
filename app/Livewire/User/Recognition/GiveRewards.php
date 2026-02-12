@@ -212,7 +212,7 @@ class GiveRewards extends Component
 
     public function export()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new GiveRewardsExport(), 'give_rewards.xlsx');
+        return (new \App\Exports\Recognition\GiveRewardsExport())->download('give_rewards.csv');
     }
 
     public function render()

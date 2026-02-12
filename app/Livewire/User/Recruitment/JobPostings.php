@@ -9,7 +9,7 @@ use App\Models\Recruitment\Requisition;
 use App\Models\Recruitment\JobListing;
 use App\Exports\Recruitment\JobPostsExport;
 use Illuminate\Support\Facades\Http;
-use Maatwebsite\Excel\Facades\Excel;
+
 
 class JobPostings extends Component
 {
@@ -129,7 +129,7 @@ class JobPostings extends Component
 
     public function export()
     {
-        return Excel::download(new JobPostsExport, 'job_posts.xlsx');
+        return (new JobPostsExport)->download('job_posts.csv');
     }
 
 

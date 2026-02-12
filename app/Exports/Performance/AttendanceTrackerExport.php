@@ -2,26 +2,18 @@
 
 namespace App\Exports\Performance;
 
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use App\Exports\Traits\CsvExportable;
 use Carbon\Carbon;
 
-class AttendanceTrackerExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class AttendanceTrackerExport
 {
-    protected array $attendanceRecords;
+    use CsvExportable;
+
+    protected $attendanceRecords;
 
     public function __construct(array $attendanceRecords)
     {
         $this->attendanceRecords = $attendanceRecords;
-    }
-
-    public function collection()
-    {
-        return collect($this->attendanceRecords);
     }
 
     public function headings(): array
@@ -29,6 +21,7 @@ class AttendanceTrackerExport implements FromCollection, WithHeadings, WithMappi
         return [
             'Employee Name',
             'Position',
+            'Department',
             'Date',
             'Time In',
             'Time Out',
@@ -38,33 +31,20 @@ class AttendanceTrackerExport implements FromCollection, WithHeadings, WithMappi
         ];
     }
 
-    public function map($record): array
+    public function rows(): array
     {
-        $name = trim(($record['employee']['first_name'] ?? '') . ' ' . ($record['employee']['last_name'] ?? ''));
-        $position = $record['employee']['position'] ?? '';
-        $date = isset($record['date']) ? Carbon::parse($record['date'])->format('M d, Y') : '';
-        $timeIn = isset($record['clock_in_time']) ? Carbon::parse($record['clock_in_time'])->format('h:i A') : '-';
-        $timeOut = isset($record['clock_out_time']) ? Carbon::parse($record['clock_out_time'])->format('h:i A') : '-';
-        $totalHours = $record['total_hours'] ?? '0.00';
-        $status = ucfirst(str_replace('_', ' ', $record['status'] ?? 'unknown'));
-        $location = $record['location'] ?? 'N/A';
-
-        return [
-            $name,
-            $position,
-            $date,
-            $timeIn,
-            $timeOut,
-            $totalHours,
-            $status,
-            $location,
-        ];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            1 => ['font' => ['bold' => true]],
-        ];
+        return collect($this->attendanceRecords)->map(function ($record) {
+            return [
+                $record['employee_name'] ?? ($record['first_name'] . ' ' . ($record['last_name'] ?? '')),
+                $record['position'] ?? 'N/A',
+                $record['department'] ?? 'N/A',
+                isset($record['date']) ? Carbon::parse($record['date'])->format('M d, Y') : 'N/A',
+                $record['time_in'] ?? 'N/A',
+                $record['time_out'] ?? 'N/A',
+                $record['total_hours'] ?? 'N/A',
+                $record['status'] ?? 'N/A',
+                $record['location'] ?? 'N/A',
+            ];
+        })->toArray();
     }
 }

@@ -73,7 +73,7 @@ class SubmitTicket extends Component
 
     public function exportData()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\SupportTicketsExport(session('user.email')), 'my_tickets.xlsx');
+        return (new \App\Exports\SupportTicketsExport(session('user.email')))->download('my_tickets.csv');
     }
 
     public function render()

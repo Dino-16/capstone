@@ -51,7 +51,7 @@ class SupportTicket extends Component
 
     public function exportData()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\SupportTicketsExport(), 'all_tickets.xlsx');
+        return (new \App\Exports\SupportTicketsExport())->download('all_tickets.csv');
     }
 
     public function render()

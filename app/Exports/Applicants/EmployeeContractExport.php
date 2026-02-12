@@ -2,27 +2,18 @@
 
 namespace App\Exports\Applicants;
 
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\Exportable; // Add this
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use App\Exports\Traits\CsvExportable;
+use Carbon\Carbon;
 
-class EmployeeContractExport implements FromCollection, WithHeadings, WithMapping, WithStyles
+class EmployeeContractExport
 {
-    use Exportable; // Add this
+    use CsvExportable;
 
     protected $employees;
 
-    public function __construct($employees)
+    public function __construct(array $employees)
     {
         $this->employees = $employees;
-    }
-
-    public function collection()
-    {
-        return collect($this->employees);
     }
 
     public function headings(): array
@@ -30,31 +21,24 @@ class EmployeeContractExport implements FromCollection, WithHeadings, WithMappin
         return [
             'Employee Name',
             'Email',
-            'Department',
             'Position',
+            'Department',
             'Date Hired',
             'End of Contract',
-            'Status'
         ];
     }
 
-    public function map($employee): array
+    public function rows(): array
     {
-        return [
-            $employee['name'],
-            $employee['email'],
-            $employee['department'],
-            $employee['position'],
-            $employee['date_hired'] ? $employee['date_hired']->format('M d, Y') : 'N/A',
-            $employee['end_contract'] ? $employee['end_contract']->format('M d, Y') : 'N/A',
-            'Active', // Assuming active since they are in the list
-        ];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            1 => ['font' => ['bold' => true]],
-        ];
+        return collect($this->employees)->map(function ($employee) {
+            return [
+                $employee['name'] ?? 'N/A',
+                $employee['email'] ?? 'N/A',
+                $employee['position'] ?? 'N/A',
+                $employee['department'] ?? 'N/A',
+                isset($employee['date_hired']) ? Carbon::parse($employee['date_hired'])->format('M d, Y') : 'N/A',
+                isset($employee['end_contract']) ? Carbon::parse($employee['end_contract'])->format('M d, Y') : 'N/A',
+            ];
+        })->toArray();
     }
 }

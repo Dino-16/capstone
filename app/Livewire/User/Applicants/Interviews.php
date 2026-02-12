@@ -561,7 +561,7 @@ class Interviews extends Component
 
     public function exportData()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\Applicants\InterviewsExport(), 'interviews.xlsx');
+        return (new \App\Exports\Applicants\InterviewsExport())->download('interviews.csv');
     }
 
     public function render()

@@ -357,7 +357,7 @@ class OrientationSchedule extends Component
 
     public function export()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\Onboarding\OrientationSchedulesExport(), 'orientation_schedules.xlsx');
+        return (new \App\Exports\Onboarding\OrientationSchedulesExport())->download('orientation_schedules.csv');
     }
 
     public function render()

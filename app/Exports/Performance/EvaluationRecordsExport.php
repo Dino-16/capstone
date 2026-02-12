@@ -2,79 +2,50 @@
 
 namespace App\Exports\Performance;
 
+use App\Exports\Traits\CsvExportable;
 use App\Models\Performance\Evaluation;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class EvaluationRecordsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class EvaluationRecordsExport
 {
-    public function collection()
-    {
-        return Evaluation::all();
-    }
+    use CsvExportable;
 
     public function headings(): array
     {
         return [
             'Employee Name',
-            'Email',
-            'Evaluation Date',
-            'Evaluator Name',
             'Position',
             'Department',
-            'Employment Date',
-            'Evaluation Type',
-            'Overall Score',
-            'Job Knowledge',
-            'Work Quality',
-            'Initiative',
+            'Evaluator',
+            'Evaluation Period',
+            'Quality of Work',
             'Communication',
-            'Dependability',
+            'Teamwork',
+            'Initiative',
             'Attendance',
-            'Strengths',
-            'Areas for Improvement',
-            'Comments',
+            'Overall Score',
             'Status',
             'Created At',
-            'Updated At',
         ];
     }
 
-    public function map($item): array
+    public function rows(): array
     {
-        return [
-            $item->employee_name,
-            $item->email,
-            $item->evaluation_date ? $item->evaluation_date->format('M d, Y') : '',
-            $item->evaluator_name,
-            $item->position,
-            $item->department,
-            $item->employment_date ? $item->employment_date->format('M d, Y') : '',
-            $item->evaluation_type,
-            $item->overall_score,
-            $item->job_knowledge,
-            $item->work_quality,
-            $item->initiative,
-            $item->communication,
-            $item->dependability,
-            $item->attendance,
-            $item->strengths,
-            $item->areas_for_improvement,
-            $item->comments,
-            $item->status,
-            $item->created_at ? $item->created_at->format('M d, Y h:i A') : '',
-            $item->updated_at ? $item->updated_at->format('M d, Y h:i A') : '',
-        ];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            1 => ['font' => ['bold' => true]],
-        ];
+        return Evaluation::all()->map(function ($evaluation) {
+            return [
+                $evaluation->employee_name,
+                $evaluation->position ?? 'N/A',
+                $evaluation->department ?? 'N/A',
+                $evaluation->evaluator_name ?? 'N/A',
+                $evaluation->evaluation_period ?? 'N/A',
+                $evaluation->quality_of_work ?? 'N/A',
+                $evaluation->communication ?? 'N/A',
+                $evaluation->teamwork ?? 'N/A',
+                $evaluation->initiative ?? 'N/A',
+                $evaluation->attendance_score ?? 'N/A',
+                $evaluation->overall_score ?? 'N/A',
+                $evaluation->status ?? 'N/A',
+                $evaluation->created_at?->format('Y-m-d H:i:s'),
+            ];
+        })->toArray();
     }
 }

@@ -2,32 +2,24 @@
 
 namespace App\Exports\Onboarding;
 
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use App\Exports\Traits\CsvExportable;
 
-class EmployeesExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class EmployeesExport
 {
+    use CsvExportable;
+
     protected $employees;
 
-    public function __construct($employees)
+    public function __construct(array $employees)
     {
         $this->employees = $employees;
-    }
-
-    public function collection()
-    {
-        return collect($this->employees);
     }
 
     public function headings(): array
     {
         return [
             'Name',
-            'Position', 
+            'Position',
             'Department',
             'Contract Signing',
             'HR Documents',
@@ -35,22 +27,17 @@ class EmployeesExport implements FromCollection, WithHeadings, WithMapping, With
         ];
     }
 
-    public function map($employee): array
+    public function rows(): array
     {
-        return [
-            $employee['Name'] ?? '',
-            $employee['Position'] ?? '',
-            $employee['Department'] ?? '',
-            $employee['Contract Signing'] ?? '',
-            $employee['HR Documents'] ?? '',
-            $employee['Training Modules'] ?? '',
-        ];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            1 => ['font' => ['bold' => true]],
-        ];
+        return collect($this->employees)->map(function ($employee) {
+            return [
+                $employee['Name'] ?? 'N/A',
+                $employee['Position'] ?? 'N/A',
+                $employee['Department'] ?? 'N/A',
+                $employee['Contract Signing'] ?? 'N/A',
+                $employee['HR Documents'] ?? 'N/A',
+                $employee['Training Modules'] ?? 'N/A',
+            ];
+        })->toArray();
     }
 }

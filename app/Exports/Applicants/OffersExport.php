@@ -2,58 +2,45 @@
 
 namespace App\Exports\Applicants;
 
+use App\Exports\Traits\CsvExportable;
 use App\Models\Applicants\Candidate;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class OffersExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class OffersExport
 {
-    public function collection()
-    {
-        return Candidate::whereIn('status', ['passed', 'hired'])
-            ->where('interview_result', 'passed')
-            ->latest()
-            ->get();
-    }
+    use CsvExportable;
 
     public function headings(): array
     {
         return [
-            'ID',
             'Name',
             'Email',
-            'Position',
+            'Applied Position',
             'Department',
+            'Status',
             'Contract Status',
             'Contract Sent At',
             'Contract Approved At',
-            'Status'
+            'Created At',
         ];
     }
 
-    public function map($item): array
+    public function rows(): array
     {
-        return [
-            $item->id,
-            $item->candidate_name,
-            $item->candidate_email,
-            $item->applied_position,
-            $item->department,
-            $item->contract_status,
-            $item->contract_sent_at ? $item->contract_sent_at->format('M d, Y h:i A') : 'N/A',
-            $item->contract_approved_at ? $item->contract_approved_at->format('M d, Y h:i A') : 'N/A',
-            $item->status,
-        ];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            1 => ['font' => ['bold' => true]],
-        ];
+        return Candidate::whereIn('status', ['passed', 'hired'])
+            ->where('interview_result', 'passed')
+            ->get()
+            ->map(function ($candidate) {
+                return [
+                    $candidate->candidate_name,
+                    $candidate->candidate_email,
+                    $candidate->applied_position,
+                    $candidate->department,
+                    ucfirst($candidate->status),
+                    ucfirst($candidate->contract_status ?? 'Pending'),
+                    $candidate->contract_sent_at ? $candidate->contract_sent_at->format('M d, Y') : 'N/A',
+                    $candidate->contract_approved_at ? $candidate->contract_approved_at->format('M d, Y') : 'N/A',
+                    $candidate->created_at?->format('Y-m-d H:i:s'),
+                ];
+            })->toArray();
     }
 }

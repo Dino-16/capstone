@@ -618,7 +618,7 @@ class Applications extends Component
 
     public function exportData()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\Applicants\ApplicationsExport(), 'applications.xlsx');
+        return (new \App\Exports\Applicants\ApplicationsExport())->download('applications.csv');
     }
 
     public function render()

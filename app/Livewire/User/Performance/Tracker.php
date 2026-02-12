@@ -12,6 +12,7 @@ use App\Exports\Performance\PerformanceTrackerExport;
 use App\Exports\Performance\AttendanceTrackerExport;
 use App\Livewire\Traits\RequiresPasswordVerification;
 
+
 class Tracker extends Component
 {
 
@@ -81,7 +82,7 @@ class Tracker extends Component
     
     public function exportData()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new PerformanceTrackerExport($this->filteredEmployees), 'performance_tracker.xlsx');
+        return (new PerformanceTrackerExport($this->filteredEmployees))->download('performance_tracker.csv');
     }
     
     // Attendance search and filter properties
@@ -122,7 +123,7 @@ class Tracker extends Component
     
     public function exportAttendanceData()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new AttendanceTrackerExport($this->filteredAttendance), 'attendance_tracker.xlsx');
+        return (new AttendanceTrackerExport($this->filteredAttendance))->download('attendance_tracker.csv');
     }
 
     public function mount()

@@ -2,65 +2,46 @@
 
 namespace App\Exports\FacilityRequest;
 
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use App\Exports\Traits\CsvExportable;
 
-class FacilityRequestExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class FacilityRequestExport
 {
-    protected array $reservations;
+    use CsvExportable;
+
+    protected $reservations;
 
     public function __construct(array $reservations)
     {
         $this->reservations = $reservations;
     }
 
-    public function collection()
-    {
-        return collect($this->reservations);
-    }
-
     public function headings(): array
     {
         return [
-            'Facility',
-            'Location',
             'Requested By',
-            'Email',
+            'Facility Name',
+            'Location',
             'Booking Date',
             'Start Time',
             'End Time',
             'Purpose',
-            'Attendees',
-            'Priority',
             'Status',
         ];
     }
 
-    public function map($reservation): array
+    public function rows(): array
     {
-        return [
-            $reservation['facility_name'] ?? '',
-            $reservation['location'] ?? '',
-            $reservation['full_name'] ?? '',
-            $reservation['email'] ?? '',
-            $reservation['booking_date'] ?? '',
-            $reservation['start_time'] ?? '',
-            $reservation['end_time'] ?? '',
-            $reservation['purpose'] ?? '',
-            $reservation['expected_attendees'] ?? '',
-            $reservation['priority_level'] ?? '',
-            $reservation['status'] ?? '',
-        ];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            1 => ['font' => ['bold' => true]],
-        ];
+        return collect($this->reservations)->map(function ($reservation) {
+            return [
+                $reservation['requested_by'] ?? $reservation['full_name'] ?? 'N/A',
+                $reservation['facility_name'] ?? 'N/A',
+                $reservation['location'] ?? 'N/A',
+                $reservation['booking_date'] ?? 'N/A',
+                $reservation['start_time'] ?? 'N/A',
+                $reservation['end_time'] ?? 'N/A',
+                $reservation['purpose'] ?? 'N/A',
+                $reservation['status'] ?? 'N/A',
+            ];
+        })->toArray();
     }
 }

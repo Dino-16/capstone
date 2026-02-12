@@ -2,55 +2,38 @@
 
 namespace App\Exports\Onboarding;
 
+use App\Exports\Traits\CsvExportable;
 use App\Models\Onboarding\DocumentChecklist;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class DocumentChecklistsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class DocumentChecklistsExport
 {
-    public function collection()
-    {
-        return DocumentChecklist::all();
-    }
+    use CsvExportable;
 
     public function headings(): array
     {
         return [
-            'ID',
             'Employee Name',
-            'Document Type',
-            'Document Name',
-            'Status',
-            'Submitted Date',
-            'Notes',
+            'Resume',
+            'Medical Certificate',
+            'Valid Government ID',
+            'Submission Date',
             'Created At',
-            'Updated At'
+            'Updated At',
         ];
     }
 
-    public function map($item): array
+    public function rows(): array
     {
-        return [
-            $item->id,
-            $item->employee_name,
-            $item->document_type,
-            $item->document_name,
-            $item->status,
-            $item->submitted_date ? $item->submitted_date->format('M d, Y') : '',
-            $item->notes ?? '',
-            $item->created_at ? $item->created_at->format('M d, Y h:i A') : '',
-            $item->updated_at ? $item->updated_at->format('M d, Y h:i A') : '',
-        ];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            1 => ['font' => ['bold' => true]],
-        ];
+        return DocumentChecklist::all()->map(function ($checklist) {
+            return [
+                $checklist->employee_name,
+                $checklist->getDocumentStatus('resume'),
+                $checklist->getDocumentStatus('medical_certificate'),
+                $checklist->getDocumentStatus('valid_government_id'),
+                $checklist->submission_date ?? 'N/A',
+                $checklist->created_at?->format('Y-m-d H:i:s'),
+                $checklist->updated_at?->format('Y-m-d H:i:s'),
+            ];
+        })->toArray();
     }
 }

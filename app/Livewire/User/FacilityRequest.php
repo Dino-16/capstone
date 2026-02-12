@@ -165,14 +165,7 @@ class FacilityRequest extends Component
 
     public function exportData()
     {
-        $reservations = $this->filteredReservations;
-
-        if (empty($reservations)) {
-            $this->toast('No data to export.');
-            return;
-        }
-
-        return \Maatwebsite\Excel\Facades\Excel::download(new FacilityRequestExport($reservations), 'facility_requests.xlsx');
+        return (new \App\Exports\FacilityRequest\FacilityRequestExport($this->reservations))->download('facility_requests.csv');
     }
 
     public function openBookingModal()

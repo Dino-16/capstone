@@ -230,7 +230,7 @@ class Candidates extends Component
 
     public function exportData()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\Applicants\CandidatesExport(), 'candidates.xlsx');
+        return (new \App\Exports\Applicants\CandidatesExport())->download('candidates.csv');
     }
 
     public function render()

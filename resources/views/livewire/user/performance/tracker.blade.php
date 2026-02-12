@@ -66,29 +66,30 @@
                                     </li>
                                 @endforeach
                             </ul>
+                        </div>
 
                         {{-- NEXT EVALUATION FILTER --}}
                         <div @class('dropdown')>
-                <button
-                    type="button"
-                    id="nextEvalFilterDropdown"
-                    data-bs-toggle="dropdown"
-                    @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
-                >
-                    <i @class('bi bi-funnel-fill me-2')></i>
-                    Filter: 
-                    @if($nextEvaluationFilter === '')
-                        All Status
-                    @elseif($nextEvaluationFilter === 'current')
-                        Due This Month
-                    @elseif($nextEvaluationFilter === 'pending')
-                        Pending/Overdue
-                    @elseif($nextEvaluationFilter === 'upcoming')
-                        Upcoming
-                    @elseif($nextEvaluationFilter === 'caught_up')
-                        All Caught Up
-                    @endif
-                </button>
+                            <button
+                                type="button"
+                                id="nextEvalFilterDropdown"
+                                data-bs-toggle="dropdown"
+                                @class('btn btn-outline-body-tertiary dropdown-toggle d-flex align-items-center border rounded bg-secondary-subtle')
+                            >
+                                <i @class('bi bi-funnel-fill me-2')></i>
+                                Filter: 
+                                @if($nextEvaluationFilter === '')
+                                    All Status
+                                @elseif($nextEvaluationFilter === 'current')
+                                    Due This Month
+                                @elseif($nextEvaluationFilter === 'pending')
+                                    Pending/Overdue
+                                @elseif($nextEvaluationFilter === 'upcoming')
+                                    Upcoming
+                                @elseif($nextEvaluationFilter === 'caught_up')
+                                    All Caught Up
+                                @endif
+                            </button>
 
                             <ul @class('dropdown-menu') aria-labelledby="nextEvalFilterDropdown">
                                 <li>
@@ -312,7 +313,6 @@
                             </button>
                         </div>
                     </div>
-                </div>
 
                 <div @class('p-5 bg-white rounded border rounded-bottom-0 border-bottom-0')>
                     <h3>Daily Attendance Tracker</h3>
@@ -407,6 +407,7 @@
                             @endforelse
                         </tbody>
                     </table>
+                </div>
                 </div>
 
             </div>

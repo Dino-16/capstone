@@ -2,65 +2,46 @@
 
 namespace App\Exports\Recognition;
 
+use App\Exports\Traits\CsvExportable;
 use App\Models\Recognition\GiveReward;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class GiveRewardsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class GiveRewardsExport
 {
-    public function collection()
-    {
-        return GiveReward::with('reward')->orderBy('created_at', 'desc')->get();
-    }
+    use CsvExportable;
 
     public function headings(): array
     {
         return [
-            'ID',
             'Employee Name',
             'Employee Email',
-            'Employee Position',
-            'Employee Department',
             'Reward Name',
             'Reward Type',
+            'Points',
             'Given By',
-            'Given Date',
             'Status',
             'Reason',
             'Notes',
             'Created At',
-            'Updated At'
+            'Updated At',
         ];
     }
 
-    public function map($item): array
+    public function rows(): array
     {
-        return [
-            $item->id,
-            $item->employee_name,
-            $item->employee_email,
-            $item->employee_position,
-            $item->employee_department,
-            $item->reward ? $item->reward->name : 'N/A',
-            $item->reward ? $item->reward->type : 'N/A',
-            $item->given_by,
-            $item->given_date ? $item->given_date->format('M d, Y') : '',
-            ucfirst($item->status),
-            $item->reason ?? 'N/A',
-            $item->notes ?? 'N/A',
-            $item->created_at ? $item->created_at->format('M d, Y h:i A') : '',
-            $item->updated_at ? $item->updated_at->format('M d, Y h:i A') : '',
-        ];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            1 => ['font' => ['bold' => true]],
-        ];
+        return GiveReward::with('reward')->get()->map(function ($giveReward) {
+            return [
+                $giveReward->employee_name ?? 'N/A',
+                $giveReward->employee_email ?? 'N/A',
+                optional($giveReward->reward)->name ?? 'N/A',
+                optional($giveReward->reward)->type ?? 'N/A',
+                optional($giveReward->reward)->points ?? 0,
+                $giveReward->given_by ?? 'N/A',
+                $giveReward->status ?? 'N/A',
+                $giveReward->reason ?? 'N/A',
+                $giveReward->notes ?? 'N/A',
+                $giveReward->created_at?->format('Y-m-d H:i:s'),
+                $giveReward->updated_at?->format('Y-m-d H:i:s'),
+            ];
+        })->toArray();
     }
 }

@@ -2,70 +2,57 @@
 
 namespace App\Exports;
 
+use App\Exports\Traits\CsvExportable;
 use App\Models\SupportTicket;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class SupportTicketsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class SupportTicketsExport
 {
+    use CsvExportable;
+
     protected $requesterEmail;
 
-    public function __construct($requesterEmail = null)
+    public function __construct(?string $requesterEmail = null)
     {
         $this->requesterEmail = $requesterEmail;
-    }
-
-    public function collection()
-    {
-        $query = SupportTicket::query()->latest();
-
-        if ($this->requesterEmail) {
-            $query->where('requester_email', $this->requesterEmail);
-        }
-
-        return $query->get();
     }
 
     public function headings(): array
     {
         return [
-            'ID',
             'Requester Name',
             'Requester Email',
-            'Position',
+            'Requester Position',
             'Subject',
             'Description',
             'Priority',
             'Status',
             'Admin Notes',
-            'Created At'
+            'Created At',
+            'Updated At',
         ];
     }
 
-    public function map($item): array
+    public function rows(): array
     {
-        return [
-            $item->id,
-            $item->requester_name,
-            $item->requester_email,
-            $item->requester_position,
-            $item->subject,
-            $item->description,
-            $item->priority,
-            $item->status,
-            $item->admin_notes,
-            $item->created_at ? $item->created_at->format('M d, Y h:i A') : '',
-        ];
-    }
+        $query = SupportTicket::query();
 
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            1 => ['font' => ['bold' => true]],
-        ];
+        if ($this->requesterEmail) {
+            $query->where('requester_email', $this->requesterEmail);
+        }
+
+        return $query->get()->map(function ($ticket) {
+            return [
+                $ticket->requester_name,
+                $ticket->requester_email,
+                $ticket->requester_position ?? 'N/A',
+                $ticket->subject,
+                $ticket->description,
+                $ticket->priority,
+                $ticket->status,
+                $ticket->admin_notes ?? 'N/A',
+                $ticket->created_at?->format('Y-m-d H:i:s'),
+                $ticket->updated_at?->format('Y-m-d H:i:s'),
+            ];
+        })->toArray();
     }
 }

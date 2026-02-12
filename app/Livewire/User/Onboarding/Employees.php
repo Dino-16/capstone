@@ -349,30 +349,7 @@ class Employees extends Component
 
     public function export()
     {
-        // For export, we usually want everything matching the search, ignoring pagination
-        $response = Http::get('http://hr4.jetlougetravels-ph.com/api/employees', [
-            'search'   => $this->search,
-            'per_page' => 5000, 
-        ]);
-
-        if ($response->successful()) {
-            $data = $response->json();
-            $items = collect($data['data'] ?? $data); // Handle both paginated/unpaginated API response
-            $enrichedItems = $this->enrichEmployeesWithDocumentStatus($items->toArray());
-
-            $exportData = collect($enrichedItems)->map(fn($emp) => [
-                'Name'             => ($emp['first_name'] ?? '') . ' ' . ($emp['last_name'] ?? $emp['full_name'] ?? '—'),
-                'Position'         => $emp['position'] ?? '—',
-                'Department'       => $emp['department']['name'] ?? 'Not Integrated',
-                'HR Documents'     => $emp['document_status'] ?? 'Not Integrated',
-                'Employment Status' => $emp['employment_status'] ?? '---',
-                'Date Hired'       => $emp['date_hired'] ?? '---',
-            ]);
-
-            return \Maatwebsite\Excel\Facades\Excel::download(new EmployeesExport($exportData->toArray()), 'employees.xlsx');
-        }
-
-        return response()->streamDownload(fn() => print("Export failed"), "error.xlsx");
+        return (new \App\Exports\Onboarding\EmployeesExport($this->employees))->download('employees.csv');
     }
 
     public function editEmployee($index)

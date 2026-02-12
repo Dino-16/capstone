@@ -27,11 +27,11 @@ class Reports extends Component
     public $typeFilter = 'All';
 
     public $reportTypes = [
-        'requisition' => 'Requisition',
-        'jobpost' => 'Job Post',
-        'employee' => 'Employee',
-        'documentchecklist' => 'Document Checklist',
-        'orientationschedule' => 'Orientation Schedule',
+        'requisition' => 'Requisitions',
+        'jobpost' => 'Job Posts',
+        'employee' => 'Employees',
+        'documentchecklist' => 'Document Checklists',
+        'orientationschedule' => 'Orientation Schedules',
         'evaluationrecords' => 'Evaluation Records',
         'rewards' => 'Rewards',
         'giverewards' => 'Give Rewards',
@@ -43,31 +43,27 @@ class Reports extends Component
         $this->reports = Report::latest()->get();
     }
 
-    public function getFilteredReportsProperty()
+    public function updatedSearch()
     {
-        $query = Report::latest();
-
-        // Apply search filter
-        if ($this->search) {
-            $query->where('report_name', 'like', '%' . $this->search . '%');
-        }
-
-        // Apply type filter
-        if ($this->typeFilter !== 'All') {
-            $query->where('report_type', $this->typeFilter);
-        }
-
-        return $query->get();
+        $this->reports = Report::query()
+            ->when($this->search, function ($query) {
+                $query->where('report_name', 'like', '%' . $this->search . '%');
+            })
+            ->when($this->typeFilter !== 'All', function ($query) {
+                $query->where('report_type', $this->typeFilter);
+            })
+            ->latest()
+            ->get();
     }
 
     public function exportRequisition()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new RequisitionsExport(), 'requisitions.xlsx');
+        return (new RequisitionsExport())->download('requisitions.csv');
     }
     
     public function exportJobPost()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new JobPostsExport(), 'job_posts.xlsx');
+        return (new JobPostsExport())->download('job_posts.csv');
     }
     
     public function exportEmployee()
@@ -83,32 +79,32 @@ class Reports extends Component
             ];
         })->toArray();
         
-        return \Maatwebsite\Excel\Facades\Excel::download(new EmployeesExport($employees), 'employees.xlsx');
+        return (new EmployeesExport($employees))->download('employees.csv');
     }
     
     public function exportDocumentChecklist()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new DocumentChecklistsExport(), 'document_checklists.xlsx');
+        return (new DocumentChecklistsExport())->download('document_checklists.csv');
     }
     
     public function exportOrientationSchedule()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new OrientationSchedulesExport(), 'orientation_schedules.xlsx');
+        return (new OrientationSchedulesExport())->download('orientation_schedules.csv');
     }
     
     public function exportEvaluationRecords()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new EvaluationRecordsExport(), 'evaluation_records.xlsx');
+        return (new EvaluationRecordsExport())->download('evaluation_records.csv');
     }
     
     public function exportRewards()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new RewardsExport(), 'rewards.xlsx');
+        return (new RewardsExport())->download('rewards.csv');
     }
     
     public function exportGiveRewards()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new GiveRewardsExport(), 'give_rewards.xlsx');
+        return (new GiveRewardsExport())->download('give_rewards.csv');
     }
 
     /**
@@ -139,7 +135,7 @@ class Reports extends Component
         Report::create([
             'report_name' => $this->reportName,
             'report_type' => $this->reportType,
-            'report_file' => $this->reportName . '_' . date('Y-m-d_H-i-s') . '.xlsx',
+            'report_file' => $this->reportName . '_' . date('Y-m-d_H-i-s') . '.csv',
             'status' => 'published',
         ]);
 

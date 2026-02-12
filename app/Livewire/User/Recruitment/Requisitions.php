@@ -6,7 +6,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\Recruitment\Requisition;
 use App\Exports\Recruitment\RequisitionsExport;
-use Maatwebsite\Excel\Facades\Excel;
+
 
 class Requisitions extends Component
 {   
@@ -38,7 +38,7 @@ class Requisitions extends Component
 
     public function export()
     {
-        return Excel::download(new RequisitionsExport, 'requisitions.xlsx');
+        return (new RequisitionsExport)->download('requisitions.csv');
     }
 
     // Pagination Page when Filtered

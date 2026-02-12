@@ -2,57 +2,44 @@
 
 namespace App\Exports\Applicants;
 
+use App\Exports\Traits\CsvExportable;
 use App\Models\Applicants\Candidate;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class CandidatesExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class CandidatesExport
 {
-    public function collection()
-    {
-        return Candidate::whereIn('status', ['scheduled', 'interview_ready'])
-            ->latest()
-            ->get();
-    }
+    use CsvExportable;
 
     public function headings(): array
     {
         return [
-            'ID',
             'Name',
             'Email',
             'Phone',
-            'Position',
+            'Applied Position',
             'Department',
-            'Schedule',
             'Status',
-            'Created At'
+            'Interview Schedule',
+            'Interview Result',
+            'Created At',
         ];
     }
 
-    public function map($item): array
+    public function rows(): array
     {
-        return [
-            $item->id,
-            $item->candidate_name,
-            $item->candidate_email,
-            $item->candidate_phone,
-            $item->applied_position,
-            $item->department,
-            $item->interview_schedule ? $item->interview_schedule->format('M d, Y h:i A') : 'Not Scheduled',
-            $item->status,
-            $item->created_at ? $item->created_at->format('M d, Y h:i A') : '',
-        ];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            1 => ['font' => ['bold' => true]],
-        ];
+        return Candidate::whereIn('status', ['scheduled', 'interview_ready', 'failed'])
+            ->get()
+            ->map(function ($candidate) {
+                return [
+                    $candidate->candidate_name,
+                    $candidate->candidate_email,
+                    $candidate->candidate_phone,
+                    $candidate->applied_position,
+                    $candidate->department,
+                    ucfirst($candidate->status),
+                    $candidate->interview_schedule ? $candidate->interview_schedule->format('M d, Y h:i A') : 'N/A',
+                    ucfirst($candidate->interview_result ?? 'Pending'),
+                    $candidate->created_at?->format('Y-m-d H:i:s'),
+                ];
+            })->toArray();
     }
 }

@@ -2,53 +2,40 @@
 
 namespace App\Exports\Recruitment;
 
+use App\Exports\Traits\CsvExportable;
 use App\Models\Recruitment\Requisition;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class RequisitionsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class RequisitionsExport
 {
-    public function collection()
-    {
-        return Requisition::all();
-    }
+    use CsvExportable;
 
     public function headings(): array
     {
         return [
-            'ID',
-            'Requested By',
-            'Department',
             'Position',
-            'No. of Openings',
+            'Department',
+            'Opening',
+            'Description',
+            'Qualifications',
             'Status',
             'Created At',
-            'Updated At'
+            'Updated At',
         ];
     }
 
-    public function map($requisition): array
+    public function rows(): array
     {
-        return [
-            $requisition->id,
-            $requisition->requested_by,
-            $requisition->department,
-            $requisition->position,
-            $requisition->opening,
-            $requisition->status ?? 'Pending', // Default if not set
-            $requisition->created_at ? $requisition->created_at->format('M d, Y h:i A') : '',
-            $requisition->updated_at ? $requisition->updated_at->format('M d, Y h:i A') : '',
-        ];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            1 => ['font' => ['bold' => true]],
-        ];
+        return Requisition::all()->map(function ($requisition) {
+            return [
+                $requisition->position,
+                $requisition->department ?? 'N/A',
+                $requisition->opening ?? 0,
+                $requisition->description ?? 'N/A',
+                $requisition->qualifications ?? 'N/A',
+                $requisition->status,
+                $requisition->created_at?->format('Y-m-d H:i:s'),
+                $requisition->updated_at?->format('Y-m-d H:i:s'),
+            ];
+        })->toArray();
     }
 }

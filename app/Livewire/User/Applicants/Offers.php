@@ -723,12 +723,12 @@ JetLounge Travels HR Team";
 
     public function exportData()
     {
-        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\Applicants\OffersExport(), 'offers.xlsx');
+        return (new \App\Exports\Applicants\OffersExport())->download('offers.csv');
     }
 
     public function exportEmployees()
     {
-        return (new \App\Exports\Applicants\EmployeeContractExport($this->filteredEmployees))->download('employee_contracts.xlsx');
+        return (new \App\Exports\Applicants\EmployeeContractExport($this->filteredEmployees))->download('employee_contracts.csv');
     }
 
     public function render()

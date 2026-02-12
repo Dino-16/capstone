@@ -2,57 +2,44 @@
 
 namespace App\Exports\Onboarding;
 
+use App\Exports\Traits\CsvExportable;
 use App\Models\Onboarding\OrientationSchedule;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class OrientationSchedulesExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class OrientationSchedulesExport
 {
-    public function collection()
-    {
-        return OrientationSchedule::all();
-    }
+    use CsvExportable;
 
     public function headings(): array
     {
         return [
-            'ID',
             'Employee Name',
+            'Position',
+            'Department',
             'Orientation Date',
-            'Orientation Time',
+            'Start Time',
+            'End Time',
             'Location',
             'Facilitator',
-            'Status',
-            'Notes',
             'Created At',
-            'Updated At'
+            'Updated At',
         ];
     }
 
-    public function map($item): array
+    public function rows(): array
     {
-        return [
-            $item->id,
-            $item->employee_name,
-            $item->orientation_date ? $item->orientation_date->format('M d, Y') : '',
-            $item->orientation_time ? $item->orientation_time->format('h:i A') : '',
-            $item->location,
-            $item->facilitator,
-            $item->status,
-            $item->notes ?? '',
-            $item->created_at ? $item->created_at->format('M d, Y h:i A') : '',
-            $item->updated_at ? $item->updated_at->format('M d, Y h:i A') : '',
-        ];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            1 => ['font' => ['bold' => true]],
-        ];
+        return OrientationSchedule::all()->map(function ($schedule) {
+            return [
+                $schedule->employee_name,
+                $schedule->position ?? 'N/A',
+                $schedule->department ?? 'N/A',
+                $schedule->orientation_date ? $schedule->orientation_date->format('M d, Y') : 'N/A',
+                $schedule->start_time ?? 'N/A',
+                $schedule->end_time ?? 'N/A',
+                $schedule->location ?? 'N/A',
+                $schedule->facilitator ?? 'N/A',
+                $schedule->created_at?->format('Y-m-d H:i:s'),
+                $schedule->updated_at?->format('Y-m-d H:i:s'),
+            ];
+        })->toArray();
     }
 }

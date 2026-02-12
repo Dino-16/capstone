@@ -2,53 +2,38 @@
 
 namespace App\Exports\Recognition;
 
+use App\Exports\Traits\CsvExportable;
 use App\Models\Recognition\Reward;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class RewardsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class RewardsExport
 {
-    public function collection()
-    {
-        return Reward::all();
-    }
+    use CsvExportable;
 
     public function headings(): array
     {
         return [
-            'ID',
             'Name',
             'Type',
             'Description',
-            'Points Required',
-            'Is Active',
+            'Points',
+            'Active',
             'Created At',
-            'Updated At'
+            'Updated At',
         ];
     }
 
-    public function map($item): array
+    public function rows(): array
     {
-        return [
-            $item->id,
-            $item->name,
-            $item->type,
-            $item->description,
-            $item->points_required,
-            $item->is_active ? 'Yes' : 'No',
-            $item->created_at ? $item->created_at->format('M d, Y h:i A') : '',
-            $item->updated_at ? $item->updated_at->format('M d, Y h:i A') : '',
-        ];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            1 => ['font' => ['bold' => true]],
-        ];
+        return Reward::all()->map(function ($reward) {
+            return [
+                $reward->name,
+                $reward->type ?? 'N/A',
+                $reward->description ?? 'N/A',
+                $reward->points ?? 0,
+                $reward->is_active ? 'Yes' : 'No',
+                $reward->created_at?->format('Y-m-d H:i:s'),
+                $reward->updated_at?->format('Y-m-d H:i:s'),
+            ];
+        })->toArray();
     }
 }

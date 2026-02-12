@@ -2,60 +2,44 @@
 
 namespace App\Exports\Applicants;
 
+use App\Exports\Traits\CsvExportable;
 use App\Models\Applicants\Application;
-use App\Models\Applicants\FilteredResume;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class ApplicationsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class ApplicationsExport
 {
-    public function collection()
-    {
-        return Application::latest()->get();
-    }
+    use CsvExportable;
 
     public function headings(): array
     {
         return [
-            'ID',
-            'Name',
+            'First Name',
+            'Last Name',
             'Email',
             'Phone',
             'Applied Position',
             'Department',
-            'Status',
-            'AI Score',
+            'Rating Score',
             'Qualification Status',
-            'Created At'
+            'Status',
+            'Created At',
         ];
     }
 
-    public function map($item): array
+    public function rows(): array
     {
-        $resume = FilteredResume::where('application_id', $item->id)->first();
-        
-        return [
-            $item->id,
-            $item->first_name . ' ' . $item->last_name,
-            $item->email,
-            $item->phone,
-            $item->applied_position,
-            $item->department,
-            $item->status,
-            $resume ? $resume->rating_score : 'N/A',
-            $resume ? $resume->qualification_status : 'N/A',
-            $item->created_at ? $item->created_at->format('M d, Y h:i A') : '',
-        ];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            1 => ['font' => ['bold' => true]],
-        ];
+        return Application::with('filteredResume')->get()->map(function ($application) {
+            return [
+                $application->first_name,
+                $application->last_name,
+                $application->email,
+                $application->phone,
+                $application->applied_position,
+                $application->department,
+                optional($application->filteredResume)->rating_score ?? 'N/A',
+                optional($application->filteredResume)->qualification_status ?? 'N/A',
+                $application->status,
+                $application->created_at?->format('Y-m-d H:i:s'),
+            ];
+        })->toArray();
     }
 }
