@@ -3,6 +3,7 @@
 namespace App\Livewire\User;
 
 use Livewire\Component;
+use Livewire\Attributes\Computed;
 use App\Exports\Recruitment\RequisitionsExport;
 use App\Exports\Recruitment\JobPostsExport;
 use App\Exports\Onboarding\EmployeesExport;
@@ -22,7 +23,6 @@ class Reports extends Component
 
     public $reportName;
     public $reportType;
-    public $reports;
     public $search = '';
     public $typeFilter = 'All';
 
@@ -40,12 +40,12 @@ class Reports extends Component
     public function mount()
     {
         $this->initializePasswordVerification();
-        $this->reports = Report::latest()->get();
     }
 
-    public function updatedSearch()
+    #[Computed]
+    public function filteredReports()
     {
-        $this->reports = Report::query()
+        return Report::query()
             ->when($this->search, function ($query) {
                 $query->where('report_name', 'like', '%' . $this->search . '%');
             })
@@ -140,7 +140,7 @@ class Reports extends Component
         ]);
 
         $this->reset(['reportName', 'reportType']);
-        $this->reports = Report::latest()->get();
+        unset($this->filteredReports);
         
         $this->toast('Report created successfully! Click the download button to generate the file.');
     }
@@ -156,7 +156,7 @@ class Reports extends Component
         if ($report) {
             $report->delete();
             $this->toast('Report deleted successfully!');
-            $this->reports = Report::latest()->get();
+            unset($this->filteredReports);
         }
     }
 
