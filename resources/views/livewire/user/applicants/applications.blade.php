@@ -321,7 +321,7 @@
                     @empty
                         <tr>
                             <td colspan="7" @class('text-center text-muted py-5')>
-                                                                @if($search)
+                                @if($search)
                                     <i @class('bi bi-search d-block mx-auto fs-1')></i>
                                     <div class="mt-3">No applications found matching "{{ $search }}".</div>
                                 @elseif($qualificationFilter)
